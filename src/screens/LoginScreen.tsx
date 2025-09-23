@@ -64,7 +64,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.headerContent}>
             <View style={styles.logoContainer}>
               <Image 
-                source={require('../../logo_png.png')}
+                source={require('../../AdminLTELogo.png')}
                 style={styles.logo}
                 resizeMode="contain"
               />
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.background,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === 'ios' ? 80 : 56,
     paddingBottom: 40,
     paddingHorizontal: Theme.spacing.lg,
   },
@@ -171,17 +171,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Theme.spacing.md,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 76,
+    height: 76,
   },
   welcomeText: {
     ...Theme.typography.h1,

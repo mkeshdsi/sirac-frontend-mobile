@@ -31,7 +31,7 @@ export default function App() {
         }}
         initialRouteName="Login"
       >
-        <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
+        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="TokenVerification" component={TokenVerificationScreen} options={{ title: 'Verificar Token' }} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ title: 'SIRAC' }} />
         <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} options={{ title: 'Perfil' }} />
