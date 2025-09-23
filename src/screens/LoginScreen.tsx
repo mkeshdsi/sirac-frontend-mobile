@@ -84,7 +84,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             
             <View style={styles.inputContainer}>
               <Input
-                label="Email ou Telefone"
+                label="Email"
                 placeholder="exemplo@email.com"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -144,12 +144,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               />
             </View>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Não tem uma conta? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('UserTypeSelection')}>
-                <Text style={styles.registerText}>Criar conta</Text>
-              </TouchableOpacity>
-            </View>
+           
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
