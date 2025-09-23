@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { View, Text, TextInput, StyleSheet, ViewStyle, TextInputProps } from 'react-native';
 import { Theme } from '@/constants/theme';
 
@@ -7,9 +7,11 @@ interface Props extends TextInputProps {
   error?: string;
   containerStyle?: ViewStyle;
   required?: boolean;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
 }
 
-export const Input: React.FC<Props> = ({ label, error, containerStyle, required, ...rest }) => {
+export const Input: React.FC<Props> = ({ label, error, containerStyle, required, leftIcon, rightIcon, ...rest }) => {
   return (
     <View style={[styles.container, containerStyle]}>
       {!!label && (
@@ -18,11 +20,16 @@ export const Input: React.FC<Props> = ({ label, error, containerStyle, required,
           {required && <Text style={styles.required}> *</Text>}
         </Text>
       )}
-      <TextInput
-        placeholderTextColor={Theme.colors.gray400}
-        style={[styles.input, !!error && styles.inputError]}
-        {...rest}
-      />
+      <View style={[styles.inputWrapper, !!error && styles.inputError]}
+      >
+        {!!leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
+        <TextInput
+          placeholderTextColor={Theme.colors.gray400}
+          style={styles.input}
+          {...rest}
+        />
+        {!!rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
+      </View>
       {!!error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
@@ -40,17 +47,29 @@ const styles = StyleSheet.create({
   required: {
     color: Theme.colors.error,
   },
-  input: {
+  inputWrapper: {
     borderWidth: 1,
     borderColor: Theme.colors.border,
     borderRadius: Theme.radius.md,
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.sm,
     backgroundColor: Theme.colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  input: {
+    flex: 1,
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.md,
     color: Theme.colors.textPrimary,
+    ...Theme.typography.body1,
   },
   inputError: {
     borderColor: Theme.colors.error,
+  },
+  iconLeft: {
+    paddingLeft: Theme.spacing.md,
+  },
+  iconRight: {
+    paddingRight: Theme.spacing.md,
   },
   error: {
     marginTop: 4,

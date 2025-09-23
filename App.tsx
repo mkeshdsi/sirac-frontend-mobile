@@ -13,6 +13,8 @@ import { DocumentUploadScreen } from '@/screens/DocumentUploadScreen';
 import { ReviewSubmitScreen } from '@/screens/ReviewSubmitScreen';
 import { SuccessScreen } from '@/screens/SuccessScreen';
 import { PasswordCreationScreen } from '@/screens/PasswordCreationScreen';
+import { LoginScreen } from '@/screens/LoginScreen';
+import { TokenVerificationScreen } from '@/screens/TokenVerificationScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -27,7 +29,10 @@ export default function App() {
           headerTitleStyle: { ...Theme.typography.h4 },
           cardStyle: { backgroundColor: Theme.colors.background },
         }}
+        initialRouteName="Login"
       >
+        <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
+        <Stack.Screen name="TokenVerification" component={TokenVerificationScreen} options={{ title: 'Verificar Token' }} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ title: 'SIRAC' }} />
         <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} options={{ title: 'Perfil' }} />
         <Stack.Screen name="PasswordCreation" component={PasswordCreationScreen} options={{ title: 'Palavra‑Passe' }} />
@@ -40,3 +45,4 @@ export default function App() {
     </NavigationContainer>
   );
 }
+

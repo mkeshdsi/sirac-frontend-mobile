@@ -35,8 +35,6 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             
             <View style={styles.titleSection}>
-              <Text style={styles.title}>SIRAC</Text>
-              <View style={styles.titleUnderline} />
               <Text style={styles.subtitle}>
                 Sistema de Registo de{'\n'}Agentes e Comerciantes
               </Text>

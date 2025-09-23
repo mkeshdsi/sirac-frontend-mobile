@@ -21,6 +21,8 @@ export interface DocumentsPayload {
 }
 
 export type RootStackParamList = {
+  Login: undefined;
+  TokenVerification: { username: string; maskedDestination: string };
   Welcome: undefined;
   UserTypeSelection: undefined;
   PersonalDataForm: { userType: UserType };
