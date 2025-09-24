@@ -33,14 +33,12 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     setLoading(true);
     try {
       const res = await login(username.trim(), password);
-      if (!res.success) {
-        setError('Credenciais inválidas.');
+      if (!res.success || !res.token) {
+        setError(res.message || 'Falha ao iniciar sessão.');
         return;
       }
-      navigation.navigate('TokenVerification', { 
-        username: username.trim(), 
-        maskedDestination: res.maskedDestination 
-      });
+      // Login concluído, segue para seleção de perfil
+      navigation.reset({ index: 0, routes: [{ name: 'UserTypeSelection' }] });
     } catch (e) {
       setError('Falha ao iniciar sessão. Tente novamente.');
     } finally {

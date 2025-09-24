@@ -14,7 +14,6 @@ import { ReviewSubmitScreen } from '@/screens/ReviewSubmitScreen';
 import { SuccessScreen } from '@/screens/SuccessScreen';
 import { PasswordCreationScreen } from '@/screens/PasswordCreationScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
-import { TokenVerificationScreen } from '@/screens/TokenVerificationScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -32,7 +31,6 @@ export default function App() {
         initialRouteName="Login"
       >
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="TokenVerification" component={TokenVerificationScreen} options={{ title: 'Verificar Token' }} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ title: 'SIRAC' }} />
         <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} options={{ title: 'Perfil' }} />
         <Stack.Screen name="PasswordCreation" component={PasswordCreationScreen} options={{ title: 'Palavra‑Passe' }} />
