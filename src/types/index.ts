@@ -14,8 +14,11 @@ export interface CommercialData {
   assinatura?: string;
   dataFormulario?: string; // dd/mm/aaaa
 
+  // Tipo de Parceiro (alinhado com API)
+  tipoParceiro?: 'AGENTE' | 'MERCHANT';
+
   // Empresa
-  tipoEmpresa?: 'Sociedade' | 'Individual';
+  tipoEmpresa?: 'SOCIEDADE' | 'INDIVIDUAL';
   designacao?: string;
   naturezaObjecto?: string;
   banco?: string;
@@ -36,29 +39,18 @@ export interface CommercialData {
   proprietarioEmail?: string;
   proprietarioContacto?: string;
 
-  // Estabelecimentos Assistentes
-  assistente1NomeCompleto?: string;
-  assistente1Contacto?: string;
-  assistente2NomeCompleto?: string;
-  assistente2Contacto?: string;
+  // Assistentes (lista dinâmica)
+  assistentes?: Array<{ nomeCompleto?: string; contacto?: string }>; 
 
-  // Angariador
-  angariadorNome?: string;
-  angariadorCelular?: string;
-
-  // A preencher pela carteira móvel
-  validadoPorNome?: string;
-  validadoPorFuncao?: string;
-  dataValidacao?: string; // dd/mm/aaaa
-  aprovadoPorNome?: string;
-  aprovadoPorFuncao?: string;
-  dataAprovacao?: string; // dd/mm/aaaa
+  // Relações (IDs opcionais)
+  angariadorId?: string; // enviar como número no payload se preenchido
+  aprovadorId?: string;   // enviar como número no payload se preenchido
+  validadorId?: string;   // enviar como número no payload se preenchido
 
   // Substituição e outros
   substituicaoNomeAgente?: string;
   substituicaoProvinciaLocalidade?: string;
   substituicaoEnderecoBairro?: string;
-  parceiroOficial?: string;
   profissao?: string;
 }
 
@@ -75,10 +67,10 @@ export type RootStackParamList = {
   ApiConfig: undefined;
   Welcome: undefined;
   UserTypeSelection: undefined;
-  PersonalDataForm: { userType: UserType };
-  PasswordCreation: { userType: UserType; personalData: PersonalData };
-  CommercialDataForm: { personalData: PersonalData; password: string };
-  DocumentUpload: { personalData: PersonalData; password: string; commercialData?: CommercialData };
-  ReviewSubmit: { personalData: PersonalData; commercialData?: CommercialData; documents: DocumentsPayload };
+  PersonalDataForm: undefined; // removido do fluxo principal
+  PasswordCreation: undefined; // removido do fluxo principal
+  CommercialDataForm: undefined;
+  DocumentUpload: { commercialData?: CommercialData };
+  ReviewSubmit: { commercialData?: CommercialData; documents: DocumentsPayload };
   Success: { registrationId: string };
 };

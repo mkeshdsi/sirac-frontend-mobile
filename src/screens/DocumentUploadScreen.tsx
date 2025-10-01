@@ -15,8 +15,9 @@ import * as ImagePicker from 'expo-image-picker';
  interface Props { navigation: Nav; route: Route }
 
 export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { personalData, commercialData } = route.params;
+  const { commercialData } = route.params;
   const [docs, setDocs] = useState<DocumentsPayload>({});
+  const hasAnyDoc = Object.values(docs).some(Boolean);
 
   const pickImage = async (key: keyof DocumentsPayload) => {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
@@ -33,7 +34,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
   };
 
   const goNext = () => {
-    navigation.navigate('ReviewSubmit', { personalData, commercialData, documents: docs });
+    navigation.navigate('ReviewSubmit', { commercialData, documents: docs });
   };
 
   return (
@@ -49,6 +50,16 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
         <Card style={styles.item}><Text style={styles.itemTitle}>Alvará</Text><Button title="Escolher ficheiro" variant="outline" onPress={() => pickFile('alvaraUri')} /></Card>
         <Card style={styles.item}><Text style={styles.itemTitle}>Comprov. Residência</Text><Button title="Escolher ficheiro" variant="outline" onPress={() => pickFile('comprovativoResidenciaUri')} /></Card>
         <Card style={styles.item}><Text style={styles.itemTitle}>Foto de Perfil</Text><Button title="Escolher imagem" variant="outline" onPress={() => pickImage('fotoPerfilUri')} /></Card>
+      </View>
+
+      {/* Botão adicional que aparece após anexar pelo menos um documento */}
+      <View style={{ marginTop: Theme.spacing.lg }}>
+        <Button title="Prosseguir para Revisão" onPress={goNext} disabled={!hasAnyDoc} />
+        {!hasAnyDoc && (
+          <Text style={{ ...Theme.typography.caption, color: Theme.colors.textSecondary, marginTop: 6 }}>
+            Anexe pelo menos um documento para prosseguir.
+          </Text>
+        )}
       </View>
 
       <View style={styles.footer}>

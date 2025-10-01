@@ -5,7 +5,7 @@ import { Button, Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
-import axios from 'axios';
+import { getAuthApi } from '@/config/api';
 
  type Nav = StackNavigationProp<RootStackParamList, 'ReviewSubmit'>;
  type Route = RouteProp<RootStackParamList, 'ReviewSubmit'>;
@@ -13,18 +13,89 @@ import axios from 'axios';
  interface Props { navigation: Nav; route: Route }
 
 export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { personalData, commercialData, documents } = route.params;
+  const { commercialData, documents } = route.params;
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
     try {
       setLoading(true);
-      // TODO: ajustar a URL do backend quando disponível
-      await new Promise((r) => setTimeout(r, 800));
-      const registrationId = Math.random().toString(36).slice(2, 8).toUpperCase();
+      const api = await getAuthApi();
+
+      // Utilidades de mapeamento/conversão
+      const toIsoDate = (ddmmyyyy?: string) => {
+        if (!ddmmyyyy) return undefined;
+        const m = ddmmyyyy.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!m) return undefined;
+        const [_, dd, mm, yyyy] = m;
+        return `${yyyy}-${mm}-${dd}`; // Backend espera Date; string ISO simples
+      };
+
+      // Definir tipo_parceiro a partir do formulário (AGENTE|MERCHANT) ou fallback pelo fluxo
+      const tipo_parceiro = commercialData?.tipoParceiro || (commercialData ? 'MERCHANT' : 'AGENTE');
+
+      // Montar payload conforme backend (app.models.parceiro.Parceiro)
+      const payload: any = {
+        tipo_parceiro,
+        designacao: commercialData?.designacao || commercialData?.nomeComercial || '',
+        // tipo_empresa já vem conforme enum da API (SOCIEDADE|INDIVIDUAL)
+        tipo_empresa: commercialData?.tipoEmpresa,
+        natureza_actividade: commercialData?.naturezaObjecto || undefined,
+        nuit: commercialData?.nuit || undefined,
+        banco: commercialData?.banco || undefined,
+        numero_conta: commercialData?.numeroConta || undefined,
+        bairro_ref: commercialData?.enderecoBairroRef || undefined,
+        profissao: commercialData?.profissao || undefined,
+        assinatura_adesao: commercialData?.assinatura || undefined,
+        data_adesao: toIsoDate(commercialData?.dataFormulario),
+        // IDs opcionais (FKs) se fornecidos
+        angariador_id: commercialData?.angariadorId ? Number(commercialData.angariadorId) : undefined,
+        aprovador_id: commercialData?.aprovadorId ? Number(commercialData.aprovadorId) : undefined,
+        validador_id: commercialData?.validadorId ? Number(commercialData.validadorId) : undefined,
+        // FKs opcionais (angariador_id, aprovador_id, validador_id) não utilizados aqui
+        endereco: commercialData ? {
+          cidade: commercialData.enderecoCidade!,
+          localidade: commercialData.enderecoLocalidade || undefined,
+          avenida_rua: commercialData.enderecoAvenidaRua || undefined,
+          numero: commercialData.enderecoNumero || undefined,
+          quarteirao: commercialData.enderecoQuart || undefined,
+          telefone: commercialData.telefone || undefined,
+          celular: commercialData.celular || undefined,
+        } : undefined,
+        proprietarios: commercialData?.proprietarioNomeCompleto ? [{
+          nome: commercialData.proprietarioNomeCompleto,
+          email: commercialData.proprietarioEmail || undefined,
+          contacto: commercialData.proprietarioContacto || undefined,
+        }] : [],
+        assistentes: Array.isArray(commercialData?.assistentes) && commercialData!.assistentes!.length > 0
+          ? commercialData!.assistentes!.map((a) => ({
+              nome_completo: a?.nomeCompleto || undefined,
+              contacto: a?.contacto || undefined,
+            }))
+          : [],
+        estabelecimentos: (commercialData?.substituicaoNomeAgente || commercialData?.substituicaoProvinciaLocalidade || commercialData?.substituicaoEnderecoBairro)
+          ? [{
+            nome: commercialData?.substituicaoNomeAgente || 'Estabelecimento',
+            provincia_localidade: commercialData?.substituicaoProvinciaLocalidade || undefined,
+            endereco_bairro: commercialData?.substituicaoEnderecoBairro || undefined,
+          }] : [],
+      };
+
+      // Validações mínimas antes do envio (parcial, backend também valida)
+      if (!payload.assinatura_adesao || !payload.data_adesao) {
+        throw new Error('Assinatura e data de adesão são obrigatórias.');
+      }
+      if (!payload.designacao || !payload.tipo_empresa || !payload.endereco?.cidade) {
+        throw new Error('Designação, tipo de empresa e cidade são obrigatórios.');
+      }
+
+      // Enviar para API (prefixo correto no backend)
+      const res = await api.post('/api/v1/parceiros/', payload);
+      const parceiro = res.data?.parceiro || res.data;
+      const registrationId = String(parceiro?.id || '--------');
       navigation.replace('Success', { registrationId });
-    } catch (e) {
-      Alert.alert('Erro', 'Falha ao submeter cadastro. Tente novamente.');
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Falha ao submeter cadastro. Tente novamente.';
+      Alert.alert('Erro', msg);
     } finally {
       setLoading(false);
     }
@@ -34,12 +105,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Revisão</Text>
 
-      <Card style={styles.card}>
-        <Text style={styles.section}>Dados Pessoais</Text>
-        <Text style={styles.item}>Nome: {personalData.nome}</Text>
-        <Text style={styles.item}>Telefone: {personalData.telefone}</Text>
-        <Text style={styles.item}>BI: {personalData.biNumero}</Text>
-      </Card>
+      {/* Secção Dados Pessoais removida por não ser necessária para o envio à API */}
 
       {commercialData && (
         <Card style={styles.card}>

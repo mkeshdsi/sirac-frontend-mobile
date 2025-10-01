@@ -36,35 +36,29 @@ const userTypeOptions: UserTypeOption[] = [
   {
     type: 'Comerciante',
     title: 'Comerciante',
-    description: 'Para empresas e negócios que vendem produtos ou serviços',
+    description: 'Será registado como MERCHANT',
     icon: '🏪',
     features: [
-      'Registo de estabelecimento comercial',
-      'Gestão de licenças comerciais',
-      'Controlo de inventário básico',
-      'Relatórios de vendas'
+      'Abertura de Parceiro (MERCHANT)',
+    
     ],
-    // tmcel: amarelo e azul
     gradient: ['#F2C94C', '#00A3E0'] as const
   },
   {
     type: 'TecnicoComercial',
     title: 'Técnico Comercial',
-    description: 'Para profissionais que representam empresas comerciais',
+    description: 'Será registado como AGENTE',
     icon: '👨‍💼',
     features: [
-      'Certificação profissional',
-      'Gestão de clientes',
-      'Relatórios de desempenho',
-      'Comissões e vendas'
+      'Abertura de Parceiro (AGENTE)',
+      
     ],
-    // tmcel: amarelo e azul (variante mais escura no fim)
     gradient: ['#F2C94C', '#0077B6'] as const
   }
 ];
 
 export const UserTypeSelectionScreen: React.FC<Props> = ({ navigation }) => {
-  const SELECTED_BG = '#01836b'; // cor solicitada para seleção (verde petróleo tmcel)
+  const SELECTED_BG = '#01836b'; 
   const [selectedType, setSelectedType] = useState<UserType | null>(null);
 
   const handleSelection = (userType: UserType) => {
@@ -73,7 +67,7 @@ export const UserTypeSelectionScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleContinue = () => {
     if (selectedType) {
-      navigation.navigate('PersonalDataForm', { userType: selectedType });
+      navigation.navigate('CommercialDataForm');
     }
   };
 

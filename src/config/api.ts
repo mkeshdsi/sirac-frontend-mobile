@@ -1,16 +1,38 @@
 import axios, { AxiosInstance } from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
 const KEY_API_BASE_URL = 'sirac_api_base_url';
-const DEFAULT_BASE_URL = 'http://192.168.137.1:8000'; // Hotspot Windows por padrão
+const DEFAULT_BASE_URL = 'http://10.100.33.169:8055'; // IP da máquina para uso no Expo Go
 const KEY_AUTH_TOKEN = 'sirac_auth_token';
+
+function normalizeBase(url: string): string {
+  if (!url) return url;
+  return url.replace(/\/$/, ''); // remove barra no final
+}
+
+function deriveBaseFromExpo(): string | null {
+  try {
+    // hostUri exemplos: '192.168.0.10:19000', 'exp.host/...', etc.
+    const hostUri = (Constants as any)?.expoConfig?.hostUri || (Constants as any)?.manifest2?.hostUri || (Constants as any)?.manifest?.hostUri;
+    if (!hostUri || typeof hostUri !== 'string') return null;
+    const host = hostUri.split(':')[0];
+    if (!host || host.includes('exp.host')) return null;
+    // Porta padrão do backend conforme main.py: 8055
+    return `http://${host}:8055`;
+  } catch {
+    return null;
+  }
+}
 
 export async function getBaseUrl(): Promise<string> {
   try {
     const saved = await SecureStore.getItemAsync(KEY_API_BASE_URL);
-    return saved || DEFAULT_BASE_URL;
+    const derived = deriveBaseFromExpo();
+    return normalizeBase(saved || derived || DEFAULT_BASE_URL);
   } catch {
-    return DEFAULT_BASE_URL;
+    const derived = deriveBaseFromExpo();
+    return normalizeBase(derived || DEFAULT_BASE_URL);
   }
 }
 
