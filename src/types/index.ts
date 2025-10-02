@@ -38,6 +38,8 @@ export interface CommercialData {
   proprietarioNomeCompleto?: string;
   proprietarioEmail?: string;
   proprietarioContacto?: string;
+  // Lista de proprietários (novo)
+  proprietarios?: Array<{ nome?: string; email?: string; contacto?: string }>;
 
   // Assistentes (lista dinâmica)
   assistentes?: Array<{ nomeCompleto?: string; contacto?: string }>; 
@@ -52,6 +54,8 @@ export interface CommercialData {
   substituicaoProvinciaLocalidade?: string;
   substituicaoEnderecoBairro?: string;
   profissao?: string;
+  // Lista de estabelecimentos (novo)
+  estabelecimentos?: Array<{ nome?: string; provinciaLocalidade?: string; enderecoBairro?: string }>;
 }
 
 export interface DocumentsPayload {

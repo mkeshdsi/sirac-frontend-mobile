@@ -61,23 +61,38 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           telefone: commercialData.telefone || undefined,
           celular: commercialData.celular || undefined,
         } : undefined,
-        proprietarios: commercialData?.proprietarioNomeCompleto ? [{
-          nome: commercialData.proprietarioNomeCompleto,
-          email: commercialData.proprietarioEmail || undefined,
-          contacto: commercialData.proprietarioContacto || undefined,
-        }] : [],
+        proprietarios: Array.isArray(commercialData?.proprietarios) && commercialData!.proprietarios!.length > 0
+          ? commercialData!.proprietarios!.map((p) => ({
+              nome: p?.nome || undefined,
+              email: p?.email || undefined,
+              contacto: p?.contacto || undefined,
+            }))
+          : (commercialData?.proprietarioNomeCompleto
+              ? [{
+                  nome: commercialData.proprietarioNomeCompleto,
+                  email: commercialData.proprietarioEmail || undefined,
+                  contacto: commercialData.proprietarioContacto || undefined,
+                }]
+              : []),
         assistentes: Array.isArray(commercialData?.assistentes) && commercialData!.assistentes!.length > 0
           ? commercialData!.assistentes!.map((a) => ({
               nome_completo: a?.nomeCompleto || undefined,
               contacto: a?.contacto || undefined,
             }))
           : [],
-        estabelecimentos: (commercialData?.substituicaoNomeAgente || commercialData?.substituicaoProvinciaLocalidade || commercialData?.substituicaoEnderecoBairro)
-          ? [{
-            nome: commercialData?.substituicaoNomeAgente || 'Estabelecimento',
-            provincia_localidade: commercialData?.substituicaoProvinciaLocalidade || undefined,
-            endereco_bairro: commercialData?.substituicaoEnderecoBairro || undefined,
-          }] : [],
+        estabelecimentos: Array.isArray(commercialData?.estabelecimentos) && commercialData!.estabelecimentos!.length > 0
+          ? commercialData!.estabelecimentos!.map((e) => ({
+              nome: e?.nome || 'Estabelecimento',
+              provincia_localidade: e?.provinciaLocalidade || undefined,
+              endereco_bairro: e?.enderecoBairro || undefined,
+            }))
+          : ((commercialData?.substituicaoNomeAgente || commercialData?.substituicaoProvinciaLocalidade || commercialData?.substituicaoEnderecoBairro)
+              ? [{
+                nome: commercialData?.substituicaoNomeAgente || 'Estabelecimento',
+                provincia_localidade: commercialData?.substituicaoProvinciaLocalidade || undefined,
+                endereco_bairro: commercialData?.substituicaoEnderecoBairro || undefined,
+              }]
+              : []),
       };
 
       // Validações mínimas antes do envio (parcial, backend também valida)

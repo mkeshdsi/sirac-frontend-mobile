@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Input, Card, Select } from '@/components';
@@ -13,13 +13,25 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 type Nav = StackNavigationProp<RootStackParamList, 'CommercialDataForm'>;
 
-// Sem Route; esta tela não recebe params
+const COLORS = {
+  primary: '#01836b',
+  secondary: '#ffcc03',
+  primaryLight: '#01836b15',
+  secondaryLight: '#ffcc0315',
+  white: '#ffffff',
+  background: '#f8f9fa',
+  surface: '#ffffff',
+  border: '#e0e0e0',
+  text: '#1a1a1a',
+  textSecondary: '#666666',
+  error: '#d32f2f',
+  success: '#01836b',
+};
 
 const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 const phoneRegex = /^\d{7,15}$/;
 
 const schema: yup.ObjectSchema<CommercialData> = yup.object({
-  // Tipo de Parceiro (AGENTE | MERCHANT)
   tipoParceiro: yup.string().oneOf(['AGENTE', 'MERCHANT'], 'Tipo de parceiro inválido').required('Tipo de parceiro é obrigatório'),
   nomeComercial: yup.string()
     .when('tipoParceiro', {
@@ -39,8 +51,6 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
       then: (s) => s.required('Número do alvará é obrigatório'),
       otherwise: (s) => s.optional(),
     }),
-
-  // Datas no formato dd/mm/aaaa (opcionais)
   dataFormulario: yup
     .string()
     .required('Data do formulário é obrigatória')
@@ -53,8 +63,6 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
     .string()
     .optional()
     .test('date-opt3', 'Data inválida (dd/mm/aaaa)', (v) => !v || dateRegex.test(v)),
-
-  // Tipo de empresa (enum da API: SOCIEDADE | INDIVIDUAL)
   tipoEmpresa: yup
     .string()
     .oneOf(['SOCIEDADE', 'INDIVIDUAL'], 'Tipo de empresa inválido')
@@ -62,18 +70,14 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
       is: 'MERCHANT',
       then: (s) => s.required('Tipo de empresa é obrigatório'),
       otherwise: (s) => s.optional(),
-    })
-    ,
+    }),
   designacao: yup.string().optional(),
   naturezaObjecto: yup.string().optional(),
   banco: yup.string().optional(),
   numeroConta: yup.string().optional().test('accnum', 'Nº da conta deve conter apenas dígitos', (v) => !v || /^\d+$/.test(v)),
-
-  // Telefones (opcionais, 7 a 15 dígitos)
   telefone: yup.string().optional().test('tel', 'Telefone inválido', (v) => !v || phoneRegex.test(v)),
   celular: yup.string().optional().test('cel', 'Celular inválido', (v) => !v || phoneRegex.test(v)),
   proprietarioContacto: yup.string().optional().test('propcont', 'Contacto inválido', (v) => !v || phoneRegex.test(v)),
-  // Lista dinâmica de assistentes
   assistentes: yup
     .array(
       yup.object({
@@ -82,33 +86,37 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
       })
     )
     .optional(),
-
-  // Email do proprietário
+  proprietarios: yup
+    .array(
+      yup.object({
+        nome: yup.string().optional(),
+        email: yup.string().optional().email('Email inválido'),
+        contacto: yup.string().optional().test('prop-contact', 'Contacto inválido', (v) => !v || phoneRegex.test(v)),
+      })
+    )
+    .optional(),
+  estabelecimentos: yup
+    .array(
+      yup.object({
+        nome: yup.string().optional(),
+        provinciaLocalidade: yup.string().optional(),
+        enderecoBairro: yup.string().optional(),
+      })
+    )
+    .optional(),
   proprietarioEmail: yup.string().optional().email('Email inválido'),
-  // Endereço - cidade obrigatória (backend)
   enderecoCidade: yup.string().required('Cidade é obrigatória'),
   enderecoLocalidade: yup.string().optional(),
   enderecoAvenidaRua: yup.string().optional(),
   enderecoNumero: yup.string().optional(),
   enderecoQuart: yup.string().optional(),
   enderecoBairroRef: yup.string().optional(),
-
-  // Assinatura
   assinatura: yup.string().required('Assinatura é obrigatória'),
-
-  // Nomes opcionais
   proprietarioNomeCompleto: yup.string().optional(),
-  // os nomes dos assistentes são tratados no array 'assistentes'
-
-  // Substituição (opcional)
   substituicaoNomeAgente: yup.string().optional(),
   substituicaoProvinciaLocalidade: yup.string().optional(),
   substituicaoEnderecoBairro: yup.string().optional(),
-
-  // Profissão (opcional)
   profissao: yup.string().optional(),
-
-  // Relações por ID (opcionais)
   angariadorId: yup.string().optional().test('num', 'ID inválido', (v) => !v || /^\d+$/.test(v)),
   aprovadorId: yup.string().optional().test('num2', 'ID inválido', (v) => !v || /^\d+$/.test(v)),
   validadorId: yup.string().optional().test('num3', 'ID inválido', (v) => !v || /^\d+$/.test(v)),
@@ -116,33 +124,203 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
 
 interface Props { navigation: Nav }
 
-// Lista dinâmica de Assistentes (declarado fora do componente para evitar erros de escopo)
 const AssistentesFieldArray: React.FC<{ control: any }> = ({ control }) => {
-  const { fields, append, remove } = useFieldArray({ control, name: 'assistentes' });
+  const { fields, append, remove, move, update } = useFieldArray({ control, name: 'assistentes' });
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [temp, setTemp] = useState<{ nomeCompleto: string; contacto: string }>({ nomeCompleto: '', contacto: '' });
+
+  const openAdd = () => {
+    setEditIndex(null);
+    setTemp({ nomeCompleto: '', contacto: '' });
+    setModalVisible(true);
+  };
+  const openEdit = (index: number) => {
+    const f: any = fields[index] || {};
+    setEditIndex(index);
+    setTemp({ nomeCompleto: f.nomeCompleto || '', contacto: f.contacto || '' });
+    setModalVisible(true);
+  };
+  const onSave = () => {
+    if (!temp.nomeCompleto && !temp.contacto) { setModalVisible(false); return; }
+    if (editIndex === null) append({ ...temp }); else update(editIndex, { ...temp });
+    setModalVisible(false);
+  };
+  const onDelete = () => {
+    if (editIndex !== null) { remove(editIndex); }
+    setModalVisible(false);
+  };
+
   return (
     <View>
+      {fields.length > 0 && (
+        <View style={styles.tableHeader}>
+          <Text style={styles.th}>Nome Completo</Text>
+          <Text style={styles.th}>Contacto</Text>
+          <Text style={[styles.th, { flex: 0.8 }]}>Ações</Text>
+        </View>
+      )}
       {fields.map((field, index) => (
-        <View key={field.id} style={{ marginBottom: Theme.spacing.md }}>
-          <Controller
-            control={control}
-            name={`assistentes.${index}.nomeCompleto` as const}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input label={`Assistente ${index + 1} - Nome Completo`} placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
-            )}
-          />
-          <Controller
-            control={control}
-            name={`assistentes.${index}.contacto` as const}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input label={`Assistente ${index + 1} - Contacto`} placeholder="" keyboardType="phone-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
-            )}
-          />
-          <View style={{ flexDirection: 'row', gap: Theme.spacing.sm }}>
-            <Button title="Remover" variant="outline" onPress={() => remove(index)} style={{ flex: 1 }} />
+        <TouchableOpacity key={field.id} onPress={() => openEdit(index)} activeOpacity={0.8} style={[styles.tableRow, index % 2 ? styles.tableRowAlt : undefined]}>
+          <View style={styles.td}><Text style={styles.cellText}>{(field as any).nomeCompleto || '-'}</Text></View>
+          <View style={styles.td}><Text style={styles.cellText}>{(field as any).contacto || '-'}</Text></View>
+          <View style={[styles.rowActions, { flex: 0.8 }]}>
+            <TouchableOpacity onPress={() => index > 0 && move(index, index - 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↑</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => index < fields.length - 1 && move(index, index + 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↓</Text></TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      ))}
+      <TouchableOpacity onPress={openAdd} style={styles.addButton}>
+        <Text style={styles.addButtonText}>+ Adicionar Assistente</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const ProprietariosFieldArray: React.FC<{ control: any }> = ({ control }) => {
+  const { fields, append, remove, move, update } = useFieldArray({ control, name: 'proprietarios' });
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [temp, setTemp] = useState<{ nome: string; email: string; contacto: string }>({ nome: '', email: '', contacto: '' });
+
+  const openAdd = () => {
+    setEditIndex(null);
+    setTemp({ nome: '', email: '', contacto: '' });
+    setModalVisible(true);
+  };
+  const openEdit = (index: number) => {
+    const f: any = fields[index] || {};
+    setEditIndex(index);
+    setTemp({ nome: f.nome || '', email: f.email || '', contacto: f.contacto || '' });
+    setModalVisible(true);
+  };
+  const onSave = () => {
+    if (!temp.nome && !temp.email && !temp.contacto) { setModalVisible(false); return; }
+    if (editIndex === null) append({ ...temp }); else update(editIndex, { ...temp });
+    setModalVisible(false);
+  };
+  const onDelete = () => {
+    if (editIndex !== null) { remove(editIndex); }
+    setModalVisible(false);
+  };
+
+  return (
+    <View>
+      {fields.length > 0 && (
+        <View style={styles.tableHeader}>
+          <Text style={styles.th}>Nome</Text>
+          <Text style={styles.th}>Email</Text>
+          <Text style={styles.th}>Contacto</Text>
+          <Text style={[styles.th, { flex: 0.8 }]}>Ações</Text>
+        </View>
+      )}
+      {fields.map((field, index) => (
+        <TouchableOpacity key={field.id} onPress={() => openEdit(index)} activeOpacity={0.8} style={[styles.tableRow, index % 2 ? styles.tableRowAlt : undefined]}>
+          <View style={styles.td}><Text style={styles.cellText}>{(field as any).nome || '-'}</Text></View>
+          <View style={styles.td}><Text style={styles.cellText}>{(field as any).email || '-'}</Text></View>
+          <View style={styles.td}><Text style={styles.cellText}>{(field as any).contacto || '-'}</Text></View>
+          <View style={[styles.rowActions, { flex: 0.8 }]}>
+            <TouchableOpacity onPress={() => index > 0 && move(index, index - 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↑</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => index < fields.length - 1 && move(index, index + 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↓</Text></TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      ))}
+      <TouchableOpacity onPress={openAdd} style={styles.addButton}>
+        <Text style={styles.addButtonText}>+ Adicionar Proprietário</Text>
+      </TouchableOpacity>
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{editIndex === null ? 'Adicionar Proprietário' : 'Editar Proprietário'}</Text>
+            <Input label="Nome" placeholder="Nome" value={temp.nome} onChangeText={(t) => setTemp((s) => ({ ...s, nome: t }))} />
+            <Input label="Email" placeholder="email@dominio.com" keyboardType="email-address" autoCapitalize="none" value={temp.email} onChangeText={(t) => setTemp((s) => ({ ...s, email: t }))} />
+            <Input label="Contacto" placeholder="Contacto" keyboardType="phone-pad" value={temp.contacto} onChangeText={(t) => setTemp((s) => ({ ...s, contacto: t }))} />
+            <View style={styles.modalActions}>
+              {editIndex !== null && (
+                <TouchableOpacity onPress={onDelete} style={[styles.modalButton, styles.modalDanger]}><Text style={styles.modalButtonText}>Apagar</Text></TouchableOpacity>
+              )}
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.modalButton, styles.modalOutline]}><Text style={styles.modalButtonTextOutline}>Cancelar</Text></TouchableOpacity>
+              <TouchableOpacity onPress={onSave} style={[styles.modalButton, styles.modalPrimary]}><Text style={styles.modalButtonText}>Salvar</Text></TouchableOpacity>
+            </View>
           </View>
         </View>
+      </Modal>
+    </View>
+  );
+};
+
+const EstabelecimentosFieldArray: React.FC<{ control: any }> = ({ control }) => {
+  const { fields, append, remove, move, update } = useFieldArray({ control, name: 'estabelecimentos' });
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [temp, setTemp] = useState<{ nome: string; provinciaLocalidade: string; enderecoBairro: string }>({ nome: '', provinciaLocalidade: '', enderecoBairro: '' });
+
+  const openAdd = () => {
+    setEditIndex(null);
+    setTemp({ nome: '', provinciaLocalidade: '', enderecoBairro: '' });
+    setModalVisible(true);
+  };
+  const openEdit = (index: number) => {
+    const f: any = fields[index] || {};
+    setEditIndex(index);
+    setTemp({ nome: f.nome || '', provinciaLocalidade: f.provinciaLocalidade || '', enderecoBairro: f.enderecoBairro || '' });
+    setModalVisible(true);
+  };
+  const onSave = () => {
+    if (!temp.nome && !temp.provinciaLocalidade && !temp.enderecoBairro) { setModalVisible(false); return; }
+    if (editIndex === null) append({ ...temp }); else update(editIndex, { ...temp });
+    setModalVisible(false);
+  };
+  const onDelete = () => {
+    if (editIndex !== null) { remove(editIndex); }
+    setModalVisible(false);
+  };
+
+  return (
+    <View>
+      {fields.length > 0 && (
+        <View style={styles.tableHeader}>
+          <Text style={styles.th}>Nome</Text>
+          <Text style={styles.th}>Província/Localidade</Text>
+          <Text style={styles.th}>Endereço/Bairro</Text>
+          <Text style={[styles.th, { flex: 0.8 }]}>Ações</Text>
+        </View>
+      )}
+      {fields.map((field, index) => (
+        <TouchableOpacity key={field.id} onPress={() => openEdit(index)} activeOpacity={0.8} style={[styles.tableRow, index % 2 ? styles.tableRowAlt : undefined]}>
+          <View style={styles.td}><Text style={styles.cellText}>{(field as any).nome || '-'}</Text></View>
+          <View style={styles.td}><Text style={styles.cellText}>{(field as any).provinciaLocalidade || '-'}</Text></View>
+          <View style={styles.td}><Text style={styles.cellText}>{(field as any).enderecoBairro || '-'}</Text></View>
+          <View style={[styles.rowActions, { flex: 0.8 }]}>
+            <TouchableOpacity onPress={() => index > 0 && move(index, index - 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↑</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => index < fields.length - 1 && move(index, index + 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↓</Text></TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       ))}
-      <Button title="Adicionar Assistente" onPress={() => append({ nomeCompleto: '', contacto: '' })} />
+      <TouchableOpacity onPress={openAdd} style={styles.addButton}>
+        <Text style={styles.addButtonText}>+ Adicionar Estabelecimento</Text>
+      </TouchableOpacity>
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{editIndex === null ? 'Adicionar Estabelecimento' : 'Editar Estabelecimento'}</Text>
+            <Input label="Nome" placeholder="Nome" value={temp.nome} onChangeText={(t) => setTemp((s) => ({ ...s, nome: t }))} />
+            <Input label="Província/Localidade" placeholder="Província/Localidade" value={temp.provinciaLocalidade} onChangeText={(t) => setTemp((s) => ({ ...s, provinciaLocalidade: t }))} />
+            <Input label="Endereço/Bairro" placeholder="Endereço/Bairro" value={temp.enderecoBairro} onChangeText={(t) => setTemp((s) => ({ ...s, enderecoBairro: t }))} />
+            <View style={styles.modalActions}>
+              {editIndex !== null && (
+                <TouchableOpacity onPress={onDelete} style={[styles.modalButton, styles.modalDanger]}><Text style={styles.modalButtonText}>Apagar</Text></TouchableOpacity>
+              )}
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.modalButton, styles.modalOutline]}><Text style={styles.modalButtonTextOutline}>Cancelar</Text></TouchableOpacity>
+              <TouchableOpacity onPress={onSave} style={[styles.modalButton, styles.modalPrimary]}><Text style={styles.modalButtonText}>Salvar</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -163,9 +341,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       nomeComercial: '',
       nuit: '',
       alvara: '',
-      // Proprietário não é mais pré-preenchido a partir dos dados pessoais
       proprietarioNomeCompleto: '',
       proprietarioContacto: '',
+      proprietarios: [],
+      estabelecimentos: [],
     },
   });
   const tipoParceiro = useWatch({ control, name: 'tipoParceiro' });
@@ -212,11 +391,9 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   useEffect(() => {
-    // Carrega listas uma vez ao montar a tela
     loadAng();
     loadApr();
     loadVal();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onSubmit = async (data: CommercialData) => {
@@ -233,11 +410,62 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Dados Comerciais</Text>
+        <Text style={styles.headerSubtitle}>Preencha as informações do parceiro</Text>
+      </View>
+
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Card style={styles.formCard}>
+        {/* Tipo de Parceiro */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>👤</Text>
+            </View>
+            <Text style={styles.cardTitle}>Tipo de Parceiro</Text>
+          </View>
+          <Controller
+            control={control}
+            name="tipoParceiro"
+            render={({ field }) => (
+              <View style={styles.radioGroup}>
+                <TouchableOpacity 
+                  onPress={() => field.onChange('AGENTE')} 
+                  style={[styles.radioCard, field.value === 'AGENTE' && styles.radioCardSelected]}
+                >
+                  <View style={[styles.radioIndicator, field.value === 'AGENTE' && styles.radioIndicatorSelected]}>
+                    {field.value === 'AGENTE' && <View style={styles.radioIndicatorInner} />}
+                  </View>
+                  <Text style={[styles.radioLabel, field.value === 'AGENTE' && styles.radioLabelSelected]}>AGENTE</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => field.onChange('MERCHANT')} 
+                  style={[styles.radioCard, field.value === 'MERCHANT' && styles.radioCardSelected]}
+                >
+                  <View style={[styles.radioIndicator, field.value === 'MERCHANT' && styles.radioIndicatorSelected]}>
+                    {field.value === 'MERCHANT' && <View style={styles.radioIndicatorInner} />}
+                  </View>
+                  <Text style={[styles.radioLabel, field.value === 'MERCHANT' && styles.radioLabelSelected]}>MERCHANT</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          />
+          {!!errors.tipoParceiro?.message && <Text style={styles.errorText}>{errors.tipoParceiro.message}</Text>}
+        </Card>
+
+        {/* Informações Básicas */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>📋</Text>
+            </View>
+            <Text style={styles.cardTitle}>Informações Básicas</Text>
+          </View>
           <Controller control={control} name="nomeComercial" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Nome Comercial (Designação)" placeholder="Nome do negócio" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nomeComercial?.message} required />
+            <Input label="Nome Comercial" placeholder="Nome do negócio" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nomeComercial?.message} required />
           )} />
           <Controller control={control} name="nuit" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="NUIT" placeholder="123456789" keyboardType="numeric" maxLength={9} value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nuit?.message} required />
@@ -246,7 +474,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             <Input label="Número do Alvará" placeholder="Ex: 123/2024" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.alvara?.message} required />
           )} />
           <Controller control={control} name="assinatura" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Assinatura (placeholder)" placeholder="Assinatura do representante" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.assinatura?.message} required />
+            <Input label="Assinatura" placeholder="Assinatura do representante" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.assinatura?.message} required />
           )} />
           <Controller
             control={control}
@@ -272,7 +500,6 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                   error={errors.dataFormulario?.message}
                   required
                 />
-
                 {showDatePicker && (
                   <DateTimePicker
                     value={tempDate || new Date()}
@@ -292,67 +519,62 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           />
         </Card>
 
-        <Card style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Relações (Opcional)</Text>
-          <Text style={{ ...Theme.typography.caption, color: Theme.colors.textSecondary, marginBottom: 8 }}>
-            Selecione IDs vindos da API. Não é possível digitar manualmente.
-          </Text>
-          <Text style={styles.infoTitle}>Angariador</Text>
+        {/* Relações */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>🔗</Text>
+            </View>
+            <Text style={styles.cardTitle}>Relações</Text>
+          </View>
+          <Text style={styles.helperText}>Selecione os responsáveis (opcional)</Text>
           <Controller control={control} name="angariadorId" render={({ field: { value, onChange } }) => (
             <Select label="Angariador" value={value as any} onChange={onChange} options={angOptions} loading={loadingRefs.ang} />
           )} />
-
-          <Text style={styles.infoTitle}>Aprovador</Text>
           <Controller control={control} name="aprovadorId" render={({ field: { value, onChange } }) => (
             <Select label="Aprovador" value={value as any} onChange={onChange} options={aprOptions} loading={loadingRefs.apr} />
           )} />
-
-          <Text style={styles.infoTitle}>Validador</Text>
           <Controller control={control} name="validadorId" render={({ field: { value, onChange } }) => (
             <Select label="Validador" value={value as any} onChange={onChange} options={valOptions} loading={loadingRefs.val} />
           )} />
         </Card>
 
-        <Card style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Tipo de Parceiro</Text>
-          <Controller
-            control={control}
-            name="tipoParceiro"
-            render={({ field }) => (
-              <View style={styles.radioRow}>
-                <TouchableOpacity onPress={() => field.onChange('AGENTE')} style={[styles.radioOption, field.value === 'AGENTE' && styles.radioSelected]}>
-                  <Text style={field.value === 'AGENTE' ? styles.radioLabelSelected : styles.radioLabel}>AGENTE</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => field.onChange('MERCHANT')} style={[styles.radioOption, field.value === 'MERCHANT' && styles.radioSelected]}>
-                  <Text style={field.value === 'MERCHANT' ? styles.radioLabelSelected : styles.radioLabel}>MERCHANT</Text>
-                </TouchableOpacity>
+        {/* Dados da Empresa */}
+        {tipoParceiro === 'MERCHANT' && (
+          <Card style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardIconContainer}>
+                <Text style={styles.cardIcon}>🏢</Text>
               </View>
-            )}
-          />
-          {!!errors.tipoParceiro?.message && <Text style={styles.errorTextInline}>{errors.tipoParceiro.message}</Text>}
-        </Card>
-
-        {tipoParceiro !== 'AGENTE' && (
-          <Card style={styles.formCard}>
-            <Text style={styles.sectionTitle}>Dados da Empresa</Text>
-            <Text style={{ ...Theme.typography.caption, color: Theme.colors.textSecondary, marginBottom: 8 }}>
-              Selecione o tipo de empresa exatamente como a API espera
-            </Text>
+              <Text style={styles.cardTitle}>Dados da Empresa</Text>
+            </View>
             <Controller
               control={control}
               name="tipoEmpresa"
               render={({ field }) => (
-                <View style={styles.radioRow}>
-                  <TouchableOpacity onPress={() => field.onChange('SOCIEDADE')} style={[styles.radioOption, field.value === 'SOCIEDADE' && styles.radioSelected]}>
-                    <Text style={field.value === 'SOCIEDADE' ? styles.radioLabelSelected : styles.radioLabel}>SOCIEDADE</Text>
+                <View style={styles.radioGroup}>
+                  <TouchableOpacity 
+                    onPress={() => field.onChange('SOCIEDADE')} 
+                    style={[styles.radioCard, field.value === 'SOCIEDADE' && styles.radioCardSelected]}
+                  >
+                    <View style={[styles.radioIndicator, field.value === 'SOCIEDADE' && styles.radioIndicatorSelected]}>
+                      {field.value === 'SOCIEDADE' && <View style={styles.radioIndicatorInner} />}
+                    </View>
+                    <Text style={[styles.radioLabel, field.value === 'SOCIEDADE' && styles.radioLabelSelected]}>SOCIEDADE</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => field.onChange('INDIVIDUAL')} style={[styles.radioOption, field.value === 'INDIVIDUAL' && styles.radioSelected]}>
-                    <Text style={field.value === 'INDIVIDUAL' ? styles.radioLabelSelected : styles.radioLabel}>INDIVIDUAL</Text>
+                  <TouchableOpacity 
+                    onPress={() => field.onChange('INDIVIDUAL')} 
+                    style={[styles.radioCard, field.value === 'INDIVIDUAL' && styles.radioCardSelected]}
+                  >
+                    <View style={[styles.radioIndicator, field.value === 'INDIVIDUAL' && styles.radioIndicatorSelected]}>
+                      {field.value === 'INDIVIDUAL' && <View style={styles.radioIndicatorInner} />}
+                    </View>
+                    <Text style={[styles.radioLabel, field.value === 'INDIVIDUAL' && styles.radioLabelSelected]}>INDIVIDUAL</Text>
                   </TouchableOpacity>
                 </View>
               )}
             />
-            {!!errors.tipoEmpresa?.message && <Text style={styles.errorTextInline}>{errors.tipoEmpresa.message}</Text>}
+            {!!errors.tipoEmpresa?.message && <Text style={styles.errorText}>{errors.tipoEmpresa.message}</Text>}
             <Controller control={control} name="designacao" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="Designação" placeholder="Designação da empresa" value={value} onChangeText={onChange} onBlur={onBlur} />
             )} />
@@ -368,167 +590,498 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           </Card>
         )}
 
-        <Card style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Endereço</Text>
+        {/* Endereço */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>📍</Text>
+            </View>
+            <Text style={styles.cardTitle}>Endereço</Text>
+          </View>
           <Controller control={control} name="enderecoCidade" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Cidade" placeholder="Ex: Maputo" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.enderecoCidade?.message} required />
           )} />
           <Controller control={control} name="enderecoLocalidade" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Localidade" placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input label="Localidade" placeholder="Localidade" value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
           <Controller control={control} name="enderecoAvenidaRua" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Avenida/Rua" placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input label="Avenida/Rua" placeholder="Avenida/Rua" value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
-          <Controller control={control} name="enderecoNumero" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Nº" placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
-          <Controller control={control} name="enderecoQuart" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Quart." placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
+          <View style={styles.rowFields}>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="enderecoNumero" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Nº" placeholder="Nº" value={value} onChangeText={onChange} onBlur={onBlur} />
+              )} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="enderecoQuart" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Quart." placeholder="Quart." value={value} onChangeText={onChange} onBlur={onBlur} />
+              )} />
+            </View>
+          </View>
           <Controller control={control} name="enderecoBairroRef" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Bairro/Ref." placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input label="Bairro/Ref." placeholder="Bairro/Referência" value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
-          <Controller control={control} name="telefone" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Telefone" placeholder="" keyboardType="phone-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
-          <Controller control={control} name="celular" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Celular" placeholder="" keyboardType="phone-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
+          <View style={styles.rowFields}>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="telefone" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Telefone" placeholder="Telefone" keyboardType="phone-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
+              )} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="celular" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Celular" placeholder="Celular" keyboardType="phone-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
+              )} />
+            </View>
+          </View>
         </Card>
 
-        <Card style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Dados dos Proprietários</Text>
-          <Controller control={control} name="proprietarioNomeCompleto" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Nome Completo" placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
-          <Controller control={control} name="proprietarioEmail" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Email" placeholder="email@dominio.com" keyboardType="email-address" autoCapitalize="none" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
-          <Controller control={control} name="proprietarioContacto" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Contacto" placeholder="" keyboardType="phone-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
+        {/* Proprietários */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>👥</Text>
+            </View>
+            <Text style={styles.cardTitle}>Proprietários</Text>
+          </View>
+          <ProprietariosFieldArray control={control} />
         </Card>
 
-        <Card style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Assistentes</Text>
+        {/* Assistentes */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>🤝</Text>
+            </View>
+            <Text style={styles.cardTitle}>Assistentes</Text>
+          </View>
           <AssistentesFieldArray control={control} />
         </Card>
 
-        
+        {/* Estabelecimentos */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>🏪</Text>
+            </View>
+            <Text style={styles.cardTitle}>Estabelecimentos</Text>
+          </View>
+          <EstabelecimentosFieldArray control={control} />
+        </Card>
 
-        <Card style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Substituição (Agente Merchant)</Text>
+        {/* Substituição */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>🔄</Text>
+            </View>
+            <Text style={styles.cardTitle}>Substituição (Agente Merchant)</Text>
+          </View>
           <Controller control={control} name="substituicaoNomeAgente" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Nome" placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input label="Nome" placeholder="Nome do substituto" value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
           <Controller control={control} name="substituicaoProvinciaLocalidade" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Província/Localidade" placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input label="Província/Localidade" placeholder="Província/Localidade" value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
           <Controller control={control} name="substituicaoEnderecoBairro" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Endereço/Bairro" placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input label="Endereço/Bairro" placeholder="Endereço/Bairro" value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
         </Card>
 
-        <Card style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Profissão</Text>
+        {/* Profissão */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>💼</Text>
+            </View>
+            <Text style={styles.cardTitle}>Profissão</Text>
+          </View>
           <Controller control={control} name="profissao" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Profissão" placeholder="" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input label="Profissão" placeholder="Profissão" value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
         </Card>
 
-        <Card>
-          <Text style={styles.infoTitle}>Documentos necessários na próxima etapa</Text>
-          <Text style={styles.infoItem}>• BI (Frente)</Text>
-          <Text style={styles.infoItem}>• BI (Verso)</Text>
-          <Text style={styles.infoItem}>• Alvará</Text>
-          <Text style={styles.infoItem}>• Comprovativo de residência</Text>
-          <Text style={styles.infoItem}>• Foto de perfil</Text>
+        {/* Documentos Necessários */}
+        <Card style={styles.infoCard}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardIconContainer, { backgroundColor: COLORS.secondaryLight }]}>
+              <Text style={styles.cardIcon}>📄</Text>
+            </View>
+            <Text style={styles.cardTitle}>Documentos Necessários</Text>
+          </View>
+          <Text style={styles.helperText}>Na próxima etapa, será necessário fazer upload dos seguintes documentos:</Text>
+          <View style={styles.docList}>
+            <View style={styles.docItem}>
+              <Text style={styles.docBullet}>•</Text>
+              <Text style={styles.docText}>BI (Frente)</Text>
+            </View>
+            <View style={styles.docItem}>
+              <Text style={styles.docBullet}>•</Text>
+              <Text style={styles.docText}>BI (Verso)</Text>
+            </View>
+            <View style={styles.docItem}>
+              <Text style={styles.docBullet}>•</Text>
+              <Text style={styles.docText}>Alvará</Text>
+            </View>
+            <View style={styles.docItem}>
+              <Text style={styles.docBullet}>•</Text>
+              <Text style={styles.docText}>Comprovativo de residência</Text>
+            </View>
+            <View style={styles.docItem}>
+              <Text style={styles.docBullet}>•</Text>
+              <Text style={styles.docText}>Foto de perfil</Text>
+            </View>
+          </View>
         </Card>
       </ScrollView>
 
+      {/* Footer com botões */}
       <View style={styles.footer}>
-        <Button title="Voltar" variant="outline" onPress={() => navigation.goBack()} style={{ flex: 1 }} />
-        <Button title="Continuar" onPress={handleSubmit(onSubmit)} loading={isLoading} style={{ flex: 2 }} />
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={styles.footerButtonSecondary}
+        >
+          <Text style={styles.footerButtonSecondaryText}>Voltar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={handleSubmit(onSubmit)} 
+          style={styles.footerButtonPrimary}
+          disabled={isLoading}
+        >
+          <Text style={styles.footerButtonPrimaryText}>
+            {isLoading ? 'Processando...' : 'Continuar'}
+          </Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Theme.colors.background },
-  content: { padding: Theme.spacing.lg },
-  formCard: { marginBottom: Theme.spacing.lg },
-  infoTitle: { ...Theme.typography.h4, color: Theme.colors.textPrimary, marginBottom: Theme.spacing.sm },
-  infoItem: { ...Theme.typography.body2, color: Theme.colors.textSecondary, marginBottom: 4 },
-  sectionTitle: { ...Theme.typography.h4, color: Theme.colors.textPrimary, marginBottom: Theme.spacing.md },
-  footer: { flexDirection: 'row', gap: Theme.spacing.md, padding: Theme.spacing.lg },
-  // Radio styles
-  radioRow: {
+  container: { 
+    flex: 1, 
+    backgroundColor: COLORS.background 
+  },
+  header: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  content: { 
+    padding: 16,
+    paddingBottom: 32,
+  },
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardHeader: {
     flexDirection: 'row',
-    gap: Theme.spacing.md,
-    marginBottom: Theme.spacing.md,
-  },
-  radioOption: {
-    flex: 1,
-    paddingVertical: Theme.spacing.sm,
-    paddingHorizontal: Theme.spacing.md,
-    borderWidth: 1,
-    borderColor: Theme.colors.border || '#ddd',
-    borderRadius: Theme.borderRadius.md,
     alignItems: 'center',
-    backgroundColor: Theme.colors.surface,
+    marginBottom: 16,
   },
-  radioSelected: {
-    borderColor: Theme.colors.primary,
-    backgroundColor: Theme.colors.primary + '22',
+  cardIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  cardIcon: {
+    fontSize: 20,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  helperText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  radioGroup: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  radioCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+  },
+  radioCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+  },
+  radioIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioIndicatorSelected: {
+    borderColor: COLORS.primary,
+  },
+  radioIndicatorInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.primary,
   },
   radioLabel: {
-    ...Theme.typography.body2,
-    color: Theme.colors.textSecondary,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   radioLabelSelected: {
-    ...Theme.typography.body2,
-    color: Theme.colors.primary,
+    color: COLORS.primary,
     fontWeight: '700',
   },
-  errorTextInline: {
-    ...Theme.typography.caption,
-    color: Theme.colors.error || '#d32f2f',
-    marginBottom: Theme.spacing.sm,
+  errorText: {
+    fontSize: 12,
+    color: COLORS.error,
+    marginTop: -8,
+    marginBottom: 12,
   },
-  // Chips (para selects de relações)
-  chipRow: {
+  rowFields: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Theme.spacing.sm,
-    marginBottom: Theme.spacing.sm,
+    gap: 12,
   },
-  chip: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: Theme.borderRadius.sm,
-    borderWidth: 1,
-    borderColor: Theme.colors.border || '#ddd',
-    backgroundColor: Theme.colors.surface,
+  tableHeader: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 8,
+    marginBottom: 8,
   },
-  chipSelected: {
-    borderColor: Theme.colors.primary,
-    backgroundColor: Theme.colors.primary + '22',
-  },
-  chipLabel: {
-    ...Theme.typography.caption,
-    color: Theme.colors.textSecondary,
-  },
-  chipLabelSelected: {
-    ...Theme.typography.caption,
-    color: Theme.colors.primary,
+  th: { 
+    flex: 1, 
+    fontSize: 12,
     fontWeight: '700',
+    color: COLORS.primary,
+    textTransform: 'uppercase',
   },
-  paginationRow: {
+  tableRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    gap: 8,
+    borderRadius: 8,
+    marginBottom: 6,
+    backgroundColor: COLORS.white,
+  },
+  tableRowAlt: {
+    backgroundColor: COLORS.background,
+  },
+  td: { 
+    flex: 1,
+  },
+  rowActions: { 
+    flexDirection: 'row', 
+    gap: 6,
+    justifyContent: 'flex-end',
+  },
+  cellText: { 
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 500,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  modalActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Theme.spacing.sm,
-    marginTop: Theme.spacing.sm,
+    gap: 8,
+    marginTop: 8,
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  modalPrimary: {
+    backgroundColor: COLORS.primary,
+  },
+  modalDanger: {
+    backgroundColor: COLORS.error,
+  },
+  modalOutline: {
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.white,
+  },
+  modalButtonText: {
+    color: COLORS.white,
+    fontWeight: '700',
+  },
+  modalButtonTextOutline: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconButtonSuccess: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  iconButtonDanger: {
+    backgroundColor: COLORS.error,
+    borderColor: COLORS.error,
+  },
+  iconButtonText: {
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  iconButtonTextWhite: {
+    fontSize: 16,
+    color: COLORS.white,
+    fontWeight: '600',
+  },
+  addButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  infoCard: {
+    backgroundColor: COLORS.secondaryLight,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.secondary + '30',
+  },
+  docList: {
+    marginTop: 8,
+  },
+  docItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  docBullet: {
+    fontSize: 16,
+    color: COLORS.primary,
+    marginRight: 8,
+    fontWeight: '700',
+  },
+  docText: {
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  footer: { 
+    flexDirection: 'row', 
+    gap: 12,
+    padding: 16,
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  footerButtonSecondary: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerButtonSecondaryText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  footerButtonPrimary: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  footerButtonPrimaryText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.white,
   },
 });
