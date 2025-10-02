@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Card } from '@/components';
@@ -52,6 +52,45 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
         <Card style={styles.item}><Text style={styles.itemTitle}>Foto de Perfil</Text><Button title="Escolher imagem" variant="outline" onPress={() => pickImage('fotoPerfilUri')} /></Card>
       </View>
 
+      {/* Pré-visualização dos documentos anexados */}
+      {hasAnyDoc && (
+        <View style={{ marginTop: Theme.spacing.lg }}>
+          <Text style={styles.previewTitle}>Pré-visualização</Text>
+          <View style={styles.previewGrid}>
+            {docs.biFrenteUri ? (
+              <Card style={styles.previewItem}>
+                <Text style={styles.previewLabel}>BI (Frente)</Text>
+                <Image source={{ uri: docs.biFrenteUri }} style={styles.previewImage} resizeMode="cover" />
+              </Card>
+            ) : null}
+            {docs.biVersoUri ? (
+              <Card style={styles.previewItem}>
+                <Text style={styles.previewLabel}>BI (Verso)</Text>
+                <Image source={{ uri: docs.biVersoUri }} style={styles.previewImage} resizeMode="cover" />
+              </Card>
+            ) : null}
+            {docs.fotoPerfilUri ? (
+              <Card style={styles.previewItem}>
+                <Text style={styles.previewLabel}>Foto de Perfil</Text>
+                <Image source={{ uri: docs.fotoPerfilUri }} style={styles.previewImage} resizeMode="cover" />
+              </Card>
+            ) : null}
+            {docs.alvaraUri ? (
+              <Card style={styles.previewItem}>
+                <Text style={styles.previewLabel}>Alvará</Text>
+                <Button title="Abrir" variant="outline" onPress={() => Linking.openURL(docs.alvaraUri!)} />
+              </Card>
+            ) : null}
+            {docs.comprovativoResidenciaUri ? (
+              <Card style={styles.previewItem}>
+                <Text style={styles.previewLabel}>Comprov. Residência</Text>
+                <Button title="Abrir" variant="outline" onPress={() => Linking.openURL(docs.comprovativoResidenciaUri!)} />
+              </Card>
+            ) : null}
+          </View>
+        </View>
+      )}
+
       {/* Botão adicional que aparece após anexar pelo menos um documento */}
       <View style={{ marginTop: Theme.spacing.lg }}>
         <Button title="Prosseguir para Revisão" onPress={goNext} disabled={!hasAnyDoc} />
@@ -78,5 +117,10 @@ const styles = StyleSheet.create({
   grid: { gap: Theme.spacing.md },
   item: {},
   itemTitle: { ...Theme.typography.h4, color: Theme.colors.textPrimary, marginBottom: Theme.spacing.sm },
+  previewTitle: { ...Theme.typography.h3, color: Theme.colors.textPrimary, marginBottom: Theme.spacing.sm },
+  previewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Theme.spacing.md },
+  previewItem: { width: '48%' },
+  previewLabel: { ...Theme.typography.body2, color: Theme.colors.textSecondary, marginBottom: Theme.spacing.xs },
+  previewImage: { width: '100%', height: 140, borderRadius: Theme.borderRadius.md, backgroundColor: '#eee' },
   footer: { flexDirection: 'row', gap: Theme.spacing.md, marginTop: Theme.spacing.lg },
 });

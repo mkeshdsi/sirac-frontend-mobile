@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Input, Card, Select } from '@/components';
@@ -9,6 +9,7 @@ import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { listAngariadores, listAprovadores, listValidadores } from '@/services/apiResources';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 type Nav = StackNavigationProp<RootStackParamList, 'CommercialDataForm'>;
 
@@ -152,6 +153,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const [angOptions, setAngOptions] = useState<Array<{ id: number; label: string }>>([]);
   const [aprOptions, setAprOptions] = useState<Array<{ id: number; label: string }>>([]);
   const [valOptions, setValOptions] = useState<Array<{ id: number; label: string }>>([]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState<Date | null>(null);
 
   const { control, handleSubmit, formState: { errors } } = useForm<CommercialData>({
     resolver: yupResolver(schema) as any,
@@ -166,6 +169,13 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
     },
   });
   const tipoParceiro = useWatch({ control, name: 'tipoParceiro' });
+
+  const formatDate = (d: Date) => {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
 
   const fetchList = async (resource: 'ang' | 'apr' | 'val') => {
     const params: any = {};
@@ -238,9 +248,48 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <Controller control={control} name="assinatura" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Assinatura (placeholder)" placeholder="Assinatura do representante" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.assinatura?.message} required />
           )} />
-          <Controller control={control} name="dataFormulario" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Data do Formulário" placeholder="dd/mm/aaaa" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.dataFormulario?.message} required />
-          )} />
+          <Controller
+            control={control}
+            name="dataFormulario"
+            render={({ field: { value, onChange } }) => (
+              <View>
+                <Input
+                  label="Data do Formulário"
+                  placeholder="Selecionar data (dd/mm/aaaa)"
+                  value={value}
+                  editable={false}
+                  onPressIn={() => {
+                    setTempDate(() => {
+                      if (value && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+                        const [dd, mm, yyyy] = value.split('/').map((v: string) => parseInt(v, 10));
+                        return new Date(yyyy, (mm as number) - 1, dd as number);
+                      }
+                      return new Date();
+                    });
+                    setShowDatePicker(true);
+                  }}
+                  rightIcon={<Text style={{ fontSize: 18 }}>📅</Text>}
+                  error={errors.dataFormulario?.message}
+                  required
+                />
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={tempDate || new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, selectedDate) => {
+                      if (Platform.OS === 'android') setShowDatePicker(false);
+                      if (selectedDate) {
+                        setTempDate(selectedDate);
+                        onChange(formatDate(selectedDate));
+                      }
+                    }}
+                  />
+                )}
+              </View>
+            )}
+          />
         </Card>
 
         <Card style={styles.formCard}>

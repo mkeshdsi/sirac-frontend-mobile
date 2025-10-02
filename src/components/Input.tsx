@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { View, Text, TextInput, StyleSheet, ViewStyle, TextInputProps } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ViewStyle, TextInputProps, TouchableOpacity } from 'react-native';
 import { Theme } from '@/constants/theme';
 
 interface Props extends TextInputProps {
@@ -12,6 +12,10 @@ interface Props extends TextInputProps {
 }
 
 export const Input: React.FC<Props> = ({ label, error, containerStyle, required, leftIcon, rightIcon, ...rest }) => {
+  const isPickerLike = !!rest.onPressIn && rest.editable === false;
+  const handlePress = (e: any) => {
+    if (rest.onPressIn) rest.onPressIn(e);
+  };
   return (
     <View style={[styles.container, containerStyle]}>
       {!!label && (
@@ -20,16 +24,34 @@ export const Input: React.FC<Props> = ({ label, error, containerStyle, required,
           {required && <Text style={styles.required}> *</Text>}
         </Text>
       )}
-      <View style={[styles.inputWrapper, !!error && styles.inputError]}
-      >
-        {!!leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
-        <TextInput
-          placeholderTextColor={Theme.colors.gray400}
-          style={styles.input}
-          {...rest}
-        />
-        {!!rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
-      </View>
+      {isPickerLike ? (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handlePress}
+          accessibilityRole="button"
+          style={[styles.inputWrapper, !!error && styles.inputError]}
+        >
+          {!!leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
+          <TextInput
+            placeholderTextColor={Theme.colors.gray400}
+            style={styles.input}
+            editable={false}
+            pointerEvents="none"
+            {...rest}
+          />
+          {!!rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
+        </TouchableOpacity>
+      ) : (
+        <View style={[styles.inputWrapper, !!error && styles.inputError]}>
+          {!!leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
+          <TextInput
+            placeholderTextColor={Theme.colors.gray400}
+            style={styles.input}
+            {...rest}
+          />
+          {!!rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
+        </View>
+      )}
       {!!error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
