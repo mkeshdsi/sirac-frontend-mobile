@@ -148,24 +148,8 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
 
           {/* Card de Contacto */}
           <Card style={styles.contactCard}>
-            <Text style={styles.contactTitle}>Precisa de ajuda?</Text>
-            <Text style={styles.contactText}>
-              A nossa equipa está disponível para responder às suas questões
-            </Text>
-            <View style={styles.contactButtons}>
-              <TouchableOpacity style={styles.contactButton}>
-                <Text style={styles.contactButtonIcon}>📞</Text>
-                <Text style={styles.contactButtonText}>Ligar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.contactButton}>
-                <Text style={styles.contactButtonIcon}>💬</Text>
-                <Text style={styles.contactButtonText}>Chat</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.contactButton}>
-                <Text style={styles.contactButtonIcon}>📧</Text>
-                <Text style={styles.contactButtonText}>Email</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.contactTitle}>#SemStress</Text>
+           
           </Card>
         </Animated.View>
       </ScrollView>
@@ -173,7 +157,11 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
       {/* Footer com botão */}
       <View style={styles.footer}>
         <TouchableOpacity 
-          onPress={() => navigation.popToTop()}
+          onPress={() => {
+            // Resetar a stack para garantir que todos os formulários sejam desmontados e reiniciados
+            // Voltar diretamente para CommercialDataForm com campos limpos
+            navigation.reset({ index: 0, routes: [{ name: 'CommercialDataForm' }] });
+          }}
           style={styles.homeButton}
         >
           <Text style={styles.homeButtonText}>Voltar ao Início</Text>

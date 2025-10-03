@@ -125,9 +125,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             )}
 
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Esqueceu a palavra-passe?</Text>
-            </TouchableOpacity>
+            
 
             <View style={styles.buttonContainer}>
               <Button 
