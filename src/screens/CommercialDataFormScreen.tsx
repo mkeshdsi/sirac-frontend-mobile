@@ -4,6 +4,7 @@ import ReactNative from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Input, Card, Select } from '@/components';
+import { MOZ_BANKS } from '@/components/constants/moz_banks';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, CommercialData } from '@/types';
@@ -29,6 +30,7 @@ const COLORS = {
   error: '#d32f2f',
   success: '#01836b',
 };
+
 
 const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 const phoneRegex = /^\d{7,15}$/;
@@ -412,6 +414,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
     },
   });
   const tipoParceiro = useWatch({ control, name: 'tipoParceiro' });
+  const [bankMode, setBankMode] = useState<'lista' | 'outro'>('lista');
 
   const handleLogout = () => {
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
@@ -704,9 +707,60 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             <Controller control={control} name="naturezaObjecto" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="Natureza e objecto da actividade" placeholder="Ex: Comércio de ..." value={value} onChangeText={onChange} onBlur={onBlur} />
             )} />
-            <Controller control={control} name="banco" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Banco" placeholder="Ex: BCI" value={value} onChangeText={onChange} onBlur={onBlur} />
-            )} />
+            <Controller 
+              control={control} 
+              name="banco" 
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View>
+                  <Text style={[styles.helperText, { marginBottom: 8 }]}>Banco</Text>
+                  <View style={styles.radioGroup}>
+                    <TouchableOpacity 
+                      onPress={() => setBankMode('lista')} 
+                      style={[styles.radioCard, bankMode === 'lista' && styles.radioCardSelected]}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.radioIndicator, bankMode === 'lista' && styles.radioIndicatorSelected]}>
+                        {bankMode === 'lista' && <View style={styles.radioIndicatorInner} />}
+                      </View>
+                      <Text style={[styles.radioLabel, bankMode === 'lista' && styles.radioLabelSelected]}>Lista de bancos</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => setBankMode('outro')} 
+                      style={[styles.radioCard, bankMode === 'outro' && styles.radioCardSelected]}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.radioIndicator, bankMode === 'outro' && styles.radioIndicatorSelected]}>
+                        {bankMode === 'outro' && <View style={styles.radioIndicatorInner} />}
+                      </View>
+                      <Text style={[styles.radioLabel, bankMode === 'outro' && styles.radioLabelSelected]}>Outro</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {bankMode === 'lista' ? (
+                    <Select 
+                      label="Selecionar banco"
+                      value={(value as unknown) as any}
+                      onChange={(val: any) => {
+                        // val pode ser id (number) ou label (string), mapeia sempre para label
+                        const found = typeof val === 'number' 
+                          ? MOZ_BANKS.find((b) => b.id === val)
+                          : MOZ_BANKS.find((b) => b.label === val);
+                        onChange(found?.label || (typeof val === 'string' ? val : ''));
+                      }}
+                      options={MOZ_BANKS}
+                    />
+                  ) : (
+                    <Input 
+                      label="Outro banco" 
+                      placeholder="Digite o nome do banco" 
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                    />
+                  )}
+                </View>
+              )}
+            />
             <Controller control={control} name="numeroConta" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="Nº da Conta" placeholder="0000000000" keyboardType="number-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
             )} />

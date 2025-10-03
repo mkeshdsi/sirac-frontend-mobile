@@ -1,0 +1,15 @@
+export const MOZ_BANKS: Array<{ id: number; label: string }> = [
+  { id: 1, label: 'Millennium bim' },
+  { id: 2, label: 'BCI' },
+  { id: 3, label: 'Standard Bank Moçambique' },
+  { id: 4, label: 'Absa Moçambique' },
+  { id: 5, label: 'Moza Banco' },
+  { id: 6, label: 'Access Bank Moçambique (ex-Nedbank/Banco Único)' },
+  { id: 7, label: 'BNI - Banco Nacional de Investimento' },
+  { id: 8, label: 'Banco BIG Moçambique' },
+  { id: 9, label: 'Socremo' },
+  { id: 10, label: 'Letshego' },
+  { id: 11, label: 'FNB Moçambique' },
+  { id: 12, label: 'First Capital Bank Moçambique' },
+  { id: 13, label: 'UBA Moçambique (United Bank for Africa)' },
+];
