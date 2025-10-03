@@ -82,8 +82,14 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   assistentes: yup
     .array(
       yup.object({
-        nomeCompleto: yup.string().optional(),
-        contacto: yup.string().optional().test('ass-contact', 'Contacto inválido', (v) => !v || phoneRegex.test(v)),
+        nomeCompleto: yup
+          .string()
+          .required('Nome do assistente é obrigatório')
+          .min(2, 'Nome do assistente muito curto'),
+        contacto: yup
+          .string()
+          .optional()
+          .test('ass-contact', 'Contacto inválido', (v) => !v || phoneRegex.test(v)),
       })
     )
     .optional(),
@@ -143,7 +149,11 @@ const AssistentesFieldArray: React.FC<{ control: any }> = ({ control }) => {
     setModalVisible(true);
   };
   const onSave = () => {
-    if (!temp.nomeCompleto && !temp.contacto) { setModalVisible(false); return; }
+    // Exigir pelo menos nome completo para cumprir o backend (nome_completo é obrigatório)
+    if (!temp.nomeCompleto || temp.nomeCompleto.trim().length < 2) {
+      Alert.alert('Assistente', 'Informe o Nome Completo do assistente.');
+      return;
+    }
     if (editIndex === null) append({ ...temp }); else update(editIndex, { ...temp });
     setModalVisible(false);
   };
@@ -368,6 +378,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       tipoEmpresa: undefined as any,
       proprietarioNomeCompleto: '',
       proprietarioContacto: '',
+      assistentes: [],
       proprietarios: [],
       estabelecimentos: [],
     },
@@ -447,25 +458,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   }, [tipoParceiro]);
 
   const onSubmit = async (data: CommercialData) => {
-    setIsLoading(true);
+    // Não enviar para a API aqui. O envio correto é feito na ReviewSubmitScreen,
+    // onde os campos são mapeados para o formato do backend (assinatura_adesao, data_adesao, etc.).
     try {
-      console.log('[CommercialDataForm] Submetendo payload comercial:', data);
-      const created = await createAdesao(data as any);
-      console.log('[CommercialDataForm] Resposta da API (adesao criada):', created);
-      navigation.navigate('DocumentUpload', { commercialData: created || data });
-    } catch (e) {
-      const err: any = e as any;
-      const status = err?.response?.status;
-      const detail = err?.response?.data?.detail || err?.message;
-      console.log('[CommercialDataForm] Erro na API ao criar adesao:', {
-        status,
-        data: err?.response?.data,
-        message: err?.message,
-      });
-      Alert.alert(
-        'Erro ao enviar',
-        `${status ? `Código ${status} - ` : ''}${detail || 'Ocorreu um erro ao enviar os dados comerciais. Verifique a conexão e tente novamente.'}`
-      );
+      setIsLoading(true);
+      console.log('[CommercialDataForm] Dados comerciais (pré-upload docs):', data);
+      navigation.navigate('DocumentUpload', { commercialData: data });
     } finally {
       setIsLoading(false);
     }
@@ -481,7 +479,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.headerSubtitle}>Preencha as informações do parceiro</Text>
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator>
         {/* Tipo de Parceiro */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
@@ -501,7 +499,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 >
                   <View style={[styles.radioIndicator, field.value === 'AGENTE' && styles.radioIndicatorSelected]}>
                     {field.value === 'AGENTE' && <View style={styles.radioIndicatorInner} />}
-                  </View>
+              </View>
                   <Text style={[styles.radioLabel, field.value === 'AGENTE' && styles.radioLabelSelected]}>AGENTE</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -827,7 +825,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               const firstKey = keys[0];
               const firstMsg = firstKey && (errs as any)[firstKey]?.message;
               // Log completo dos erros
-              const allErrors = keys.map((k) => ({ field: k, message: (errs as any)[k]?.message })).filter(Boolean);
+              const allErrors = keys
+                .map((k) => ({ field: k, message: (errs as any)[k]?.message }))
+                // Excluir itens sem mensagem (ex.: arrays como 'assistentes' sem erro de nível raiz)
+                .filter((e) => !!e.message);
               console.log('[CommercialDataForm] Erros de validação:', allErrors);
               // Scroll até o primeiro campo com erro (se mapeado)
               const y = firstKey ? fieldPositions[firstKey] : undefined;
@@ -859,7 +860,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: COLORS.background 
+    backgroundColor: COLORS.background,
+    // Garante altura total no Web para permitir scroll
+    minHeight: '100vh' as any,
+  },
+  scroll: {
+    flex: 1,
   },
   header: {
     backgroundColor: COLORS.white,
@@ -880,7 +886,10 @@ const styles = StyleSheet.create({
   },
   content: { 
     padding: 16,
-    paddingBottom: 32,
+    // FlexGrow garante que o conteúdo expande e ativa scroll quando necessário
+    flexGrow: 1,
+    // Maior espaço inferior para não ficar coberto pelo footer fixo
+    paddingBottom: 140,
   },
   card: {
     backgroundColor: COLORS.white,
