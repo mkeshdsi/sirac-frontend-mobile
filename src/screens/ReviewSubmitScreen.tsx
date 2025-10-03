@@ -75,10 +75,12 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
                 }]
               : []),
         assistentes: Array.isArray(commercialData?.assistentes) && commercialData!.assistentes!.length > 0
-          ? commercialData!.assistentes!.map((a) => ({
-              nome_completo: a?.nomeCompleto || undefined,
-              contacto: a?.contacto || undefined,
-            }))
+          ? commercialData!.assistentes!
+              .filter((a) => !!a?.nomeCompleto && a!.nomeCompleto!.trim().length > 0)
+              .map((a) => ({
+                nome_completo: a!.nomeCompleto!,
+                contacto: a?.contacto || undefined,
+              }))
           : [],
         estabelecimentos: Array.isArray(commercialData?.estabelecimentos) && commercialData!.estabelecimentos!.length > 0
           ? commercialData!.estabelecimentos!.map((e) => ({

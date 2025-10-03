@@ -150,11 +150,12 @@ const AssistentesFieldArray: React.FC<{ control: any }> = ({ control }) => {
   };
   const onSave = () => {
     // Exigir pelo menos nome completo para cumprir o backend (nome_completo é obrigatório)
-    if (!temp.nomeCompleto || temp.nomeCompleto.trim().length < 2) {
+    const cleanedName = (temp.nomeCompleto || '').replace(/\s+/g, ' ').trim();
+    if (!cleanedName || cleanedName.length < 2) {
       Alert.alert('Assistente', 'Informe o Nome Completo do assistente.');
       return;
     }
-    if (editIndex === null) append({ ...temp }); else update(editIndex, { ...temp });
+    if (editIndex === null) append({ ...temp, nomeCompleto: cleanedName }); else update(editIndex, { ...temp, nomeCompleto: cleanedName });
     setModalVisible(false);
   };
   const onDelete = () => {
@@ -190,7 +191,18 @@ const AssistentesFieldArray: React.FC<{ control: any }> = ({ control }) => {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{editIndex === null ? 'Adicionar Assistente' : 'Editar Assistente'}</Text>
-            <Input label="Nome Completo" placeholder="Nome Completo" value={temp.nomeCompleto} onChangeText={(t) => setTemp((s) => ({ ...s, nomeCompleto: t }))} />
+            <Input 
+              label="Nome Completo" 
+              placeholder="Nome Completo" 
+              value={temp.nomeCompleto}
+              autoCapitalize="words"
+              autoCorrect={false}
+              onChangeText={(t) => {
+                // Normaliza espaços sucessivos e evita espaços à esquerda enquanto digita
+                const normalized = t.replace(/\s+/g, ' ').replace(/^\s+/, '');
+                setTemp((s) => ({ ...s, nomeCompleto: normalized }));
+              }}
+            />
             <Input label="Contacto" placeholder="Contacto" keyboardType="phone-pad" value={temp.contacto} onChangeText={(t) => setTemp((s) => ({ ...s, contacto: t }))} />
             <View style={styles.modalActions}>
               {editIndex !== null && (
