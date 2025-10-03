@@ -36,22 +36,26 @@ const userTypeOptions: UserTypeOption[] = [
   {
     type: 'Comerciante',
     title: 'Comerciante',
-    description: 'Será registado como MERCHANT',
+    description: 'Perfil para quem possui um negócio e pretende aceitar pagamentos mKesh.',
     icon: '🏪',
     features: [
-      'Abertura de Parceiro (MERCHANT)',
-    
+      'Cadastro de MERCHANT em poucos passos',
+      'Gestão de estabelecimentos e proprietários',
+      'Upload de documentos obrigatórios',
+      'Acompanhamento do estado da adesão',
     ],
     gradient: ['#F2C94C', '#00A3E0'] as const
   },
   {
     type: 'TecnicoComercial',
     title: 'Técnico Comercial',
-    description: 'Será registado como AGENTE',
+    description: 'Perfil para técnicos comerciais responsáveis por angariar e validar parceiros.',
     icon: '👨‍💼',
     features: [
-      'Abertura de Parceiro (AGENTE)',
-      
+      'Abertura de AGENTE (parceiro)',
+      'Ligação a parceiros angariados',
+      'Fluxo otimizado para validação e aprovação',
+      'Suporte ao comerciante no processo',
     ],
     gradient: ['#F2C94C', '#0077B6'] as const
   }
@@ -185,9 +189,9 @@ export const UserTypeSelectionScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.progressText}>Passo 1 de 3</Text>
             </View>
 
-            <Text style={styles.title}>Selecione o seu perfil</Text>
+            <Text style={styles.title}>Escolha o seu perfil</Text>
             <Text style={styles.subtitle}>
-              Escolha como pretende fazer o cadastro no sistema SIRAC
+              Selecione a opção que melhor representa a sua atuação no SIRAC
             </Text>
           </View>
 
@@ -200,7 +204,7 @@ export const UserTypeSelectionScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.helpSection}>
             <Text style={styles.helpTitle}>Precisa de ajuda?</Text>
             <Text style={styles.helpText}>
-              Se não tem certeza sobre qual perfil escolher, entre em contacto connosco.
+              Tem dúvidas sobre qual perfil escolher? Fale com o suporte mKesh.
             </Text>
           </View>
         </ScrollView>
