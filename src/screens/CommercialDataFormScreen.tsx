@@ -4,6 +4,7 @@ import ReactNative from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Input, Card, Select } from '@/components';
+import SignaturePadModal from '@/components/SignaturePadModal';
 import { MOZ_BANKS } from '@/components/constants/moz_banks';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -397,6 +398,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const scrollRef = useRef<ScrollView | null>(null);
   const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
   const [tempDate, setTempDate] = useState<Date | null>(null);
+  const [showSignature, setShowSignature] = useState(false);
 
   const { control, handleSubmit, formState: { errors }, setValue, trigger, getValues } = useForm<CommercialData>({
     resolver: yupResolver(schema) as any,
@@ -533,103 +535,18 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator>
-        {/* Tipo de Parceiro */}
+        {/* DADOS EMPRESA */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIconContainer}>
-              <Text style={styles.cardIcon}>👤</Text>
+              <Text style={styles.cardIcon}>🏢</Text>
             </View>
-            <Text style={styles.cardTitle}>Tipo de Parceiro</Text>
-          </View>
-          <Controller
-            control={control}
-            name="tipoParceiro"
-            render={({ field }) => (
-              <View style={styles.radioGroup}>
-                <TouchableOpacity 
-                  onPress={() => field.onChange('AGENTE')} 
-                  style={[styles.radioCard, field.value === 'AGENTE' && styles.radioCardSelected]}
-                >
-                  <View style={[styles.radioIndicator, field.value === 'AGENTE' && styles.radioIndicatorSelected]}>
-                    {field.value === 'AGENTE' && <View style={styles.radioIndicatorInner} />}
-              </View>
-                  <Text style={[styles.radioLabel, field.value === 'AGENTE' && styles.radioLabelSelected]}>AGENTE</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => field.onChange('MERCHANT')} 
-                  style={[styles.radioCard, field.value === 'MERCHANT' && styles.radioCardSelected]}
-                >
-                  <View style={[styles.radioIndicator, field.value === 'MERCHANT' && styles.radioIndicatorSelected]}>
-                    {field.value === 'MERCHANT' && <View style={styles.radioIndicatorInner} />}
-                  </View>
-                  <Text style={[styles.radioLabel, field.value === 'MERCHANT' && styles.radioLabelSelected]}>MERCHANT</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          />
-          {!!errors.tipoParceiro?.message && <Text style={styles.errorText}>{errors.tipoParceiro.message}</Text>}
-        </Card>
-
-        {/* Informações Básicas */}
-        <Card style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIconContainer}>
-              <Text style={styles.cardIcon}>📋</Text>
-            </View>
-            <Text style={styles.cardTitle}>Informações Básicas</Text>
+            <Text style={styles.cardTitle}>DADOS EMPRESA</Text>
           </View>
           <View onLayout={onLayoutField('nuit')}>
             <Controller control={control} name="nuit" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="NUIT" placeholder="123456789" keyboardType="numeric" maxLength={9} value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nuit?.message} required />
             )} />
-          </View>
-          <View onLayout={onLayoutField('assinatura')}>
-            <Controller control={control} name="assinatura" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Assinatura" placeholder="Assinatura do representante" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.assinatura?.message} required />
-            )} />
-          </View>
-          <View onLayout={onLayoutField('dataFormulario')}>
-          <Controller
-            control={control}
-            name="dataFormulario"
-            render={({ field: { value, onChange } }) => (
-              <View>
-                <Input
-                  label="Data do Formulário"
-                  placeholder="Selecionar data (dd/mm/aaaa)"
-                  value={value}
-                  editable={false}
-                  onPressIn={() => {
-                    setTempDate(() => {
-                      if (value && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
-                        const [dd, mm, yyyy] = value.split('/').map((v: string) => parseInt(v, 10));
-                        return new Date(yyyy, (mm as number) - 1, dd as number);
-                      }
-                      return new Date();
-                    });
-                    setShowDatePicker(true);
-                  }}
-                  rightIcon={<Text style={{ fontSize: 18 }}>📅</Text>}
-                  error={errors.dataFormulario?.message}
-                  required
-                />
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={tempDate || new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={(event, selectedDate) => {
-                      if (Platform.OS === 'android') setShowDatePicker(false);
-                      if (selectedDate) {
-                        setTempDate(selectedDate);
-                        onChange(formatDate(selectedDate));
-                      }
-                    }}
-                  />
-                )}
-              </View>
-            )}
-          />
           </View>
           <View onLayout={onLayoutField('nomeComercial')}>
             <Controller control={control} name="nomeComercial" render={({ field: { onChange, onBlur, value } }) => (
@@ -641,38 +558,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               <Input label="Número do Alvará" placeholder="Ex: 123/2024" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.alvara?.message} required />
             )} />
           </View>
-        </Card>
-
-        {/* Relações */}
-        <Card style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIconContainer}>
-              <Text style={styles.cardIcon}>🔗</Text>
-            </View>
-            <Text style={styles.cardTitle}>A preencher pela carteira móvel</Text>
-          </View>
-          <Text style={styles.helperText}>Selecione os responsáveis (opcional)</Text>
-          <Controller control={control} name="angariadorId" render={({ field: { value, onChange } }) => (
-            <Select label="Angariador" value={value as any} onChange={onChange} options={angOptions} loading={loadingRefs.ang} />
-          )} />
-          <Controller control={control} name="aprovadorId" render={({ field: { value, onChange } }) => (
-            <Select label="Aprovador" value={value as any} onChange={onChange} options={aprOptions} loading={loadingRefs.apr} />
-          )} />
-          <Controller control={control} name="validadorId" render={({ field: { value, onChange } }) => (
-            <Select label="Validador" value={value as any} onChange={onChange} options={valOptions} loading={loadingRefs.val} />
-          )} />
-        </Card>
-
-        {/* Dados da Empresa */}
-        {tipoParceiro === 'MERCHANT' && (
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardIconContainer}>
-                <Text style={styles.cardIcon}>🏢</Text>
-              </View>
-              <Text style={styles.cardTitle}>DADOS EMPRESA</Text>
-            </View>
-            <View onLayout={onLayoutField('tipoEmpresa')}>
+          <View onLayout={onLayoutField('tipoEmpresa')}>
             <Controller
               control={control}
               name="tipoEmpresa"
@@ -699,73 +585,74 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               )}
             />
-            </View>
-            {!!errors.tipoEmpresa?.message && <Text style={styles.errorText}>{errors.tipoEmpresa.message}</Text>}
-            <Controller control={control} name="designacao" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Designação" placeholder="Designação da empresa" value={value} onChangeText={onChange} onBlur={onBlur} />
-            )} />
-            <Controller control={control} name="naturezaObjecto" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Natureza e objecto da actividade" placeholder="Ex: Comércio de ..." value={value} onChangeText={onChange} onBlur={onBlur} />
-            )} />
-            <Controller 
-              control={control} 
-              name="banco" 
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View>
-                  <Text style={[styles.helperText, { marginBottom: 8 }]}>Banco</Text>
-                  <View style={styles.radioGroup}>
-                    <TouchableOpacity 
-                      onPress={() => setBankMode('lista')} 
-                      style={[styles.radioCard, bankMode === 'lista' && styles.radioCardSelected]}
-                      activeOpacity={0.8}
-                    >
-                      <View style={[styles.radioIndicator, bankMode === 'lista' && styles.radioIndicatorSelected]}>
-                        {bankMode === 'lista' && <View style={styles.radioIndicatorInner} />}
-                      </View>
-                      <Text style={[styles.radioLabel, bankMode === 'lista' && styles.radioLabelSelected]}>Lista de bancos</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      onPress={() => setBankMode('outro')} 
-                      style={[styles.radioCard, bankMode === 'outro' && styles.radioCardSelected]}
-                      activeOpacity={0.8}
-                    >
-                      <View style={[styles.radioIndicator, bankMode === 'outro' && styles.radioIndicatorSelected]}>
-                        {bankMode === 'outro' && <View style={styles.radioIndicatorInner} />}
-                      </View>
-                      <Text style={[styles.radioLabel, bankMode === 'outro' && styles.radioLabelSelected]}>Outro</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {bankMode === 'lista' ? (
-                    <Select 
-                      label="Selecionar banco"
-                      value={(value as unknown) as any}
-                      onChange={(val: any) => {
-                        // val pode ser id (number) ou label (string), mapeia sempre para label
-                        const found = typeof val === 'number' 
-                          ? MOZ_BANKS.find((b) => b.id === val)
-                          : MOZ_BANKS.find((b) => b.label === val);
-                        onChange(found?.label || (typeof val === 'string' ? val : ''));
-                      }}
-                      options={MOZ_BANKS}
-                    />
-                  ) : (
-                    <Input 
-                      label="Outro banco" 
-                      placeholder="Digite o nome do banco" 
-                      value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                    />
-                  )}
+          </View>
+          {!!errors.tipoEmpresa?.message && <Text style={styles.errorText}>{errors.tipoEmpresa.message}</Text>}
+          <Controller control={control} name="designacao" render={({ field: { onChange, onBlur, value } }) => (
+            <Input label="Designação" placeholder="Designação da empresa" value={value} onChangeText={onChange} onBlur={onBlur} />
+          )} />
+          <Controller control={control} name="naturezaObjecto" render={({ field: { onChange, onBlur, value } }) => (
+            <Input label="Natureza e objecto da actividade" placeholder="Ex: Comércio de ..." value={value} onChangeText={onChange} onBlur={onBlur} />
+          )} />
+          <Controller 
+            control={control} 
+            name="banco" 
+            render={({ field: { onChange, onBlur, value } }) => (
+              <View>
+                <Text style={[styles.helperText, { marginBottom: 8 }]}>Banco</Text>
+                <View style={styles.radioGroup}>
+                  <TouchableOpacity 
+                    onPress={() => setBankMode('lista')} 
+                    style={[styles.radioCard, bankMode === 'lista' && styles.radioCardSelected]}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.radioIndicator, bankMode === 'lista' && styles.radioIndicatorSelected]}>
+                      {bankMode === 'lista' && <View style={styles.radioIndicatorInner} />}
+                    </View>
+                    <Text style={[styles.radioLabel, bankMode === 'lista' && styles.radioLabelSelected]}>Lista de bancos</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => setBankMode('outro')} 
+                    style={[styles.radioCard, bankMode === 'outro' && styles.radioCardSelected]}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.radioIndicator, bankMode === 'outro' && styles.radioIndicatorSelected]}>
+                      {bankMode === 'outro' && <View style={styles.radioIndicatorInner} />}
+                    </View>
+                    <Text style={[styles.radioLabel, bankMode === 'outro' && styles.radioLabelSelected]}>Outro</Text>
+                  </TouchableOpacity>
                 </View>
-              )}
-            />
-            <Controller control={control} name="numeroConta" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Nº da Conta" placeholder="0000000000" keyboardType="number-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
-            )} />
-          </Card>
-        )}
+                {bankMode === 'lista' ? (
+                  <Select 
+                    label="Selecionar banco"
+                    value={(value as unknown) as any}
+                    onChange={(val: any) => {
+                      const found = typeof val === 'number' 
+                        ? MOZ_BANKS.find((b) => b.id === val)
+                        : MOZ_BANKS.find((b) => b.label === val);
+                      onChange(found?.label || (typeof val === 'string' ? val : ''));
+                    }}
+                    options={MOZ_BANKS}
+                  />
+                ) : (
+                  <Input 
+                    label="Outro banco" 
+                    placeholder="Digite o nome do banco" 
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                  />
+                )}
+              </View>
+            )}
+          />
+          <Controller control={control} name="numeroConta" render={({ field: { onChange, onBlur, value } }) => (
+            <Input label="Nº da Conta" placeholder="0000000000" keyboardType="number-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
+          )} />
+          {/* Profissão dentro de Dados Empresa */}
+          <Controller control={control} name="profissao" render={({ field: { onChange, onBlur, value } }) => (
+            <Input label="Profissão" placeholder="Profissão" value={value} onChangeText={onChange} onBlur={onBlur} />
+          )} />
+        </Card>
 
         {/* Endereço */}
         <Card style={styles.card}>
@@ -829,15 +716,15 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </Card>
 
-        {/* Proprietários */}
+        {/* Estabelecimentos (antes de Assistentes) */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIconContainer}>
-              <Text style={styles.cardIcon}>👥</Text>
+              <Text style={styles.cardIcon}>🏪</Text>
             </View>
-            <Text style={styles.cardTitle}>Dados dos Proprietários</Text>
+            <Text style={styles.cardTitle}>Estabelecimentos</Text>
           </View>
-          <ProprietariosFieldArray control={control} />
+          <EstabelecimentosFieldArray control={control} />
         </Card>
 
         {/* Assistentes */}
@@ -851,36 +738,131 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <AssistentesFieldArray control={control} />
         </Card>
 
-        {/* Estabelecimentos */}
+        {/* Assinatura e Data (antes de Proprietários) */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIconContainer}>
-              <Text style={styles.cardIcon}>🏪</Text>
+              <Text style={styles.cardIcon}>✍️</Text>
             </View>
-            <Text style={styles.cardTitle}>Estabelecimentos</Text>
+            <Text style={styles.cardTitle}>Assinatura e Data</Text>
           </View>
-          <EstabelecimentosFieldArray control={control} />
+          <View onLayout={onLayoutField('assinatura')}>
+            <Controller
+              control={control}
+              name="assinatura"
+              render={({ field: { value, onChange } }) => (
+                <View>
+                  {value ? (
+                    <View style={styles.signaturePreviewBlock}>
+                      <ReactNative.Image
+                        source={{ uri: value }}
+                        style={styles.signaturePreview}
+                        resizeMode="contain"
+                      />
+                      <View style={{ height: 8 }} />
+                      <TouchableOpacity onPress={() => setShowSignature(true)} style={[styles.modalButton, styles.modalOutline]}>
+                        <Text style={styles.modalButtonTextOutline}>Refazer assinatura</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity onPress={() => setShowSignature(true)} style={[styles.modalButton, styles.modalPrimary]}>
+                      <Text style={styles.modalButtonText}>Assinar no ecrã</Text>
+                    </TouchableOpacity>
+                  )}
+                  {!!errors.assinatura?.message && (
+                    <Text style={styles.errorText}>{errors.assinatura.message}</Text>
+                  )}
+                  <SignaturePadModal
+                    visible={showSignature}
+                    onOK={(sig) => {
+                      onChange(sig);
+                    }}
+                    onClose={() => setShowSignature(false)}
+                  />
+                </View>
+              )}
+            />
+          </View>
+          <View onLayout={onLayoutField('dataFormulario')}>
+            <Controller
+              control={control}
+              name="dataFormulario"
+              render={({ field: { value, onChange } }) => (
+                <View>
+                  <Input
+                    label="Data do Formulário"
+                    placeholder="Selecionar data (dd/mm/aaaa)"
+                    value={value}
+                    editable={false}
+                    onPressIn={() => {
+                      setTempDate(() => {
+                        if (value && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+                          const [dd, mm, yyyy] = value.split('/').map((v: string) => parseInt(v, 10));
+                          return new Date(yyyy, (mm as number) - 1, dd as number);
+                        }
+                        return new Date();
+                      });
+                      setShowDatePicker(true);
+                    }}
+                    rightIcon={<Text style={{ fontSize: 18 }}>📅</Text>}
+                    error={errors.dataFormulario?.message}
+                    required
+                  />
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={tempDate || new Date()}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={(event, selectedDate) => {
+                        if (Platform.OS === 'android') setShowDatePicker(false);
+                        if (selectedDate) {
+                          setTempDate(selectedDate);
+                          onChange(formatDate(selectedDate));
+                        }
+                      }}
+                    />
+                  )}
+                </View>
+              )}
+            />
+          </View>
         </Card>
 
-        
-
-        {/* Profissão */}
+        {/* Dados dos Proprietários */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIconContainer}>
-              <Text style={styles.cardIcon}>💼</Text>
+              <Text style={styles.cardIcon}>👥</Text>
             </View>
-            <Text style={styles.cardTitle}>Profissão</Text>
+            <Text style={styles.cardTitle}>Dados dos Proprietários</Text>
           </View>
-          <Controller control={control} name="profissao" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Profissão" placeholder="Profissão" value={value} onChangeText={onChange} onBlur={onBlur} />
+          <ProprietariosFieldArray control={control} />
+        </Card>
+
+        {/* A preencher pela carteira móvel */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>🔗</Text>
+            </View>
+            <Text style={styles.cardTitle}>A preencher pela carteira móvel</Text>
+          </View>
+          <Text style={styles.helperText}>Selecione os responsáveis (opcional)</Text>
+          <Controller control={control} name="angariadorId" render={({ field: { value, onChange } }) => (
+            <Select label="Angariador" value={value as any} onChange={onChange} options={angOptions} loading={loadingRefs.ang} />
+          )} />
+          <Controller control={control} name="aprovadorId" render={({ field: { value, onChange } }) => (
+            <Select label="Aprovador" value={value as any} onChange={onChange} options={aprOptions} loading={loadingRefs.apr} />
+          )} />
+          <Controller control={control} name="validadorId" render={({ field: { value, onChange } }) => (
+            <Select label="Validador" value={value as any} onChange={onChange} options={valOptions} loading={loadingRefs.val} />
           )} />
         </Card>
 
         {/* Documentos Necessários */}
         <Card style={styles.infoCard}>
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIconContainer, { backgroundColor: COLORS.secondaryLight }]}>
+            <View style={[styles.cardIconContainer, { backgroundColor: COLORS.secondaryLight }] }>
               <Text style={styles.cardIcon}>📄</Text>
             </View>
             <Text style={styles.cardTitle}>Documentos Necessários</Text>
@@ -1329,5 +1311,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  signaturePreviewBlock: {
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 8,
+  },
+  signaturePreview: {
+    width: '100%',
+    height: 160,
+    backgroundColor: COLORS.white,
   },
 });
