@@ -222,7 +222,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
         {/* Success Message */}
         {uploadedCount === totalCount && (
           <Card style={styles.successCard}>
-            <Text style={styles.successIcon}>🎉</Text>
+           
             <Text style={styles.successTitle}>Todos os documentos anexados!</Text>
             <Text style={styles.successText}>Pode prosseguir para a revisão final</Text>
           </Card>
