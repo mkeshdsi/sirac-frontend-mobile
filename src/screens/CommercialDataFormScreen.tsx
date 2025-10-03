@@ -512,7 +512,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>FORMULÁRIO DE ADESÃO • Agente Merchant</Text>
+            <Text style={styles.headerTitle}>FORMULÁRIO DE ADESÃO</Text>
             <Text style={styles.headerSubtitle}>Preencha as informações do parceiro</Text>
           </View>
           <View style={styles.headerActions}>
@@ -862,24 +862,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <EstabelecimentosFieldArray control={control} />
         </Card>
 
-        {/* Substituição */}
-        <Card style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIconContainer}>
-              <Text style={styles.cardIcon}>🔄</Text>
-            </View>
-            <Text style={styles.cardTitle}>Substituição (Agente Merchant)</Text>
-          </View>
-          <Controller control={control} name="substituicaoNomeAgente" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Nome" placeholder="Nome do substituto" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
-          <Controller control={control} name="substituicaoProvinciaLocalidade" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Província/Localidade" placeholder="Província/Localidade" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
-          <Controller control={control} name="substituicaoEnderecoBairro" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Endereço/Bairro" placeholder="Endereço/Bairro" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
-        </Card>
+        
 
         {/* Profissão */}
         <Card style={styles.card}>
