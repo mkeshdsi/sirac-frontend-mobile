@@ -32,6 +32,9 @@ const COLORS = {
 const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 const phoneRegex = /^\d{7,15}$/;
 
+// Normaliza contactos: mantém apenas dígitos (aceita DDD), remove '+', espaços, hífens, etc.
+const normalizePhone = (s?: string) => (s ? s.replace(/[^0-9]/g, '') : '');
+
 const schema: yup.ObjectSchema<CommercialData> = yup.object({
   tipoParceiro: yup.string().oneOf(['AGENTE', 'MERCHANT'], 'Tipo de parceiro inválido').required('Tipo de parceiro é obrigatório'),
   nomeComercial: yup.string()
@@ -203,7 +206,13 @@ const AssistentesFieldArray: React.FC<{ control: any }> = ({ control }) => {
                 setTemp((s) => ({ ...s, nomeCompleto: normalized }));
               }}
             />
-            <Input label="Contacto" placeholder="Contacto" keyboardType="phone-pad" value={temp.contacto} onChangeText={(t) => setTemp((s) => ({ ...s, contacto: t }))} />
+            <Input 
+              label="Contacto" 
+              placeholder="Contacto" 
+              keyboardType="phone-pad" 
+              value={temp.contacto} 
+              onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t) }))} 
+            />
             <View style={styles.modalActions}>
               {editIndex !== null && (
                 <TouchableOpacity onPress={onDelete} style={[styles.modalButton, styles.modalDanger]}><Text style={styles.modalButtonText}>Apagar</Text></TouchableOpacity>
@@ -278,7 +287,13 @@ const ProprietariosFieldArray: React.FC<{ control: any }> = ({ control }) => {
             <Text style={styles.modalTitle}>{editIndex === null ? 'Adicionar Proprietário' : 'Editar Proprietário'}</Text>
             <Input label="Nome" placeholder="Nome" value={temp.nome} onChangeText={(t) => setTemp((s) => ({ ...s, nome: t }))} />
             <Input label="Email" placeholder="email@dominio.com" keyboardType="email-address" autoCapitalize="none" value={temp.email} onChangeText={(t) => setTemp((s) => ({ ...s, email: t }))} />
-            <Input label="Contacto" placeholder="Contacto" keyboardType="phone-pad" value={temp.contacto} onChangeText={(t) => setTemp((s) => ({ ...s, contacto: t }))} />
+            <Input 
+              label="Contacto" 
+              placeholder="Contacto" 
+              keyboardType="phone-pad" 
+              value={temp.contacto} 
+              onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t) }))} 
+            />
             <View style={styles.modalActions}>
               {editIndex !== null && (
                 <TouchableOpacity onPress={onDelete} style={[styles.modalButton, styles.modalDanger]}><Text style={styles.modalButtonText}>Apagar</Text></TouchableOpacity>
@@ -712,12 +727,26 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.rowFields}>
             <View style={{ flex: 1 }}>
               <Controller control={control} name="telefone" render={({ field: { onChange, onBlur, value } }) => (
-                <Input label="Telefone" placeholder="Telefone" keyboardType="phone-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
+                <Input 
+                  label="Telefone" 
+                  placeholder="Telefone" 
+                  keyboardType="phone-pad" 
+                  value={value} 
+                  onChangeText={(t) => onChange(normalizePhone(t))} 
+                  onBlur={onBlur} 
+                />
               )} />
             </View>
             <View style={{ flex: 1 }}>
               <Controller control={control} name="celular" render={({ field: { onChange, onBlur, value } }) => (
-                <Input label="Celular" placeholder="Celular" keyboardType="phone-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
+                <Input 
+                  label="Celular" 
+                  placeholder="Celular" 
+                  keyboardType="phone-pad" 
+                  value={value} 
+                  onChangeText={(t) => onChange(normalizePhone(t))} 
+                  onBlur={onBlur} 
+                />
               )} />
             </View>
           </View>
