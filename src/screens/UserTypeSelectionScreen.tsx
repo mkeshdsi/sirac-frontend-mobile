@@ -14,6 +14,7 @@ import { Theme } from '@/constants/theme';
 import { Button } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, UserType } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -178,8 +179,17 @@ export const UserTypeSelectionScreen: React.FC<Props> = ({ navigation }) => {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerActions}>
-              <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} activeOpacity={0.8}>
-                <Text style={styles.logoutText}>Sair</Text>
+              <TouchableOpacity 
+                onPress={handleLogout} 
+                style={styles.logoutButton} 
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Sair"
+              >
+                <View style={styles.logoutContent}>
+                  <Ionicons name="log-out-outline" size={18} color={Theme.colors.error} />
+                  <Text style={styles.logoutText}>Sair</Text>
+                </View>
               </TouchableOpacity>
             </View>
             <View style={styles.progressIndicator}>
@@ -252,6 +262,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Theme.colors.border,
     backgroundColor: Theme.colors.surface,
+  },
+  logoutContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoutIcon: {
+    fontSize: 16,
+    marginRight: 6,
   },
   logoutText: {
     ...Theme.typography.caption,
