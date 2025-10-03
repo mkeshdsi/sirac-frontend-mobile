@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform, Modal } from 'react-native';
+import ReactNative from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Input, Card, Select } from '@/components';
@@ -353,15 +354,18 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const [aprOptions, setAprOptions] = useState<Array<{ id: number; label: string }>>([]);
   const [valOptions, setValOptions] = useState<Array<{ id: number; label: string }>>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
   const [tempDate, setTempDate] = useState<Date | null>(null);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<CommercialData>({
+  const { control, handleSubmit, formState: { errors }, setValue, trigger, getValues } = useForm<CommercialData>({
     resolver: yupResolver(schema) as any,
     defaultValues: {
       tipoParceiro: 'MERCHANT',
       nomeComercial: '',
       nuit: '',
       alvara: '',
+      tipoEmpresa: undefined as any,
       proprietarioNomeCompleto: '',
       proprietarioContacto: '',
       proprietarios: [],
@@ -375,6 +379,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const yyyy = d.getFullYear();
     return `${dd}/${mm}/${yyyy}`;
+  };
+
+  // Regista a posição Y de cada campo para possibilitar scroll até ao primeiro erro
+  const onLayoutField = (name: keyof CommercialData | string) => (e: any) => {
+    const y = e?.nativeEvent?.layout?.y ?? 0;
+    setFieldPositions((s) => ({ ...s, [String(name)]: y }));
   };
 
   const fetchList = async (resource: 'ang' | 'apr' | 'val') => {
@@ -415,15 +425,47 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
     loadAng();
     loadApr();
     loadVal();
+    // Preenche a data do formulário por omissão se estiver vazia
+    (async () => {
+      const ok = await trigger('dataFormulario');
+      // Se vazio/inválido, define hoje
+      setValue('dataFormulario', formatDate(new Date()), { shouldValidate: true });
+    })();
   }, []);
+
+  // Define um default para tipoEmpresa quando MERCHANT
+  useEffect(() => {
+    if (tipoParceiro === 'MERCHANT') {
+      const current = getValues('tipoEmpresa');
+      if (!current) {
+        setValue('tipoEmpresa', 'SOCIEDADE', { shouldValidate: true });
+      }
+    } else {
+      // Não obrigatório quando AGENTE
+      setValue('tipoEmpresa', undefined as any, { shouldValidate: false });
+    }
+  }, [tipoParceiro]);
 
   const onSubmit = async (data: CommercialData) => {
     setIsLoading(true);
     try {
+      console.log('[CommercialDataForm] Submetendo payload comercial:', data);
       const created = await createAdesao(data as any);
+      console.log('[CommercialDataForm] Resposta da API (adesao criada):', created);
       navigation.navigate('DocumentUpload', { commercialData: created || data });
     } catch (e) {
-      Alert.alert('Erro', 'Ocorreu um erro ao enviar os dados comerciais. Verifique a conexão e tente novamente.');
+      const err: any = e as any;
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail || err?.message;
+      console.log('[CommercialDataForm] Erro na API ao criar adesao:', {
+        status,
+        data: err?.response?.data,
+        message: err?.message,
+      });
+      Alert.alert(
+        'Erro ao enviar',
+        `${status ? `Código ${status} - ` : ''}${detail || 'Ocorreu um erro ao enviar os dados comerciais. Verifique a conexão e tente novamente.'}`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -435,11 +477,11 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dados Comerciais</Text>
+        <Text style={styles.headerTitle}>FORMULÁRIO DE ADESÃO • Agente Merchant</Text>
         <Text style={styles.headerSubtitle}>Preencha as informações do parceiro</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Tipo de Parceiro */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
@@ -485,18 +527,17 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <Text style={styles.cardTitle}>Informações Básicas</Text>
           </View>
-          <Controller control={control} name="nomeComercial" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Nome Comercial" placeholder="Nome do negócio" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nomeComercial?.message} required />
-          )} />
-          <Controller control={control} name="nuit" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="NUIT" placeholder="123456789" keyboardType="numeric" maxLength={9} value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nuit?.message} required />
-          )} />
-          <Controller control={control} name="alvara" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Número do Alvará" placeholder="Ex: 123/2024" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.alvara?.message} required />
-          )} />
-          <Controller control={control} name="assinatura" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Assinatura" placeholder="Assinatura do representante" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.assinatura?.message} required />
-          )} />
+          <View onLayout={onLayoutField('nuit')}>
+            <Controller control={control} name="nuit" render={({ field: { onChange, onBlur, value } }) => (
+              <Input label="NUIT" placeholder="123456789" keyboardType="numeric" maxLength={9} value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nuit?.message} required />
+            )} />
+          </View>
+          <View onLayout={onLayoutField('assinatura')}>
+            <Controller control={control} name="assinatura" render={({ field: { onChange, onBlur, value } }) => (
+              <Input label="Assinatura" placeholder="Assinatura do representante" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.assinatura?.message} required />
+            )} />
+          </View>
+          <View onLayout={onLayoutField('dataFormulario')}>
           <Controller
             control={control}
             name="dataFormulario"
@@ -538,6 +579,17 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             )}
           />
+          </View>
+          <View onLayout={onLayoutField('nomeComercial')}>
+            <Controller control={control} name="nomeComercial" render={({ field: { onChange, onBlur, value } }) => (
+              <Input label="Nome Comercial" placeholder="Nome do negócio" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nomeComercial?.message} required />
+            )} />
+          </View>
+          <View onLayout={onLayoutField('nuit')}>
+            <Controller control={control} name="alvara" render={({ field: { onChange, onBlur, value } }) => (
+              <Input label="Número do Alvará" placeholder="Ex: 123/2024" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.alvara?.message} required />
+            )} />
+          </View>
         </Card>
 
         {/* Relações */}
@@ -546,7 +598,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.cardIconContainer}>
               <Text style={styles.cardIcon}>🔗</Text>
             </View>
-            <Text style={styles.cardTitle}>Relações</Text>
+            <Text style={styles.cardTitle}>A preencher pela carteira móvel</Text>
           </View>
           <Text style={styles.helperText}>Selecione os responsáveis (opcional)</Text>
           <Controller control={control} name="angariadorId" render={({ field: { value, onChange } }) => (
@@ -567,8 +619,9 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               <View style={styles.cardIconContainer}>
                 <Text style={styles.cardIcon}>🏢</Text>
               </View>
-              <Text style={styles.cardTitle}>Dados da Empresa</Text>
+              <Text style={styles.cardTitle}>DADOS EMPRESA</Text>
             </View>
+            <View onLayout={onLayoutField('tipoEmpresa')}>
             <Controller
               control={control}
               name="tipoEmpresa"
@@ -595,12 +648,13 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               )}
             />
+            </View>
             {!!errors.tipoEmpresa?.message && <Text style={styles.errorText}>{errors.tipoEmpresa.message}</Text>}
             <Controller control={control} name="designacao" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="Designação" placeholder="Designação da empresa" value={value} onChangeText={onChange} onBlur={onBlur} />
             )} />
             <Controller control={control} name="naturezaObjecto" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Natureza e Objecto da Actividade" placeholder="Ex: Comércio de ..." value={value} onChangeText={onChange} onBlur={onBlur} />
+              <Input label="Natureza e objecto da actividade" placeholder="Ex: Comércio de ..." value={value} onChangeText={onChange} onBlur={onBlur} />
             )} />
             <Controller control={control} name="banco" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="Banco" placeholder="Ex: BCI" value={value} onChangeText={onChange} onBlur={onBlur} />
@@ -619,9 +673,11 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <Text style={styles.cardTitle}>Endereço</Text>
           </View>
-          <Controller control={control} name="enderecoCidade" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Cidade" placeholder="Ex: Maputo" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.enderecoCidade?.message} required />
-          )} />
+          <View onLayout={onLayoutField('enderecoCidade')}>
+            <Controller control={control} name="enderecoCidade" render={({ field: { onChange, onBlur, value } }) => (
+              <Input label="Cidade" placeholder="Ex: Maputo" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.enderecoCidade?.message} required />
+            )} />
+          </View>
           <Controller control={control} name="enderecoLocalidade" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Localidade" placeholder="Localidade" value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
@@ -663,7 +719,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.cardIconContainer}>
               <Text style={styles.cardIcon}>👥</Text>
             </View>
-            <Text style={styles.cardTitle}>Proprietários</Text>
+            <Text style={styles.cardTitle}>Dados dos Proprietários</Text>
           </View>
           <ProprietariosFieldArray control={control} />
         </Card>
@@ -765,7 +821,29 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.footerButtonSecondaryText}>Voltar</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          onPress={handleSubmit(onSubmit)} 
+          onPress={handleSubmit(onSubmit, (errs) => {
+            try {
+              const keys = Object.keys(errs || {});
+              const firstKey = keys[0];
+              const firstMsg = firstKey && (errs as any)[firstKey]?.message;
+              // Log completo dos erros
+              const allErrors = keys.map((k) => ({ field: k, message: (errs as any)[k]?.message })).filter(Boolean);
+              console.log('[CommercialDataForm] Erros de validação:', allErrors);
+              // Scroll até o primeiro campo com erro (se mapeado)
+              const y = firstKey ? fieldPositions[firstKey] : undefined;
+              if (typeof y === 'number' && scrollRef.current) {
+                scrollRef.current.scrollTo({ y: Math.max(y - 12, 0), animated: true });
+              }
+              // Mostrar todas as mensagens no Alert (até um limite razoável)
+              const list = allErrors.slice(0, 6).map((e) => `• ${e.field}: ${e.message}`).join('\n');
+              Alert.alert(
+                'Campos em falta',
+                list || firstMsg || 'Verifique os campos obrigatórios destacados antes de continuar.'
+              );
+            } catch (err) {
+              Alert.alert('Campos em falta', 'Verifique os campos obrigatórios destacados antes de continuar.');
+            }
+          })} 
           style={styles.footerButtonPrimary}
           disabled={isLoading}
         >

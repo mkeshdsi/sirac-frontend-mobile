@@ -7,7 +7,7 @@ module.exports = {
     orientation: 'portrait',
     scheme: 'sirac',
     userInterfaceStyle: 'light',
-    platforms: ['android', 'ios'],
+    platforms: ['android', 'ios', 'web'],
     updates: {
       fallbackToCacheTimeout: 0,
     },
