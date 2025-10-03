@@ -37,8 +37,8 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         setError(res.message || 'Falha ao iniciar sessão.');
         return;
       }
-      // Login concluído, segue para seleção de perfil
-      navigation.reset({ index: 0, routes: [{ name: 'UserTypeSelection' }] });
+      // Login concluído, segue diretamente para Dados Comerciais
+      navigation.reset({ index: 0, routes: [{ name: 'CommercialDataForm' }] });
     } catch (e) {
       setError('Falha ao iniciar sessão. Tente novamente.');
     } finally {
@@ -135,6 +135,8 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={onSubmit} 
                 loading={loading}
                 disabled={!isFormValid}
+                iconName="log-in-outline"
+                iconPosition="right"
                 style={[
                   styles.loginButton,
                   !isFormValid && styles.loginButtonDisabled

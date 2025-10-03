@@ -8,6 +8,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, DocumentsPayload } from '@/types';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 
 type Nav = StackNavigationProp<RootStackParamList, 'DocumentUpload'>;
 type Route = RouteProp<RootStackParamList, 'DocumentUpload'>;
@@ -165,7 +166,10 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
                           onPress={() => Linking.openURL(uri)}
                           style={styles.openFileButton}
                         >
-                          <Text style={styles.openFileButtonText}>Abrir documento</Text>
+                          <View style={styles.inlineRow}>
+                            <Ionicons name="open-outline" size={16} color={COLORS.white} style={{ marginRight: 6 }} />
+                            <Text style={styles.openFileButtonText}>Abrir documento</Text>
+                          </View>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -175,9 +179,12 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
                     onPress={() => item.type === 'image' ? pickImage(item.key) : pickFile(item.key)}
                     style={styles.uploadButton}
                   >
-                    <Text style={styles.uploadButtonIcon}>
-                      {item.type === 'image' ? '📷' : '📁'}
-                    </Text>
+                    <Ionicons 
+                      name={item.type === 'image' ? 'image-outline' : 'document-outline'} 
+                      size={28} 
+                      color={COLORS.primary}
+                      style={{ marginBottom: 8 }}
+                    />
                     <Text style={styles.uploadButtonText}>
                       {item.type === 'image' ? 'Escolher imagem' : 'Escolher ficheiro'}
                     </Text>
@@ -228,7 +235,10 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
           onPress={() => navigation.goBack()} 
           style={styles.footerButtonSecondary}
         >
-          <Text style={styles.footerButtonSecondaryText}>Voltar</Text>
+          <View style={styles.inlineRowCenter}>
+            <Ionicons name="arrow-back-outline" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.footerButtonSecondaryText}>Voltar</Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity 
           onPress={goNext} 
@@ -238,12 +248,17 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
           ]}
           disabled={!hasAnyDoc}
         >
-          <Text style={[
-            styles.footerButtonPrimaryText,
-            !hasAnyDoc ? styles.footerButtonDisabledText : undefined
-          ]}>
-            {hasAnyDoc ? 'Continuar' : 'Anexe pelo menos 1 documento'}
-          </Text>
+          <View style={styles.inlineRowCenter}>
+            <Text style={[
+              styles.footerButtonPrimaryText,
+              !hasAnyDoc ? styles.footerButtonDisabledText : undefined
+            ]}>
+              {hasAnyDoc ? 'Continuar' : 'Anexe pelo menos 1 documento'}
+            </Text>
+            {hasAnyDoc && (
+              <Ionicons name="arrow-forward-outline" size={18} color={COLORS.white} style={{ marginLeft: 8 }} />
+            )}
+          </View>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -404,6 +419,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.white,
     fontWeight: '600',
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inlineRowCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   uploadButton: {
     backgroundColor: COLORS.white,

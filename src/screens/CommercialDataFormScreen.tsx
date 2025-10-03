@@ -4,6 +4,7 @@ import ReactNative from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Input, Card, Select } from '@/components';
+import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, CommercialData } from '@/types';
 import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
@@ -412,6 +413,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   });
   const tipoParceiro = useWatch({ control, name: 'tipoParceiro' });
 
+  const handleLogout = () => {
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  };
+
   const formatDate = (d: Date) => {
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -502,8 +507,26 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>FORMULÁRIO DE ADESÃO • Agente Merchant</Text>
-        <Text style={styles.headerSubtitle}>Preencha as informações do parceiro</Text>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>FORMULÁRIO DE ADESÃO • Agente Merchant</Text>
+            <Text style={styles.headerSubtitle}>Preencha as informações do parceiro</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={styles.logoutButton}
+              accessibilityRole="button"
+              accessibilityLabel="Sair"
+              activeOpacity={0.85}
+            >
+              <View style={styles.logoutContent}>
+                <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
+                <Text style={styles.logoutText}>Sair</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator>
@@ -851,14 +874,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
         </Card>
       </ScrollView>
 
-      {/* Footer com botões */}
+      {/* Footer com botão Continuar */}
       <View style={styles.footer}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          style={styles.footerButtonSecondary}
-        >
-          <Text style={styles.footerButtonSecondaryText}>Voltar</Text>
-        </TouchableOpacity>
         <TouchableOpacity 
           onPress={handleSubmit(onSubmit, (errs) => {
             try {
@@ -886,12 +903,17 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               Alert.alert('Campos em falta', 'Verifique os campos obrigatórios destacados antes de continuar.');
             }
           })} 
-          style={styles.footerButtonPrimary}
+          style={[styles.footerButtonPrimary, { flex: 1 }]}
           disabled={isLoading}
         >
-          <Text style={styles.footerButtonPrimaryText}>
-            {isLoading ? 'Processando...' : 'Continuar'}
-          </Text>
+          <View style={styles.inlineRowCenter}>
+            <Text style={styles.footerButtonPrimaryText}>
+              {isLoading ? 'Processando...' : 'Continuar'}
+            </Text>
+            {!isLoading && (
+              <Ionicons name="arrow-forward-outline" size={18} color={COLORS.white} style={{ marginLeft: 8 }} />
+            )}
+          </View>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -915,6 +937,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerActions: {
+    marginLeft: 12,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
@@ -924,6 +953,25 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
     color: COLORS.textSecondary,
+  },
+  logoutButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  logoutContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logoutText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.error,
+    marginLeft: 6,
   },
   content: { 
     padding: 16,
@@ -1238,5 +1286,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.white,
+    marginLeft: 8,
+  },
+  inlineRowCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

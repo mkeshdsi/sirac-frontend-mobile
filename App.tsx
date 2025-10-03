@@ -6,7 +6,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Theme } from '@/constants/theme';
 import { RootStackParamList } from '@/types';
 import { WelcomeScreen } from '@/screens/WelcomeScreen';
-import { UserTypeSelectionScreen } from '@/screens/UserTypeSelectionScreen';
 import { PersonalDataFormScreen } from '@/screens/PersonalDataFormScreen';
 import { CommercialDataFormScreen } from '@/screens/CommercialDataFormScreen';
 import { DocumentUploadScreen } from '@/screens/DocumentUploadScreen';
@@ -32,7 +31,6 @@ export default function App() {
       >
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ title: 'SIRAC' }} />
-        <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} options={{ title: 'Perfil' }} />
         <Stack.Screen name="PasswordCreation" component={PasswordCreationScreen} options={{ title: 'Palavra‑Passe' }} />
         <Stack.Screen name="PersonalDataForm" component={PersonalDataFormScreen} options={{ title: 'Dados Pessoais' }} />
         <Stack.Screen name="CommercialDataForm" component={CommercialDataFormScreen} options={{ title: 'Dados Comerciais' }} />

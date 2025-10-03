@@ -1,18 +1,25 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, ActivityIndicator, View, StyleProp } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/theme';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline';
 export type ButtonSize = 'small' | 'medium' | 'large';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 interface Props {
   title: string;
   onPress?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   loading?: boolean;
   disabled?: boolean;
+  iconName?: IoniconName;
+  iconPosition?: 'left' | 'right';
+  iconSize?: number;
+  iconColor?: string;
 }
 
 export const Button: React.FC<Props> = ({
@@ -23,6 +30,10 @@ export const Button: React.FC<Props> = ({
   style,
   loading = false,
   disabled = false,
+  iconName,
+  iconPosition = 'left',
+  iconSize = 18,
+  iconColor,
 }) => {
   const containerStyles = [
     styles.base,
@@ -40,9 +51,25 @@ export const Button: React.FC<Props> = ({
     variant === 'outline' && styles.textOutline,
   ];
 
+  const currentTextColor =
+    (variant === 'secondary' || variant === 'outline') ? Theme.colors.textPrimary : '#FFFFFF';
+  const effectiveIconColor = iconColor || currentTextColor;
+
   return (
     <TouchableOpacity style={containerStyles} onPress={onPress} activeOpacity={0.8} disabled={disabled || loading}>
-      {loading ? <ActivityIndicator color={variant === 'outline' ? Theme.colors.textPrimary : '#FFF'} /> : <Text style={textStyles}>{title}</Text>}
+      {loading ? (
+        <ActivityIndicator color={variant === 'outline' ? Theme.colors.textPrimary : '#FFF'} />
+      ) : (
+        <View style={styles.contentRow}>
+          {iconName && iconPosition === 'left' && (
+            <Ionicons name={iconName} size={iconSize} color={effectiveIconColor} style={styles.iconLeft} />
+          )}
+          <Text style={textStyles}>{title}</Text>
+          {iconName && iconPosition === 'right' && (
+            <Ionicons name={iconName} size={iconSize} color={effectiveIconColor} style={styles.iconRight} />
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -88,5 +115,16 @@ const styles = StyleSheet.create({
   },
   textOutline: {
     color: Theme.colors.textPrimary,
+  },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconLeft: {
+    marginRight: 6,
+  },
+  iconRight: {
+    marginLeft: 6,
   },
 });
