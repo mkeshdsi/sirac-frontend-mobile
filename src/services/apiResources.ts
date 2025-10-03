@@ -59,3 +59,10 @@ export async function listAdesoes(params?: ListParams) {
   const api = await getAuthApi();
   return listResource(api, '/api/v1/adesoes/', params);
 }
+
+// Create adesao (commercial data submission)
+export async function createAdesao(payload: any) {
+  const api = await getAuthApi();
+  const res = await api.post('/api/v1/adesoes/', payload);
+  return res.data;
+}

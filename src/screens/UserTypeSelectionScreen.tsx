@@ -71,6 +71,11 @@ export const UserTypeSelectionScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const handleLogout = () => {
+    // Limpa a navegação e volta ao Login
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  };
+
   const renderUserTypeCard = (option: UserTypeOption) => {
     const isSelected = selectedType === option.type;
     
@@ -168,6 +173,11 @@ export const UserTypeSelectionScreen: React.FC<Props> = ({ navigation }) => {
         >
           {/* Header */}
           <View style={styles.header}>
+            <View style={styles.headerActions}>
+              <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} activeOpacity={0.8}>
+                <Text style={styles.logoutText}>Sair</Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.progressIndicator}>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: '33%' }]} />
@@ -201,10 +211,7 @@ export const UserTypeSelectionScreen: React.FC<Props> = ({ navigation }) => {
             title="Continuar" 
             onPress={handleContinue}
             disabled={!selectedType}
-            style={[
-              styles.continueButton,
-              ...(selectedType ? [] : [styles.disabledButton])
-            ]}
+            style={selectedType ? styles.continueButton : StyleSheet.flatten([styles.continueButton, styles.disabledButton])}
           />
         </View>
       </LinearGradient>
@@ -228,6 +235,24 @@ const styles = StyleSheet.create({
   // Header Styles
   header: {
     marginBottom: Theme.spacing.xxl,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: Theme.spacing.md,
+  },
+  logoutButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: Theme.radius.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    backgroundColor: Theme.colors.surface,
+  },
+  logoutText: {
+    ...Theme.typography.caption,
+    color: Theme.colors.error,
+    fontWeight: '700',
   },
   progressIndicator: {
     marginBottom: Theme.spacing.xl,

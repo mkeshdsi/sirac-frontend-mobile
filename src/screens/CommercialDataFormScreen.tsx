@@ -8,7 +8,7 @@ import { RootStackParamList, CommercialData } from '@/types';
 import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { listAngariadores, listAprovadores, listValidadores } from '@/services/apiResources';
+import { listAngariadores, listAprovadores, listValidadores, createAdesao } from '@/services/apiResources';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 type Nav = StackNavigationProp<RootStackParamList, 'CommercialDataForm'>;
@@ -157,22 +157,41 @@ const AssistentesFieldArray: React.FC<{ control: any }> = ({ control }) => {
         <View style={styles.tableHeader}>
           <Text style={styles.th}>Nome Completo</Text>
           <Text style={styles.th}>Contacto</Text>
-          <Text style={[styles.th, { flex: 0.8 }]}>Ações</Text>
         </View>
+      )}
+      {fields.length > 0 && (
+        <Text style={[styles.helperText, { marginTop: 4, marginBottom: 6 }]}>Toque numa linha para editar</Text>
       )}
       {fields.map((field, index) => (
         <TouchableOpacity key={field.id} onPress={() => openEdit(index)} activeOpacity={0.8} style={[styles.tableRow, index % 2 ? styles.tableRowAlt : undefined]}>
           <View style={styles.td}><Text style={styles.cellText}>{(field as any).nomeCompleto || '-'}</Text></View>
           <View style={styles.td}><Text style={styles.cellText}>{(field as any).contacto || '-'}</Text></View>
-          <View style={[styles.rowActions, { flex: 0.8 }]}>
-            <TouchableOpacity onPress={() => index > 0 && move(index, index - 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↑</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => index < fields.length - 1 && move(index, index + 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↓</Text></TouchableOpacity>
+          <View style={[styles.rowActions, { flex: 0.2 }]}>
+            <Text style={styles.chevron}>›</Text>
           </View>
         </TouchableOpacity>
       ))}
       <TouchableOpacity onPress={openAdd} style={styles.addButton}>
         <Text style={styles.addButtonText}>+ Adicionar Assistente</Text>
       </TouchableOpacity>
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{editIndex === null ? 'Adicionar Assistente' : 'Editar Assistente'}</Text>
+            <Input label="Nome Completo" placeholder="Nome Completo" value={temp.nomeCompleto} onChangeText={(t) => setTemp((s) => ({ ...s, nomeCompleto: t }))} />
+            <Input label="Contacto" placeholder="Contacto" keyboardType="phone-pad" value={temp.contacto} onChangeText={(t) => setTemp((s) => ({ ...s, contacto: t }))} />
+            <View style={styles.modalActions}>
+              {editIndex !== null && (
+                <TouchableOpacity onPress={onDelete} style={[styles.modalButton, styles.modalDanger]}><Text style={styles.modalButtonText}>Apagar</Text></TouchableOpacity>
+              )}
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.modalButton, styles.modalOutline]}><Text style={styles.modalButtonTextOutline}>Cancelar</Text></TouchableOpacity>
+              <TouchableOpacity onPress={onSave} style={[styles.modalButton, styles.modalPrimary]}><Text style={styles.modalButtonText}>Salvar</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -211,17 +230,18 @@ const ProprietariosFieldArray: React.FC<{ control: any }> = ({ control }) => {
           <Text style={styles.th}>Nome</Text>
           <Text style={styles.th}>Email</Text>
           <Text style={styles.th}>Contacto</Text>
-          <Text style={[styles.th, { flex: 0.8 }]}>Ações</Text>
         </View>
+      )}
+      {fields.length > 0 && (
+        <Text style={[styles.helperText, { marginTop: 4, marginBottom: 6 }]}>Toque numa linha para editar</Text>
       )}
       {fields.map((field, index) => (
         <TouchableOpacity key={field.id} onPress={() => openEdit(index)} activeOpacity={0.8} style={[styles.tableRow, index % 2 ? styles.tableRowAlt : undefined]}>
           <View style={styles.td}><Text style={styles.cellText}>{(field as any).nome || '-'}</Text></View>
           <View style={styles.td}><Text style={styles.cellText}>{(field as any).email || '-'}</Text></View>
           <View style={styles.td}><Text style={styles.cellText}>{(field as any).contacto || '-'}</Text></View>
-          <View style={[styles.rowActions, { flex: 0.8 }]}>
-            <TouchableOpacity onPress={() => index > 0 && move(index, index - 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↑</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => index < fields.length - 1 && move(index, index + 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↓</Text></TouchableOpacity>
+          <View style={[styles.rowActions, { flex: 0.2 }]}>
+            <Text style={styles.chevron}>›</Text>
           </View>
         </TouchableOpacity>
       ))}
@@ -285,17 +305,18 @@ const EstabelecimentosFieldArray: React.FC<{ control: any }> = ({ control }) => 
           <Text style={styles.th}>Nome</Text>
           <Text style={styles.th}>Província/Localidade</Text>
           <Text style={styles.th}>Endereço/Bairro</Text>
-          <Text style={[styles.th, { flex: 0.8 }]}>Ações</Text>
         </View>
+      )}
+      {fields.length > 0 && (
+        <Text style={[styles.helperText, { marginTop: 4, marginBottom: 6 }]}>Toque numa linha para editar</Text>
       )}
       {fields.map((field, index) => (
         <TouchableOpacity key={field.id} onPress={() => openEdit(index)} activeOpacity={0.8} style={[styles.tableRow, index % 2 ? styles.tableRowAlt : undefined]}>
           <View style={styles.td}><Text style={styles.cellText}>{(field as any).nome || '-'}</Text></View>
           <View style={styles.td}><Text style={styles.cellText}>{(field as any).provinciaLocalidade || '-'}</Text></View>
           <View style={styles.td}><Text style={styles.cellText}>{(field as any).enderecoBairro || '-'}</Text></View>
-          <View style={[styles.rowActions, { flex: 0.8 }]}>
-            <TouchableOpacity onPress={() => index > 0 && move(index, index - 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↑</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => index < fields.length - 1 && move(index, index + 1)} style={styles.iconButton}><Text style={styles.iconButtonText}>↓</Text></TouchableOpacity>
+          <View style={[styles.rowActions, { flex: 0.2 }]}>
+            <Text style={styles.chevron}>›</Text>
           </View>
         </TouchableOpacity>
       ))}
@@ -399,10 +420,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const onSubmit = async (data: CommercialData) => {
     setIsLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 600));
-      navigation.navigate('DocumentUpload', { commercialData: data });
+      const created = await createAdesao(data as any);
+      navigation.navigate('DocumentUpload', { commercialData: created || data });
     } catch (e) {
-      Alert.alert('Erro', 'Ocorreu um erro ao processar os dados comerciais.');
+      Alert.alert('Erro', 'Ocorreu um erro ao enviar os dados comerciais. Verifique a conexão e tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -997,6 +1018,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.white,
     fontWeight: '600',
+  },
+  chevron: {
+    fontSize: 20,
+    color: COLORS.textSecondary,
+    marginLeft: 4,
+    marginRight: 2,
   },
   addButton: {
     marginTop: 12,
