@@ -33,10 +33,6 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
       // Definir tipo_parceiro a partir do formulário (AGENTE|MERCHANT) ou fallback pelo fluxo
       const tipo_parceiro = commercialData?.tipoParceiro || (commercialData ? 'MERCHANT' : 'AGENTE');
 
-      // Determinar assinatura curta (texto digitado) para respeitar limite de 255 chars da API
-      const assinaturaTexto = (commercialData?.assinaturaTexto || '').toString().trim();
-      const assinaturaCurta = assinaturaTexto || (commercialData?.assinatura ? commercialData.assinatura.slice(0, 255) : undefined);
-
       // Montar payload conforme backend (app.models.parceiro.Parceiro)
       const payload: any = {
         tipo_parceiro,
@@ -49,7 +45,8 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         numero_conta: commercialData?.numeroConta || undefined,
         bairro_ref: commercialData?.enderecoBairroRef || undefined,
         profissao: commercialData?.profissao || undefined,
-        assinatura_adesao: assinaturaCurta,
+        // Enviar a imagem como base64 (Data URL). ATENÇÃO: pode exceder 255 chars no backend atual.
+        assinatura_adesao: commercialData?.assinatura || undefined,
         data_adesao: toIsoDate(commercialData?.dataFormulario),
         // IDs opcionais (FKs) se fornecidos
         angariador_id: commercialData?.angariadorId ? Number(commercialData.angariadorId) : undefined,
