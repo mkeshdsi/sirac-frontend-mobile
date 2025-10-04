@@ -211,12 +211,13 @@ const AssistentesFieldArray: React.FC<{ control: any }> = ({ control }) => {
               }}
             />
             <Input 
-              label="Contacto" 
-              placeholder="Contacto" 
-              keyboardType="phone-pad" 
-              value={temp.contacto} 
-              onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t) }))} 
-            />
+  label="Contacto" 
+  placeholder="Contacto" 
+  keyboardType="phone-pad" 
+  maxLength={9}
+  value={temp.contacto} 
+  onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t).slice(0, 9) }))} 
+/>
             <View style={styles.modalActions}>
               {editIndex !== null && (
                 <TouchableOpacity onPress={onDelete} style={[styles.modalButton, styles.modalDanger]}><Text style={styles.modalButtonText}>Apagar</Text></TouchableOpacity>
@@ -292,12 +293,13 @@ const ProprietariosFieldArray: React.FC<{ control: any }> = ({ control }) => {
             <Input label="Nome" placeholder="Nome" value={temp.nome} onChangeText={(t) => setTemp((s) => ({ ...s, nome: t }))} />
             <Input label="Email" placeholder="email@dominio.com" keyboardType="email-address" autoCapitalize="none" value={temp.email} onChangeText={(t) => setTemp((s) => ({ ...s, email: t }))} />
             <Input 
-              label="Contacto" 
-              placeholder="Contacto" 
-              keyboardType="phone-pad" 
-              value={temp.contacto} 
-              onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t) }))} 
-            />
+  label="Contacto" 
+  placeholder="Contacto" 
+  keyboardType="phone-pad" 
+  maxLength={9}
+  value={temp.contacto} 
+  onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t).slice(0, 9) }))} 
+/>
             <View style={styles.modalActions}>
               {editIndex !== null && (
                 <TouchableOpacity onPress={onDelete} style={[styles.modalButton, styles.modalDanger]}><Text style={styles.modalButtonText}>Apagar</Text></TouchableOpacity>
@@ -677,25 +679,27 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             <View style={{ flex: 1 }}>
               <Controller control={control} name="telefone" render={({ field: { onChange, onBlur, value } }) => (
                 <Input 
-                  label="Telefone" 
-                  placeholder="Telefone" 
-                  keyboardType="phone-pad" 
-                  value={value} 
-                  onChangeText={(t) => onChange(normalizePhone(t))} 
-                  onBlur={onBlur} 
-                />
+                label="Telefone" 
+                placeholder="Telefone" 
+                keyboardType="phone-pad" 
+                maxLength={9}
+                value={value} 
+                onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))} 
+                onBlur={onBlur} 
+              />
               )} />
             </View>
             <View style={{ flex: 1 }}>
               <Controller control={control} name="celular" render={({ field: { onChange, onBlur, value } }) => (
                 <Input 
-                  label="Celular" 
-                  placeholder="Celular" 
-                  keyboardType="phone-pad" 
-                  value={value} 
-                  onChangeText={(t) => onChange(normalizePhone(t))} 
-                  onBlur={onBlur} 
-                />
+                label="Celular" 
+                placeholder="Celular" 
+                keyboardType="phone-pad" 
+                maxLength={9}
+                value={value} 
+                onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))} 
+                onBlur={onBlur} 
+              />
               )} />
             </View>
           </View>
