@@ -597,52 +597,37 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             control={control} 
             name="banco" 
             render={({ field: { onChange, onBlur, value } }) => (
+             
               <View>
-                <Text style={[styles.helperText, { marginBottom: 8 }]}>Banco</Text>
-                <View style={styles.radioGroup}>
-                  <TouchableOpacity 
-                    onPress={() => setBankMode('lista')} 
-                    style={[styles.radioCard, bankMode === 'lista' && styles.radioCardSelected]}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.radioIndicator, bankMode === 'lista' && styles.radioIndicatorSelected]}>
-                      {bankMode === 'lista' && <View style={styles.radioIndicatorInner} />}
-                    </View>
-                    <Text style={[styles.radioLabel, bankMode === 'lista' && styles.radioLabelSelected]}>Lista de bancos</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => setBankMode('outro')} 
-                    style={[styles.radioCard, bankMode === 'outro' && styles.radioCardSelected]}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.radioIndicator, bankMode === 'outro' && styles.radioIndicatorSelected]}>
-                      {bankMode === 'outro' && <View style={styles.radioIndicatorInner} />}
-                    </View>
-                    <Text style={[styles.radioLabel, bankMode === 'outro' && styles.radioLabelSelected]}>Outro</Text>
-                  </TouchableOpacity>
-                </View>
-                {bankMode === 'lista' ? (
-                  <Select 
-                    label="Selecionar banco"
-                    value={(value as unknown) as any}
-                    onChange={(val: any) => {
-                      const found = typeof val === 'number' 
-                        ? MOZ_BANKS.find((b) => b.id === val)
-                        : MOZ_BANKS.find((b) => b.label === val);
-                      onChange(found?.label || (typeof val === 'string' ? val : ''));
-                    }}
-                    options={MOZ_BANKS}
-                  />
-                ) : (
-                  <Input 
-                    label="Outro banco" 
-                    placeholder="Digite o nome do banco" 
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                  />
-                )}
-              </View>
+  <Text style={[styles.helperText, { marginBottom: 8 }]}>Banco</Text>
+  <Select
+    label="Selecionar banco"
+    // Se estiver em modo 'outro', mantemos o Select marcado em 'Outro' para o utilizador ver a seleção
+    value={(bankMode === 'outro' ? 'Outro' : (value as any)) || (null as any)}
+    onChange={(val: any) => {
+      const found = MOZ_BANKS.find((b) => String(b.id) === String(val) || b.label === val);
+      if (String(val) === 'Outro' || found?.label === 'Outro') {
+        setBankMode('outro');
+        onChange(''); // limpar para exigir preenchimento manual
+      } else {
+        setBankMode('lista');
+        onChange(found?.label ?? String(val));
+      }
+    }}
+    options={MOZ_BANKS}
+  />
+  {bankMode === 'outro' && (
+    <Input
+      label="Digite o nome do banco"
+      placeholder="Digite o nome do banco"
+      value={typeof value === 'string' ? value : ''}
+      onChangeText={onChange}
+      onBlur={onBlur}
+      required={true}
+      error={errors.banco?.message}
+    />
+  )}
+</View>
             )}
           />
           <Controller control={control} name="numeroConta" render={({ field: { onChange, onBlur, value } }) => (
