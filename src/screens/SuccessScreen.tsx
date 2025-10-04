@@ -156,7 +156,12 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
       {/* Footer com botão */}
       <View style={styles.footer}>
         <TouchableOpacity 
-          onPress={() => navigation.popToTop()}
+          onPress={() => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'CommercialDataForm' }],
+            });
+          }}
           style={styles.homeButton}
         >
           <Text style={styles.homeButtonText}>Voltar ao Início</Text>

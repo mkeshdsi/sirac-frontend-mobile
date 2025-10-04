@@ -754,8 +754,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                       </TouchableOpacity>
                     </View>
                   ) : (
-                    <TouchableOpacity onPress={() => setShowSignature(true)} style={[styles.modalButton, styles.modalPrimary]}>
-                      <Text style={styles.modalButtonText}>Assinar no ecrã</Text>
+                    <TouchableOpacity onPress={() => setShowSignature(true)} style={[styles.modalButton, styles.modalWarning]}>
+                      <Text style={[styles.modalButtonText, { textAlign: 'center' }]}>Assinar no ecrã</Text>
                     </TouchableOpacity>
                   )}
                   {!!errors.assinatura?.message && (
@@ -1313,5 +1313,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 160,
     backgroundColor: COLORS.white,
+  },
+  modalWarning: {
+    backgroundColor: COLORS.secondary,
+    borderColor: COLORS.secondary,
   },
 });
