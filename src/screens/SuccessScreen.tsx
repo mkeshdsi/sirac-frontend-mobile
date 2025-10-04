@@ -58,7 +58,7 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
   }, []);
 
   const nextSteps = [
-    
+   
     {
       icon: '🔍',
       title: 'Análise de Documentos',
@@ -146,10 +146,9 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
 
         
 
-          {/* Card de Contacto */}
+          
           <Card style={styles.contactCard}>
             <Text style={styles.contactTitle}>#SemStress</Text>
-           
           </Card>
         </Animated.View>
       </ScrollView>
@@ -157,11 +156,7 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
       {/* Footer com botão */}
       <View style={styles.footer}>
         <TouchableOpacity 
-          onPress={() => {
-            // Resetar a stack para garantir que todos os formulários sejam desmontados e reiniciados
-            // Voltar diretamente para CommercialDataForm com campos limpos
-            navigation.reset({ index: 0, routes: [{ name: 'CommercialDataForm' }] });
-          }}
+          onPress={() => navigation.popToTop()}
           style={styles.homeButton}
         >
           <Text style={styles.homeButtonText}>Voltar ao Início</Text>
@@ -356,21 +351,28 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   contactCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.secondary,
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 3,
+    borderColor: COLORS.primary,
   },
   contactTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
+    fontSize: 32,
+    fontWeight: '900',
+    color: COLORS.primary,
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
   },
   contactText: {
     fontSize: 14,
