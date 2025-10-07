@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { SafeAreaView, View, Text, StyleSheet, Animated, ScrollView, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -27,6 +28,7 @@ const COLORS = {
 
 export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
   const { registrationId } = route.params;
+  const insets = useSafeAreaInsets();
   
   // Animações
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -154,7 +156,10 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
       </ScrollView>
 
       {/* Footer com botão */}
-      <View style={styles.footer}>
+      <View style={[
+        styles.footer,
+        { paddingBottom: Math.max(20, insets.bottom + 12) }
+      ]}>
         <TouchableOpacity 
           onPress={() => {
             navigation.reset({
