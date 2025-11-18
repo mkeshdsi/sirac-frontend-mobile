@@ -23,6 +23,7 @@ export interface CommercialData {
   naturezaObjecto?: string;
   banco?: string;
   numeroConta?: string;
+  profissao?: string;
 
   // Endereço
   enderecoCidade?: string;
@@ -44,16 +45,6 @@ export interface CommercialData {
   // Assistentes (lista dinâmica)
   assistentes?: Array<{ nomeCompleto?: string; contacto?: string }>; 
 
-  // Relações (IDs opcionais)
-  angariadorId?: string; // enviar como número no payload se preenchido
-  aprovadorId?: string;   // enviar como número no payload se preenchido
-  validadorId?: string;   // enviar como número no payload se preenchido
-
-  // Substituição e outros
-  substituicaoNomeAgente?: string;
-  substituicaoProvinciaLocalidade?: string;
-  substituicaoEnderecoBairro?: string;
-  profissao?: string;
   // Lista de estabelecimentos (novo)
   estabelecimentos?: Array<{ nome?: string; provinciaLocalidade?: string; enderecoBairro?: string }>;
 }

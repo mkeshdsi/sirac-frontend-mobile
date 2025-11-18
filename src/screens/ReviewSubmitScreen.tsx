@@ -48,11 +48,8 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         // Enviar a imagem como base64 (Data URL). ATENÇÃO: pode exceder 255 chars no backend atual.
         assinatura_adesao: commercialData?.assinatura || undefined,
         data_adesao: toIsoDate(commercialData?.dataFormulario),
-        // IDs opcionais (FKs) se fornecidos
-        angariador_id: commercialData?.angariadorId ? Number(commercialData.angariadorId) : undefined,
-        aprovador_id: commercialData?.aprovadorId ? Number(commercialData.aprovadorId) : undefined,
-        validador_id: commercialData?.validadorId ? Number(commercialData.validadorId) : undefined,
-        // FKs opcionais (angariador_id, aprovador_id, validador_id) não utilizados aqui
+        // Incluir angariador_id no payload (pode ser definido pelo backend se não vier do cliente)
+        // angariador_id: commercialData?.angariadorId ? Number(commercialData.angariadorId) : undefined,
         endereco: commercialData ? {
           cidade: commercialData.enderecoCidade!,
           localidade: commercialData.enderecoLocalidade || undefined,
@@ -89,13 +86,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
               provincia_localidade: e?.provinciaLocalidade || undefined,
               endereco_bairro: e?.enderecoBairro || undefined,
             }))
-          : ((commercialData?.substituicaoNomeAgente || commercialData?.substituicaoProvinciaLocalidade || commercialData?.substituicaoEnderecoBairro)
-              ? [{
-                nome: commercialData?.substituicaoNomeAgente || 'Estabelecimento',
-                provincia_localidade: commercialData?.substituicaoProvinciaLocalidade || undefined,
-                endereco_bairro: commercialData?.substituicaoEnderecoBairro || undefined,
-              }]
-              : []),
+          : [],
       };
 
       // Validações mínimas antes do envio (parcial, backend também valida)

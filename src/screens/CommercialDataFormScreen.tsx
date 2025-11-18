@@ -131,9 +131,6 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   substituicaoProvinciaLocalidade: yup.string().optional(),
   substituicaoEnderecoBairro: yup.string().optional(),
   profissao: yup.string().optional(),
-  angariadorId: yup.string().optional().test('num', 'ID inválido', (v) => !v || /^\d+$/.test(v)),
-  aprovadorId: yup.string().optional().test('num2', 'ID inválido', (v) => !v || /^\d+$/.test(v)),
-  validadorId: yup.string().optional().test('num3', 'ID inválido', (v) => !v || /^\d+$/.test(v)),
 }) as yup.ObjectSchema<CommercialData>;
 
 interface Props { navigation: Nav }
@@ -392,10 +389,6 @@ const EstabelecimentosFieldArray: React.FC<{ control: any }> = ({ control }) => 
 
 export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingRefs, setLoadingRefs] = useState({ ang: false, apr: false, val: false });
-  const [angOptions, setAngOptions] = useState<Array<{ id: number; label: string }>>([]);
-  const [aprOptions, setAprOptions] = useState<Array<{ id: number; label: string }>>([]);
-  const [valOptions, setValOptions] = useState<Array<{ id: number; label: string }>>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
   const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
@@ -437,44 +430,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
     setFieldPositions((s) => ({ ...s, [String(name)]: y }));
   };
 
-  const fetchList = async (resource: 'ang' | 'apr' | 'val') => {
-    const params: any = {};
-    try {
-      if (resource === 'ang') return await listAngariadores(params);
-      if (resource === 'apr') return await listAprovadores(params);
-      if (resource === 'val') return await listValidadores(params);
-      return [];
-    } catch {
-      return [];
-    }
-  };
-
-  const loadAng = async () => {
-    setLoadingRefs((s) => ({ ...s, ang: true }));
-    const data = await fetchList('ang');
-    const mapList = (arr: any[]) => (Array.isArray(arr) ? arr : []).map((it: any) => ({ id: it.id, label: it.nome || `#${it.id}` }));
-    setAngOptions(mapList(data));
-    setLoadingRefs((s) => ({ ...s, ang: false }));
-  };
-  const loadApr = async () => {
-    setLoadingRefs((s) => ({ ...s, apr: true }));
-    const data = await fetchList('apr');
-    const mapList = (arr: any[]) => (Array.isArray(arr) ? arr : []).map((it: any) => ({ id: it.id, label: it.nome || `#${it.id}` }));
-    setAprOptions(mapList(data));
-    setLoadingRefs((s) => ({ ...s, apr: false }));
-  };
-  const loadVal = async () => {
-    setLoadingRefs((s) => ({ ...s, val: true }));
-    const data = await fetchList('val');
-    const mapList = (arr: any[]) => (Array.isArray(arr) ? arr : []).map((it: any) => ({ id: it.id, label: it.nome || `#${it.id}` }));
-    setValOptions(mapList(data));
-    setLoadingRefs((s) => ({ ...s, val: false }));
-  };
-
   useEffect(() => {
-    loadAng();
-    loadApr();
-    loadVal();
     // Preenche a data do formulário por omissão se estiver vazia
     (async () => {
       const ok = await trigger('dataFormulario');
@@ -828,25 +784,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <ProprietariosFieldArray control={control} />
         </Card>
 
-        {/* A preencher pela carteira móvel */}
-        <Card style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIconContainer}>
-              <Text style={styles.cardIcon}>🔗</Text>
-            </View>
-            <Text style={styles.cardTitle}>A preencher pela carteira móvel</Text>
-          </View>
-          <Text style={styles.helperText}>Selecione os responsáveis (opcional)</Text>
-          <Controller control={control} name="angariadorId" render={({ field: { value, onChange } }) => (
-            <Select label="Angariador" value={value as any} onChange={onChange} options={angOptions} loading={loadingRefs.ang} />
-          )} />
-          <Controller control={control} name="aprovadorId" render={({ field: { value, onChange } }) => (
-            <Select label="Aprovador" value={value as any} onChange={onChange} options={aprOptions} loading={loadingRefs.apr} />
-          )} />
-          <Controller control={control} name="validadorId" render={({ field: { value, onChange } }) => (
-            <Select label="Validador" value={value as any} onChange={onChange} options={valOptions} loading={loadingRefs.val} />
-          )} />
-        </Card>
+ 
 
         {/* Documentos Necessários */}
         <Card style={styles.infoCard}>
