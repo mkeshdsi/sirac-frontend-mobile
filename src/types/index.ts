@@ -10,6 +10,10 @@ export interface CommercialData {
   nomeComercial: string;
   nuit: string;
   alvara: string;
+  // Add new fields for agent contact and document identification
+  contactoAgente?: string;
+  tipoDocumento?: 'BI' | 'PASSAPORTE' | 'CARTAO_ELEITOR' | 'CARTA_CONDUCAO';
+  numeroDocumento?: string;
   // Campos adicionais
   assinatura?: string;
   dataFormulario?: string; // dd/mm/aaaa

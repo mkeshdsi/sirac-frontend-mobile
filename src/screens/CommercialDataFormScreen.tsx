@@ -53,10 +53,15 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
       then: (s) => s.required('NUIT é obrigatório').matches(/^[0-9]{9}$/, 'NUIT deve ter 9 dígitos'),
       otherwise: (s) => s.optional(),
     }),
+  // Add new fields for agent contact and document identification
+  contactoAgente: yup.string().optional().test('tel', 'Contacto inválido', (v) => !v || phoneRegex.test(v)),
+  tipoDocumento: yup.string().oneOf(['BI', 'PASSAPORTE', 'CARTAO_ELEITOR', 'CARTA_CONDUCAO'], 'Tipo de documento inválido').optional(),
+  numeroDocumento: yup.string().optional(),
   alvara: yup.string()
-    .when('tipoParceiro', {
-      is: 'MERCHANT',
-      then: (s) => s.required('Número do alvará é obrigatório'),
+    .when(['tipoParceiro', 'tipoDocumento'], {
+      is: (tipoParceiro: string, tipoDocumento: string) => 
+        tipoParceiro === 'MERCHANT' || tipoDocumento === 'CARTA_CONDUCAO',
+      then: (s) => s.required('Número do alvará/licença é obrigatório'),
       otherwise: (s) => s.optional(),
     }),
   dataFormulario: yup
@@ -411,6 +416,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
     },
   });
   const tipoParceiro = useWatch({ control, name: 'tipoParceiro' });
+  const tipoDocumento = useWatch({ control, name: 'tipoDocumento' });
   const [bankMode, setBankMode] = useState<'lista' | 'outro'>('lista');
 
   const handleLogout = () => {
@@ -493,6 +499,66 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator>
+        {/* CONTACTO DO AGENTE E DOCUMENTO DE IDENTIFICAÇÃO */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>👤</Text>
+            </View>
+            <Text style={styles.cardTitle}>Dados do Agente</Text>
+          </View>
+          <View onLayout={onLayoutField('contactoAgente')}>
+            <Controller control={control} name="contactoAgente" render={({ field: { onChange, onBlur, value } }) => (
+              <Input 
+                label="Contacto do Agente" 
+                placeholder="Contacto do Agente" 
+                keyboardType="phone-pad" 
+                maxLength={9}
+                value={value} 
+                onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))} 
+                onBlur={onBlur} 
+                error={errors.contactoAgente?.message}
+              />
+            )} />
+          </View>
+          
+          <View onLayout={onLayoutField('tipoDocumento')}>
+            <Text style={[styles.helperText, { marginBottom: 8 }]}>Tipo de Documento</Text>
+            <Controller
+              control={control}
+              name="tipoDocumento"
+              render={({ field: { onChange, value } }) => (
+                <Select
+                  label="Selecionar tipo de documento"
+                  placeholder="Selecionar tipo de documento"
+                  value={value || (null as any)}
+                  onChange={onChange}
+                  errorText={errors.tipoDocumento?.message}
+                  options={[
+                    { id: 'BI', label: 'BI' },
+                    { id: 'PASSAPORTE', label: 'Passaporte' },
+                    { id: 'CARTAO_ELEITOR', label: 'Cartão de Eleitor' },
+                    { id: 'CARTA_CONDUCAO', label: 'Carta de Condução' },
+                  ]}
+                />
+              )}
+            />
+          </View>
+          
+          <View onLayout={onLayoutField('numeroDocumento')}>
+            <Controller control={control} name="numeroDocumento" render={({ field: { onChange, onBlur, value } }) => (
+              <Input 
+                label="Número do Documento" 
+                placeholder="Número do Documento" 
+                value={value} 
+                onChangeText={onChange} 
+                onBlur={onBlur} 
+                error={errors.numeroDocumento?.message}
+              />
+            )} />
+          </View>
+        </Card>
+
         {/* DADOS EMPRESA */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
@@ -506,16 +572,27 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               <Input label="NUIT" placeholder="123456789" keyboardType="numeric" maxLength={9} value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nuit?.message} required />
             )} />
           </View>
+          
+          <View onLayout={onLayoutField('nuit')}>
+            <Controller control={control} name="alvara" render={({ field: { onChange, onBlur, value } }) => (
+              <Input 
+                label="Número do Alvará/Licença" 
+                placeholder="Ex: 123/2024" 
+                value={value} 
+                onChangeText={onChange} 
+                onBlur={onBlur} 
+                error={errors.alvara?.message} 
+                required={tipoParceiro === 'MERCHANT' || tipoDocumento === 'CARTA_CONDUCAO'}
+              />
+            )} />
+          </View>
+
           <View onLayout={onLayoutField('nomeComercial')}>
             <Controller control={control} name="nomeComercial" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="Nome Comercial" placeholder="Nome do negócio" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nomeComercial?.message} required />
             )} />
           </View>
-          <View onLayout={onLayoutField('nuit')}>
-            <Controller control={control} name="alvara" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Número do Alvará" placeholder="Ex: 123/2024" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.alvara?.message} required />
-            )} />
-          </View>
+         
           <View onLayout={onLayoutField('tipoEmpresa')}>
             <Controller
               control={control}
