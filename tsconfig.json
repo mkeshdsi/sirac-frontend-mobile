@@ -1,18 +1,39 @@
 {
-  "extends": "./node_modules/expo/tsconfig.base.json",
+  "extends": "expo/tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
     "skipLibCheck": true,
-    "types": ["react", "react-native"],
+    "types": [
+      "react",
+      "react-native"
+    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/screens/*": ["./src/screens/*"],
-      "@/services/*": ["./src/services/*"],
-      "@/types/*": ["./src/types/*"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/constants/*": ["./src/constants/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/screens/*": [
+        "./src/screens/*"
+      ],
+      "@/services/*": [
+        "./src/services/*"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ],
+      "@/constants/*": [
+        "./src/constants/*"
+      ]
+    },
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "lib": [
+      "dom",
+      "esnext"
+    ],
+    "jsx": "react-native"
   }
 }

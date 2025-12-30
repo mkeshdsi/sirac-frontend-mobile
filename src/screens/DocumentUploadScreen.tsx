@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, Linking, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, Linking, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Card } from '@/components';
@@ -31,6 +31,7 @@ const COLORS = {
 };
 
 import * as Print from 'expo-print';
+import * as FileSystem from 'expo-file-system/legacy';
 
 // ... (imports existentes: React, View, etc... mas adicione Print acima)
 // (Mantenha interfaces Props, COLORS, etc. inalterados até DocumentUploadScreen)
@@ -50,18 +51,23 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
 
   const convertToPdf = async (imageUri: string): Promise<string> => {
     try {
+      // Lê a imagem como Base64 para garantir que apareça no PDF
+      const base64 = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' });
+      const src = `data:image/jpeg;base64,${base64}`;
+
       // HTML simples para embutir a imagem em página cheia
       const html = `
         <html>
           <body style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh;">
-            <img src="${imageUri}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            <img src="${src}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
           </body>
         </html>
       `;
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       return uri;
-    } catch (e) {
+    } catch (e: any) {
       console.error('Erro ao converter para PDF:', e);
+      Alert.alert('Erro na conversão', `Não foi possível converter a imagem.\nDetalhe: ${e?.message || JSON.stringify(e)}`);
       return imageUri; // Fallback, mas ideal avisar erro
     }
   };
