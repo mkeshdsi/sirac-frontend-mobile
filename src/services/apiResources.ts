@@ -20,9 +20,22 @@ export async function listEnderecos(params?: ListParams) {
   return listResource(api, '/api/v1/enderecos/', params);
 }
 
-export async function listAngariadores(params?: ListParams) {
+// Usando endpoint de users com filtro usertype (ajustado conforme backend)
+// Backend nao tem filtro, entao buscamos todos e filtramos no front
+async function listUsersByType(type: string, params?: ListParams) {
   const api = await getAuthApi();
-  return listResource(api, '/api/v1/angariadores/', params);
+  // Busca TODOS os usuarios
+  const res = await api.get('/api/v1/users/', { params });
+  const allUsers = Array.isArray(res.data) ? res.data : [];
+
+  // Filtra localmente pelo usertype
+  // Verifique se o backend retorna 'Angariador' ou 'angariador' etc. 
+  // O model User.to_dict retorna o campo "usertype".
+  return allUsers.filter((u: any) => u.usertype === type);
+}
+
+export async function listAngariadores(params?: ListParams) {
+  return listUsersByType('Angariador', params);
 }
 
 export async function listParceiros(params?: ListParams) {
@@ -31,13 +44,11 @@ export async function listParceiros(params?: ListParams) {
 }
 
 export async function listValidadores(params?: ListParams) {
-  const api = await getAuthApi();
-  return listResource(api, '/api/v1/validadores/', params);
+  return listUsersByType('Validador', params);
 }
 
 export async function listAprovadores(params?: ListParams) {
-  const api = await getAuthApi();
-  return listResource(api, '/api/v1/aprovadores/', params);
+  return listUsersByType('Aprovador', params);
 }
 
 export async function listProprietarios(params?: ListParams) {
@@ -57,7 +68,8 @@ export async function listEstabelecimentos(params?: ListParams) {
 
 export async function listAdesoes(params?: ListParams) {
   const api = await getAuthApi();
-  return listResource(api, '/api/v1/adesoes/', params);
+  // Adesões são parceiros no contexto atual
+  return listResource(api, '/api/v1/parceiros/', params);
 }
 
 // Create adesao (commercial data submission)

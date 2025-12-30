@@ -5,12 +5,12 @@ import { Button, Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
-import { getAuthApi } from '@/config/api';
+import { getAuthApi, getItem } from '@/config/api';
 
- type Nav = StackNavigationProp<RootStackParamList, 'ReviewSubmit'>;
- type Route = RouteProp<RootStackParamList, 'ReviewSubmit'>;
+type Nav = StackNavigationProp<RootStackParamList, 'ReviewSubmit'>;
+type Route = RouteProp<RootStackParamList, 'ReviewSubmit'>;
 
- interface Props { navigation: Nav; route: Route }
+interface Props { navigation: Nav; route: Route }
 
 export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   const { commercialData, documents } = route.params;
@@ -30,79 +30,139 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         return `${yyyy}-${mm}-${dd}`; // Backend espera Date; string ISO simples
       };
 
-      // Definir tipo_parceiro a partir do formulário (AGENTE|MERCHANT) ou fallback pelo fluxo
-      const tipo_parceiro = commercialData?.tipoParceiro || (commercialData ? 'MERCHANT' : 'AGENTE');
+      // Recuperar usuário logado para atribuir angariador_id
+      const userDataJson = await getItem('sirac_user_data');
+      let userId = undefined;
+      if (userDataJson) {
+        try {
+          const user = JSON.parse(userDataJson);
+          userId = user.id;
+        } catch (e) {
+          console.warn('Falha ao parsear dados do usuário:', e);
+        }
+      }
 
-      // Montar payload conforme backend (app.models.parceiro.Parceiro)
-      const payload: any = {
-        tipo_parceiro,
-        designacao: commercialData?.designacao || commercialData?.nomeComercial || '',
-        // tipo_empresa já vem conforme enum da API (SOCIEDADE|INDIVIDUAL)
-        tipo_empresa: commercialData?.tipoEmpresa,
-        natureza_actividade: commercialData?.naturezaObjecto || undefined,
-        nuit: commercialData?.nuit || undefined,
-        banco: commercialData?.banco || undefined,
-        numero_conta: commercialData?.numeroConta || undefined,
-        bairro_ref: commercialData?.enderecoBairroRef || undefined,
-        profissao: commercialData?.profissao || undefined,
-        // Enviar a imagem como base64 (Data URL). ATENÇÃO: pode exceder 255 chars no backend atual.
-        assinatura_adesao: commercialData?.assinatura || undefined,
-        data_adesao: toIsoDate(commercialData?.dataFormulario),
-        // Incluir angariador_id no payload (pode ser definido pelo backend se não vier do cliente)
-        // angariador_id: commercialData?.angariadorId ? Number(commercialData.angariadorId) : undefined,
-        endereco: commercialData ? {
-          cidade: commercialData.enderecoCidade!,
-          localidade: commercialData.enderecoLocalidade || undefined,
-          avenida_rua: commercialData.enderecoAvenidaRua || undefined,
-          numero: commercialData.enderecoNumero || undefined,
-          quarteirao: commercialData.enderecoQuart || undefined,
-          telefone: commercialData.telefone || undefined,
-          celular: commercialData.celular || undefined,
-        } : undefined,
-        proprietarios: Array.isArray(commercialData?.proprietarios) && commercialData!.proprietarios!.length > 0
-          ? commercialData!.proprietarios!.map((p) => ({
-              nome: p?.nome || undefined,
-              email: p?.email || undefined,
-              contacto: p?.contacto || undefined,
-            }))
-          : (commercialData?.proprietarioNomeCompleto
-              ? [{
-                  nome: commercialData.proprietarioNomeCompleto,
-                  email: commercialData.proprietarioEmail || undefined,
-                  contacto: commercialData.proprietarioContacto || undefined,
-                }]
-              : []),
-        assistentes: Array.isArray(commercialData?.assistentes) && commercialData!.assistentes!.length > 0
-          ? commercialData!.assistentes!
-              .filter((a) => !!a?.nomeCompleto && a!.nomeCompleto!.trim().length > 0)
-              .map((a) => ({
-                nome_completo: a!.nomeCompleto!,
-                contacto: a?.contacto || undefined,
-              }))
-          : [],
-        estabelecimentos: Array.isArray(commercialData?.estabelecimentos) && commercialData!.estabelecimentos!.length > 0
-          ? commercialData!.estabelecimentos!.map((e) => ({
-              nome: e?.nome || 'Estabelecimento',
-              provincia_localidade: e?.provinciaLocalidade || undefined,
-              endereco_bairro: e?.enderecoBairro || undefined,
-            }))
-          : [],
-      };
-
-      // Validações mínimas antes do envio (parcial, backend também valida)
-      if (!payload.assinatura_adesao || !payload.data_adesao) {
+      // Validações mínimas antes do envio
+      if (!commercialData?.assinatura || !commercialData?.dataFormulario) {
         throw new Error('Assinatura e data de adesão são obrigatórias.');
       }
-      if (!payload.designacao || !payload.tipo_empresa || !payload.endereco?.cidade) {
-        throw new Error('Designação, tipo de empresa e cidade são obrigatórios.');
-      }
+
+      // FormData para envio multipart
+      const formData = new FormData();
+
+      // --- Campos Textuais ---
+      const tipo_parceiro = commercialData?.tipoParceiro || (commercialData ? 'MERCHANT' : 'AGENTE');
+      formData.append('tipo_parceiro', tipo_parceiro);
+
+      const designacao = commercialData?.designacao || commercialData?.nomeComercial || '';
+      formData.append('designacao', designacao);
+
+      formData.append('tipo_empresa', commercialData?.tipoEmpresa || '');
+      if (commercialData?.naturezaObjecto) formData.append('natureza_actividade', commercialData.naturezaObjecto);
+      if (commercialData?.nuit) formData.append('nuit', commercialData.nuit);
+      if (commercialData?.banco) formData.append('banco', commercialData.banco);
+      if (commercialData?.numeroConta) formData.append('numero_conta', commercialData.numeroConta);
+      if (commercialData?.enderecoBairroRef) formData.append('bairro_ref', commercialData.enderecoBairroRef);
+      if (commercialData?.profissao) formData.append('profissao', commercialData.profissao);
+
+      // Assinatura e Data
+      formData.append('assinatura_adesao', commercialData.assinatura);
+      const dataAdesao = toIsoDate(commercialData.dataFormulario);
+      if (dataAdesao) formData.append('data_adesao', dataAdesao);
+
+      // Angariador ID
+      if (userId) formData.append('angariador_id', String(userId));
+
+      // Objetos Complexos (Backend faz json.loads se receber string)
+      const endereco = {
+        cidade: commercialData?.enderecoCidade || '',
+        localidade: commercialData?.enderecoLocalidade,
+        avenida_rua: commercialData?.enderecoAvenidaRua,
+        numero: commercialData?.enderecoNumero,
+        quarteirao: commercialData?.enderecoQuart,
+        telefone: commercialData?.telefone,
+        celular: commercialData?.celular,
+      };
+      formData.append('endereco', JSON.stringify(endereco));
+
+      const proprietarios = Array.isArray(commercialData?.proprietarios) && commercialData!.proprietarios!.length > 0
+        ? commercialData!.proprietarios!.map((p) => ({
+          nome: p?.nome,
+          email: p?.email,
+          contacto: p?.contacto,
+        }))
+        : (commercialData?.proprietarioNomeCompleto
+          ? [{
+            nome: commercialData.proprietarioNomeCompleto,
+            email: commercialData.proprietarioEmail,
+            contacto: commercialData.proprietarioContacto,
+          }]
+          : []);
+      formData.append('proprietarios', JSON.stringify(proprietarios));
+
+      const assistentes = Array.isArray(commercialData?.assistentes) && commercialData!.assistentes!.length > 0
+        ? commercialData!.assistentes!
+          .filter((a) => !!a?.nomeCompleto && a!.nomeCompleto!.trim().length > 0)
+          .map((a) => ({
+            nome_completo: a!.nomeCompleto!,
+            contacto: a?.contacto,
+          }))
+        : [];
+      formData.append('assistentes', JSON.stringify(assistentes));
+
+      const estabelecimentos = Array.isArray(commercialData?.estabelecimentos) && commercialData!.estabelecimentos!.length > 0
+        ? commercialData!.estabelecimentos!.map((e) => ({
+          nome: e?.nome || 'Estabelecimento',
+          provincia_localidade: e?.provinciaLocalidade,
+          endereco_bairro: e?.enderecoBairro,
+        }))
+        : [];
+      formData.append('estabelecimentos', JSON.stringify(estabelecimentos));
+
+      // --- Arquivos (PDFs) ---
+      // Helper para anexar arquivo
+      const appendFile = (key: string, uri?: string, filename?: string) => {
+        if (!uri) return;
+        formData.append(key, {
+          uri: uri,
+          name: filename || `${key}.pdf`,
+          type: 'application/pdf',
+        } as any);
+      };
+
+      // Mapeamento Mobile -> Backend Request Files
+      // Backend espera: 'bi', 'nuit', 'alvara', 'contrato'
+      // Mobile tem: biFrenteUri, biVersoUri, nuitUri, alvaraUri
+
+      // Enviamos Bi Frente como 'bi'
+      appendFile('bi', documents.biFrenteUri, `bi_frente_${Date.now()}.pdf`);
+
+      // Enviamos Nuit como 'nuit'
+      appendFile('nuit', documents.nuitUri, `nuit_${Date.now()}.pdf`);
+
+      // Enviamos Alvara como 'alvara'
+      appendFile('alvara', documents.alvaraUri, `alvara_${Date.now()}.pdf`);
+
+      // Backend não tem campo explícito para BI Verso na rota atual, mas se necessário, poderíamos enviar como 'contrato' ou ignorar.
+      // Por enquanto, enviamos apenas a frente conforme mapeamento padrão.
 
       // Enviar para API (prefixo correto no backend)
-      const res = await api.post('/api/v1/parceiros/', payload);
+      // Ajustar headers para multipart é feito automaticamente pelo axios/fetch ao passar FormData, 
+      // mas precisamos garantir que o interceptor não force application/json
+      const res = await api.post('/api/v1/parceiros/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        transformRequest: (data, headers) => {
+          return data; // Evita que o axios tente stringify o FormData
+        },
+      });
+
       const parceiro = res.data?.parceiro || res.data;
       const registrationId = String(parceiro?.id || '--------');
       navigation.replace('Success', { registrationId });
     } catch (e: any) {
+      console.error('Erro submit:', e);
       const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Falha ao submeter cadastro. Tente novamente.';
       Alert.alert('Erro', msg);
     } finally {
@@ -129,9 +189,8 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         <Text style={styles.section}>Documentos</Text>
         <Text style={styles.item}>BI Frente: {documents.biFrenteUri ? 'OK' : 'Falta'}</Text>
         <Text style={styles.item}>BI Verso: {documents.biVersoUri ? 'OK' : 'Falta'}</Text>
+        <Text style={styles.item}>NUIT: {documents.nuitUri ? 'OK' : 'Falta'}</Text>
         <Text style={styles.item}>Alvará: {documents.alvaraUri ? 'OK' : 'Falta'}</Text>
-        <Text style={styles.item}>Comprov. Residência: {documents.comprovativoResidenciaUri ? 'OK' : 'Falta'}</Text>
-        <Text style={styles.item}>Foto Perfil: {documents.fotoPerfilUri ? 'OK' : 'Falta'}</Text>
       </Card>
 
       <View style={styles.footer}>

@@ -47,7 +47,7 @@ export interface CommercialData {
   proprietarios?: Array<{ nome?: string; email?: string; contacto?: string }>;
 
   // Assistentes (lista dinâmica)
-  assistentes?: Array<{ nomeCompleto?: string; contacto?: string }>; 
+  assistentes?: Array<{ nomeCompleto?: string; contacto?: string }>;
 
   // Lista de estabelecimentos (novo)
   estabelecimentos?: Array<{ nome?: string; provinciaLocalidade?: string; enderecoBairro?: string }>;
@@ -56,9 +56,8 @@ export interface CommercialData {
 export interface DocumentsPayload {
   biFrenteUri?: string;
   biVersoUri?: string;
+  nuitUri?: string;
   alvaraUri?: string;
-  comprovativoResidenciaUri?: string;
-  fotoPerfilUri?: string;
 }
 
 export type RootStackParamList = {

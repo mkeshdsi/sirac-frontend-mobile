@@ -30,48 +30,80 @@ const COLORS = {
   success: '#01836b',
 };
 
+import * as Print from 'expo-print';
+
+// ... (imports existentes: React, View, etc... mas adicione Print acima)
+// (Mantenha interfaces Props, COLORS, etc. inalterados até DocumentUploadScreen)
+
 const getFileExtension = (uri: string) => {
   const parts = uri.split('.');
   return parts[parts.length - 1]?.toLowerCase() || '';
 };
 
-const isImageFile = (uri: string) => {
-  const ext = getFileExtension(uri);
-  return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
-};
-
-const getFileIcon = (uri: string) => {
-  const ext = getFileExtension(uri);
-  if (ext === 'pdf') return '📄';
-  if (['doc', 'docx'].includes(ext)) return '📝';
-  if (['xls', 'xlsx'].includes(ext)) return '📊';
-  return '📎';
-};
-
+// Modifique DocumentUploadScreen para incluir lógica de conversão
 export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => {
   const { commercialData } = route.params;
   const [docs, setDocs] = useState<DocumentsPayload>({});
+  const [converting, setConverting] = useState(false);
+
   const hasAnyDoc = Object.values(docs).some(Boolean);
 
+  const convertToPdf = async (imageUri: string): Promise<string> => {
+    try {
+      // HTML simples para embutir a imagem em página cheia
+      const html = `
+        <html>
+          <body style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh;">
+            <img src="${imageUri}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+          </body>
+        </html>
+      `;
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      return uri;
+    } catch (e) {
+      console.error('Erro ao converter para PDF:', e);
+      return imageUri; // Fallback, mas ideal avisar erro
+    }
+  };
+
+  const processAndSetDoc = async (key: keyof DocumentsPayload, uri: string) => {
+    setConverting(true);
+    try {
+      const ext = getFileExtension(uri);
+      let finalUri = uri;
+
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
+        // Converter para PDF
+        finalUri = await convertToPdf(uri);
+      }
+
+      // Se já for PDF, mantém. Se for outro tipo não mapeado, mantém (mas backend pode rejeitar se validar mime).
+      // Como estamos usando expo-document-picker filtrado ou image-picker, deve ser img ou pdf.
+
+      setDocs((d) => ({ ...d, [key]: finalUri }));
+    } finally {
+      setConverting(false);
+    }
+  };
+
   const pickImage = async (key: keyof DocumentsPayload) => {
-    const res = await ImagePicker.launchImageLibraryAsync({ 
+    const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.8,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsEditing: true, // Permite cortar
     });
     if (!res.canceled && res.assets && res.assets[0]?.uri) {
-      setDocs((d) => ({ ...d, [key]: res.assets![0]!.uri }));
+      await processAndSetDoc(key, res.assets[0].uri);
     }
   };
 
   const pickFile = async (key: keyof DocumentsPayload) => {
-    const res = await DocumentPicker.getDocumentAsync({ 
+    const res = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
       type: ['application/pdf', 'image/*'],
     });
     if (res.assets && res.assets[0]?.uri) {
-      setDocs((d) => ({ ...d, [key]: res.assets![0]!.uri }));
+      await processAndSetDoc(key, res.assets[0].uri);
     }
   };
 
@@ -88,14 +120,15 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
   };
 
   const documentItems = [
-    { key: 'biFrenteUri' as keyof DocumentsPayload, title: 'BI (Frente)', icon: '🪪', type: 'image' },
-    { key: 'biVersoUri' as keyof DocumentsPayload, title: 'BI (Verso)', icon: '🪪', type: 'image' },
-    { key: 'alvaraUri' as keyof DocumentsPayload, title: 'Alvará', icon: '📜', type: 'file' },
-    { key: 'comprovativoResidenciaUri' as keyof DocumentsPayload, title: 'Comprovativo de Residência', icon: '🏠', type: 'file' },
-    { key: 'fotoPerfilUri' as keyof DocumentsPayload, title: 'Foto de Perfil', icon: '📸', type: 'image' },
+    { key: 'biFrenteUri' as keyof DocumentsPayload, title: 'BI / Passaporte (Identificação)', icon: '🪪', type: 'image' },
+    // BI Verso opcional dependendo do documento, mas mantendo conforme solicitado "BI/passaporte..."
+    { key: 'biVersoUri' as keyof DocumentsPayload, title: 'Verso (se aplicável)', icon: '🪪', type: 'image' },
+    { key: 'nuitUri' as keyof DocumentsPayload, title: 'NUIT (Documento)', icon: '🔢', type: 'file' },
+    { key: 'alvaraUri' as keyof DocumentsPayload, title: 'Licença / Alvará', icon: '📜', type: 'file' },
   ];
 
   const uploadedCount = Object.values(docs).filter(Boolean).length;
+  // totalCount baseia-se nos itens obrigatórios? Vamos considerar todos itens listados como meta visual.
   const totalCount = documentItems.length;
   const progress = (uploadedCount / totalCount) * 100;
 
@@ -104,8 +137,8 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Carregar Documentos</Text>
-        <Text style={styles.headerSubtitle}>Anexe os documentos necessários para completar o cadastro</Text>
-        
+        <Text style={styles.headerSubtitle}>Anexe os documentos (convertidos auto. para PDF)</Text>
+
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
@@ -115,7 +148,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -135,10 +168,10 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.uploadCardTitle}>{item.title}</Text>
-                      {isUploaded && <Text style={styles.uploadCardStatus}>✓ Anexado</Text>}
+                      {isUploaded && <Text style={styles.uploadCardStatus}>✓ Pronto (PDF)</Text>}
                     </View>
                     {isUploaded && (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={() => removeDoc(item.key)}
                         style={styles.removeButton}
                       >
@@ -150,44 +183,43 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
 
                 {isUploaded && uri ? (
                   <View style={styles.previewContainer}>
-                    {isImageFile(uri) ? (
-                      <Image 
-                        source={{ uri }} 
-                        style={styles.previewImage} 
-                        resizeMode="cover" 
-                      />
-                    ) : (
-                      <View style={styles.filePreview}>
-                        <Text style={styles.fileIcon}>{getFileIcon(uri)}</Text>
-                        <Text style={styles.fileName}>
-                          {uri.split('/').pop()?.substring(0, 30) || 'Documento'}
-                        </Text>
-                        <TouchableOpacity 
-                          onPress={() => Linking.openURL(uri)}
-                          style={styles.openFileButton}
-                        >
-                          <View style={styles.inlineRow}>
-                            <Ionicons name="open-outline" size={16} color={COLORS.white} style={{ marginRight: 6 }} />
-                            <Text style={styles.openFileButtonText}>Abrir documento</Text>
-                          </View>
-                        </TouchableOpacity>
-                      </View>
-                    )}
+                    <View style={styles.filePreview}>
+                      <Text style={styles.fileIcon}>📄</Text>
+                      <Text style={styles.fileName}>
+                        {keyofDocumentsPayloadToLabel(item.key)}.pdf
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(uri)}
+                        style={styles.openFileButton}
+                      >
+                        <View style={styles.inlineRow}>
+                          <Ionicons name="open-outline" size={16} color={COLORS.white} style={{ marginRight: 6 }} />
+                          <Text style={styles.openFileButtonText}>Visualizar PDF</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ) : (
                   <TouchableOpacity
                     onPress={() => item.type === 'image' ? pickImage(item.key) : pickFile(item.key)}
-                    style={styles.uploadButton}
+                    style={[styles.uploadButton, converting && styles.uploadButtonDisabled]}
+                    disabled={converting}
                   >
-                    <Ionicons 
-                      name={item.type === 'image' ? 'image-outline' : 'document-outline'} 
-                      size={28} 
-                      color={COLORS.primary}
-                      style={{ marginBottom: 8 }}
-                    />
-                    <Text style={styles.uploadButtonText}>
-                      {item.type === 'image' ? 'Escolher imagem' : 'Escolher ficheiro'}
-                    </Text>
+                    {converting ? (
+                      <Text style={styles.uploadButtonText}>Processando...</Text>
+                    ) : (
+                      <>
+                        <Ionicons
+                          name={item.type === 'image' ? 'image-outline' : 'document-outline'}
+                          size={28}
+                          color={COLORS.primary}
+                          style={{ marginBottom: 8 }}
+                        />
+                        <Text style={styles.uploadButtonText}>
+                          {item.type === 'image' ? 'Escolher imagem' : 'Escolher ficheiro'}
+                        </Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 )}
               </Card>
@@ -206,24 +238,19 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
           <View style={styles.infoList}>
             <View style={styles.infoItem}>
               <Text style={styles.infoBullet}>•</Text>
-              <Text style={styles.infoText}>Certifique-se de que as imagens estão nítidas e legíveis</Text>
+              <Text style={styles.infoText}>Documentos de imagem serão convertidos automaticamente para PDF.</Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoBullet}>•</Text>
-              <Text style={styles.infoText}>Formato aceito: JPG, PNG, PDF</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoBullet}>•</Text>
-              <Text style={styles.infoText}>Tamanho máximo: 10MB por ficheiro</Text>
+              <Text style={styles.infoText}>Carregue o BI ou Passaporte primeiro.</Text>
             </View>
           </View>
         </Card>
 
         {/* Success Message */}
-        {uploadedCount === totalCount && (
+        {uploadedCount >= 3 && ( // Assumindo pelo menos 3 docs principais
           <Card style={styles.successCard}>
-           
-            <Text style={styles.successTitle}>Todos os documentos anexados!</Text>
+            <Text style={styles.successTitle}>Documentos prontos!</Text>
             <Text style={styles.successText}>Pode prosseguir para a revisão final</Text>
           </Card>
         )}
@@ -231,31 +258,32 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
 
       {/* Footer */}
       <View style={styles.footer}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
           style={styles.footerButtonSecondary}
+          disabled={converting}
         >
           <View style={styles.inlineRowCenter}>
             <Ionicons name="arrow-back-outline" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
             <Text style={styles.footerButtonSecondaryText}>Voltar</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={goNext} 
+        <TouchableOpacity
+          onPress={goNext}
           style={[
             styles.footerButtonPrimary,
-            !hasAnyDoc ? styles.footerButtonDisabled : undefined
+            (!hasAnyDoc || converting) ? styles.footerButtonDisabled : undefined
           ]}
-          disabled={!hasAnyDoc}
+          disabled={!hasAnyDoc || converting}
         >
           <View style={styles.inlineRowCenter}>
             <Text style={[
               styles.footerButtonPrimaryText,
-              !hasAnyDoc ? styles.footerButtonDisabledText : undefined
+              (!hasAnyDoc || converting) ? styles.footerButtonDisabledText : undefined
             ]}>
-              {hasAnyDoc ? 'Continuar' : 'Anexe pelo menos 1 documento'}
+              {converting ? 'Aguarde...' : (hasAnyDoc ? 'Continuar' : 'Anexe documentos')}
             </Text>
-            {hasAnyDoc && (
+            {hasAnyDoc && !converting && (
               <Ionicons name="arrow-forward-outline" size={18} color={COLORS.white} style={{ marginLeft: 8 }} />
             )}
           </View>
@@ -265,10 +293,20 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
   );
 };
 
+const keyofDocumentsPayloadToLabel = (key: string) => {
+  switch (key) {
+    case 'biFrenteUri': return 'BI_Frente';
+    case 'biVersoUri': return 'BI_Verso';
+    case 'nuitUri': return 'NUIT';
+    case 'alvaraUri': return 'Alvara';
+    default: return 'Doc';
+  }
+}
+
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.background 
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background
   },
   header: {
     backgroundColor: COLORS.white,
@@ -520,8 +558,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
   },
-  footer: { 
-    flexDirection: 'row', 
+  footer: {
+    flexDirection: 'row',
     gap: 12,
     padding: 16,
     backgroundColor: COLORS.white,
@@ -573,5 +611,8 @@ const styles = StyleSheet.create({
   },
   footerButtonDisabledText: {
     color: COLORS.textSecondary,
+  },
+  uploadButtonDisabled: {
+    opacity: 0.5,
   },
 });

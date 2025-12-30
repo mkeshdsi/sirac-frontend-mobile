@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import { getItem, setItem, deleteItem } from '@/utils/storage';
+export { getItem, setItem, deleteItem };
 
 const KEY_API_BASE_URL = 'sirac_api_base_url';
 const DEFAULT_BASE_URL = 'http://10.100.33.169:8055'; // IP da máquina para uso no Expo Go
