@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
+import { SafeAreaView, View, Text, StyleSheet, Alert } from 'react-native';
 import { Theme } from '@/constants/theme';
 import { Button, Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -13,7 +12,7 @@ type Route = RouteProp<RootStackParamList, 'ReviewSubmit'>;
 
 interface Props { navigation: Nav; route: Route }
 
-export const ReviewSubmitScreen = ({ navigation, route }: Props) => {
+export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   const { commercialData, documents } = route.params;
   const [loading, setLoading] = useState(false);
 
@@ -58,14 +57,6 @@ export const ReviewSubmitScreen = ({ navigation, route }: Props) => {
       const designacao = commercialData?.designacao || commercialData?.nomeComercial || '';
       formData.append('designacao', designacao);
 
-      // Adicionar Contacto do Agente (Vital para SGD)
-      if (commercialData?.contactoAgente) {
-        formData.append('contacto_agente', commercialData.contactoAgente);
-      } else if (commercialData?.celular) {
-        // Fallback para celular se contactoAgente não estiver preenchido (embora o form tenha ambos)
-        formData.append('contacto_agente', commercialData.celular);
-      }
-
       formData.append('tipo_empresa', commercialData?.tipoEmpresa || '');
       if (commercialData?.naturezaObjecto) formData.append('natureza_actividade', commercialData.naturezaObjecto);
       if (commercialData?.nuit) formData.append('nuit', commercialData.nuit);
@@ -82,6 +73,12 @@ export const ReviewSubmitScreen = ({ navigation, route }: Props) => {
       // Angariador ID
       if (userId) formData.append('angariador_id', String(userId));
 
+      // Contato Principal (msisdn / contacto_agente)
+      // Mapear celular para contacto_agente, pois é usado na integração SGD
+      if (commercialData?.celular) {
+        formData.append('contacto_agente', commercialData.celular);
+      }
+
       // Objetos Complexos (Backend faz json.loads se receber string)
       const endereco = {
         cidade: commercialData?.enderecoCidade || '',
@@ -94,8 +91,14 @@ export const ReviewSubmitScreen = ({ navigation, route }: Props) => {
       };
       formData.append('endereco', JSON.stringify(endereco));
 
+      console.log('FormData Entries:');
+      // @ts-ignore
+      for (let pair of formData._parts) {
+        console.log(pair[0], pair[1]);
+      }
+
       const proprietarios = Array.isArray(commercialData?.proprietarios) && commercialData!.proprietarios!.length > 0
-        ? commercialData!.proprietarios!.map((p: any) => ({
+        ? commercialData!.proprietarios!.map((p) => ({
           nome: p?.nome,
           email: p?.email,
           contacto: p?.contacto,
@@ -111,8 +114,8 @@ export const ReviewSubmitScreen = ({ navigation, route }: Props) => {
 
       const assistentes = Array.isArray(commercialData?.assistentes) && commercialData!.assistentes!.length > 0
         ? commercialData!.assistentes!
-          .filter((a: any) => !!a?.nomeCompleto && a!.nomeCompleto!.trim().length > 0)
-          .map((a: any) => ({
+          .filter((a) => !!a?.nomeCompleto && a!.nomeCompleto!.trim().length > 0)
+          .map((a) => ({
             nome_completo: a!.nomeCompleto!,
             contacto: a?.contacto,
           }))
@@ -120,7 +123,7 @@ export const ReviewSubmitScreen = ({ navigation, route }: Props) => {
       formData.append('assistentes', JSON.stringify(assistentes));
 
       const estabelecimentos = Array.isArray(commercialData?.estabelecimentos) && commercialData!.estabelecimentos!.length > 0
-        ? commercialData!.estabelecimentos!.map((e: any) => ({
+        ? commercialData!.estabelecimentos!.map((e) => ({
           nome: e?.nome || 'Estabelecimento',
           provincia_localidade: e?.provinciaLocalidade,
           endereco_bairro: e?.enderecoBairro,

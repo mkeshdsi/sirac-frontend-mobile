@@ -34,9 +34,10 @@ const COLORS = {
 
 
 const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-const phoneRegex = /^\d{7,15}$/;
+// Regex estrito para prefixos 82 ou 83 (com ou sem 258)
+const phoneRegex = /^(258)?(82|83)\d{7}$/;
 
-// Normaliza contactos: mantém apenas dígitos (aceita DDD), remove '+', espaços, hífens, etc.
+// Normaliza contactos: mantém apenas dígitos
 const normalizePhone = (s?: string) => (s ? s.replace(/[^0-9]/g, '') : '');
 
 const schema: yup.ObjectSchema<CommercialData> = yup.object({
@@ -54,12 +55,12 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
       otherwise: (s) => s.optional(),
     }),
   // Add new fields for agent contact and document identification
-  contactoAgente: yup.string().optional().test('tel', 'Contacto inválido', (v) => !v || phoneRegex.test(v)),
+  contactoAgente: yup.string().optional().test('tel', 'Deve começar com 82 ou 83 (9 dígitos)', (v) => !v || phoneRegex.test(v)),
   tipoDocumento: yup.string().oneOf(['BI', 'PASSAPORTE', 'CARTAO_ELEITOR', 'CARTA_CONDUCAO'], 'Tipo de documento inválido').optional(),
   numeroDocumento: yup.string().optional(),
   alvara: yup.string()
     .when(['tipoParceiro', 'tipoDocumento'], {
-      is: (tipoParceiro: string, tipoDocumento: string) => 
+      is: (tipoParceiro: string, tipoDocumento: string) =>
         tipoParceiro === 'MERCHANT' || tipoDocumento === 'CARTA_CONDUCAO',
       then: (s) => s.required('Número do alvará/licença é obrigatório'),
       otherwise: (s) => s.optional(),
@@ -88,9 +89,9 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   naturezaObjecto: yup.string().optional(),
   banco: yup.string().optional(),
   numeroConta: yup.string().optional().test('accnum', 'Nº da conta deve conter apenas dígitos', (v) => !v || /^\d+$/.test(v)),
-  telefone: yup.string().optional().test('tel', 'Telefone inválido', (v) => !v || phoneRegex.test(v)),
-  celular: yup.string().optional().test('cel', 'Celular inválido', (v) => !v || phoneRegex.test(v)),
-  proprietarioContacto: yup.string().optional().test('propcont', 'Contacto inválido', (v) => !v || phoneRegex.test(v)),
+  telefone: yup.string().optional().test('tel', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
+  celular: yup.string().optional().test('cel', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
+  proprietarioContacto: yup.string().optional().test('propcont', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
   assistentes: yup
     .array(
       yup.object({
@@ -101,7 +102,7 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
         contacto: yup
           .string()
           .optional()
-          .test('ass-contact', 'Contacto inválido', (v) => !v || phoneRegex.test(v)),
+          .test('ass-contact', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
       })
     )
     .optional(),
@@ -110,7 +111,7 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
       yup.object({
         nome: yup.string().optional(),
         email: yup.string().optional().email('Email inválido'),
-        contacto: yup.string().optional().test('prop-contact', 'Contacto inválido', (v) => !v || phoneRegex.test(v)),
+        contacto: yup.string().optional().test('prop-contact', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
       })
     )
     .optional(),
@@ -200,9 +201,9 @@ const AssistentesFieldArray: React.FC<{ control: any }> = ({ control }) => {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{editIndex === null ? 'Adicionar Assistente' : 'Editar Assistente'}</Text>
-            <Input 
-              label="Nome Completo" 
-              placeholder="Nome Completo" 
+            <Input
+              label="Nome Completo"
+              placeholder="Nome Completo"
               value={temp.nomeCompleto}
               autoCapitalize="words"
               autoCorrect={false}
@@ -212,14 +213,14 @@ const AssistentesFieldArray: React.FC<{ control: any }> = ({ control }) => {
                 setTemp((s) => ({ ...s, nomeCompleto: normalized }));
               }}
             />
-            <Input 
-  label="Contacto" 
-  placeholder="Contacto" 
-  keyboardType="phone-pad" 
-  maxLength={9}
-  value={temp.contacto} 
-  onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t).slice(0, 9) }))} 
-/>
+            <Input
+              label="Contacto"
+              placeholder="Contacto"
+              keyboardType="phone-pad"
+              maxLength={9}
+              value={temp.contacto}
+              onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t).slice(0, 9) }))}
+            />
             <View style={styles.modalActions}>
               {editIndex !== null && (
                 <TouchableOpacity onPress={onDelete} style={[styles.modalButton, styles.modalDanger]}><Text style={styles.modalButtonText}>Apagar</Text></TouchableOpacity>
@@ -294,14 +295,14 @@ const ProprietariosFieldArray: React.FC<{ control: any }> = ({ control }) => {
             <Text style={styles.modalTitle}>{editIndex === null ? 'Adicionar Proprietário' : 'Editar Proprietário'}</Text>
             <Input label="Nome" placeholder="Nome" value={temp.nome} onChangeText={(t) => setTemp((s) => ({ ...s, nome: t }))} />
             <Input label="Email" placeholder="email@dominio.com" keyboardType="email-address" autoCapitalize="none" value={temp.email} onChangeText={(t) => setTemp((s) => ({ ...s, email: t }))} />
-            <Input 
-  label="Contacto" 
-  placeholder="Contacto" 
-  keyboardType="phone-pad" 
-  maxLength={9}
-  value={temp.contacto} 
-  onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t).slice(0, 9) }))} 
-/>
+            <Input
+              label="Contacto"
+              placeholder="Contacto"
+              keyboardType="phone-pad"
+              maxLength={9}
+              value={temp.contacto}
+              onChangeText={(t) => setTemp((s) => ({ ...s, contacto: normalizePhone(t).slice(0, 9) }))}
+            />
             <View style={styles.modalActions}>
               {editIndex !== null && (
                 <TouchableOpacity onPress={onDelete} style={[styles.modalButton, styles.modalDanger]}><Text style={styles.modalButtonText}>Apagar</Text></TouchableOpacity>
@@ -473,7 +474,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
@@ -509,19 +510,19 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View onLayout={onLayoutField('contactoAgente')}>
             <Controller control={control} name="contactoAgente" render={({ field: { onChange, onBlur, value } }) => (
-              <Input 
-                label="Contacto do Agente" 
-                placeholder="Contacto do Agente" 
-                keyboardType="phone-pad" 
+              <Input
+                label="Contacto do Agente"
+                placeholder="Contacto do Agente"
+                keyboardType="phone-pad"
                 maxLength={9}
-                value={value} 
-                onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))} 
-                onBlur={onBlur} 
+                value={value}
+                onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))}
+                onBlur={onBlur}
                 error={errors.contactoAgente?.message}
               />
             )} />
           </View>
-          
+
           <View onLayout={onLayoutField('tipoDocumento')}>
             <Text style={[styles.helperText, { marginBottom: 8 }]}>Tipo de Documento</Text>
             <Controller
@@ -544,15 +545,15 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               )}
             />
           </View>
-          
+
           <View onLayout={onLayoutField('numeroDocumento')}>
             <Controller control={control} name="numeroDocumento" render={({ field: { onChange, onBlur, value } }) => (
-              <Input 
-                label="Número do Documento" 
-                placeholder="Número do Documento" 
-                value={value} 
-                onChangeText={onChange} 
-                onBlur={onBlur} 
+              <Input
+                label="Número do Documento"
+                placeholder="Número do Documento"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
                 error={errors.numeroDocumento?.message}
               />
             )} />
@@ -572,16 +573,16 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               <Input label="NUIT" placeholder="123456789" keyboardType="numeric" maxLength={9} value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nuit?.message} required />
             )} />
           </View>
-          
+
           <View onLayout={onLayoutField('nuit')}>
             <Controller control={control} name="alvara" render={({ field: { onChange, onBlur, value } }) => (
-              <Input 
-                label="Número do Alvará/Licença" 
-                placeholder="Ex: 123/2024" 
-                value={value} 
-                onChangeText={onChange} 
-                onBlur={onBlur} 
-                error={errors.alvara?.message} 
+              <Input
+                label="Número do Alvará/Licença"
+                placeholder="Ex: 123/2024"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.alvara?.message}
                 required={tipoParceiro === 'MERCHANT' || tipoDocumento === 'CARTA_CONDUCAO'}
               />
             )} />
@@ -592,15 +593,15 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               <Input label="Nome Comercial" placeholder="Nome do negócio" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nomeComercial?.message} required />
             )} />
           </View>
-         
+
           <View onLayout={onLayoutField('tipoEmpresa')}>
             <Controller
               control={control}
               name="tipoEmpresa"
               render={({ field }) => (
                 <View style={styles.radioGroup}>
-                  <TouchableOpacity 
-                    onPress={() => field.onChange('SOCIEDADE')} 
+                  <TouchableOpacity
+                    onPress={() => field.onChange('SOCIEDADE')}
                     style={[styles.radioCard, field.value === 'SOCIEDADE' && styles.radioCardSelected]}
                   >
                     <View style={[styles.radioIndicator, field.value === 'SOCIEDADE' && styles.radioIndicatorSelected]}>
@@ -608,8 +609,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                     </View>
                     <Text style={[styles.radioLabel, field.value === 'SOCIEDADE' && styles.radioLabelSelected]}>SOCIEDADE</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => field.onChange('INDIVIDUAL')} 
+                  <TouchableOpacity
+                    onPress={() => field.onChange('INDIVIDUAL')}
                     style={[styles.radioCard, field.value === 'INDIVIDUAL' && styles.radioCardSelected]}
                   >
                     <View style={[styles.radioIndicator, field.value === 'INDIVIDUAL' && styles.radioIndicatorSelected]}>
@@ -628,41 +629,41 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <Controller control={control} name="naturezaObjecto" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Natureza e objecto da actividade" placeholder="Ex: Comércio de ..." value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
-          <Controller 
-            control={control} 
-            name="banco" 
+          <Controller
+            control={control}
+            name="banco"
             render={({ field: { onChange, onBlur, value } }) => (
-             
+
               <View>
-  <Text style={[styles.helperText, { marginBottom: 8 }]}>Banco</Text>
-  <Select
-    label="Selecionar banco"
-    // Se estiver em modo 'outro', mantemos o Select marcado em 'Outro' para o utilizador ver a seleção
-    value={(bankMode === 'outro' ? 'Outro' : (value as any)) || (null as any)}
-    onChange={(val: any) => {
-      const found = MOZ_BANKS.find((b) => String(b.id) === String(val) || b.label === val);
-      if (String(val) === 'Outro' || found?.label === 'Outro') {
-        setBankMode('outro');
-        onChange(''); // limpar para exigir preenchimento manual
-      } else {
-        setBankMode('lista');
-        onChange(found?.label ?? String(val));
-      }
-    }}
-    options={MOZ_BANKS}
-  />
-  {bankMode === 'outro' && (
-    <Input
-      label="Digite o nome do banco"
-      placeholder="Digite o nome do banco"
-      value={typeof value === 'string' ? value : ''}
-      onChangeText={onChange}
-      onBlur={onBlur}
-      required={true}
-      error={errors.banco?.message}
-    />
-  )}
-</View>
+                <Text style={[styles.helperText, { marginBottom: 8 }]}>Banco</Text>
+                <Select
+                  label="Selecionar banco"
+                  // Se estiver em modo 'outro', mantemos o Select marcado em 'Outro' para o utilizador ver a seleção
+                  value={(bankMode === 'outro' ? 'Outro' : (value as any)) || (null as any)}
+                  onChange={(val: any) => {
+                    const found = MOZ_BANKS.find((b) => String(b.id) === String(val) || b.label === val);
+                    if (String(val) === 'Outro' || found?.label === 'Outro') {
+                      setBankMode('outro');
+                      onChange(''); // limpar para exigir preenchimento manual
+                    } else {
+                      setBankMode('lista');
+                      onChange(found?.label ?? String(val));
+                    }
+                  }}
+                  options={MOZ_BANKS}
+                />
+                {bankMode === 'outro' && (
+                  <Input
+                    label="Digite o nome do banco"
+                    placeholder="Digite o nome do banco"
+                    value={typeof value === 'string' ? value : ''}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    required={true}
+                    error={errors.banco?.message}
+                  />
+                )}
+              </View>
             )}
           />
           <Controller control={control} name="numeroConta" render={({ field: { onChange, onBlur, value } }) => (
@@ -711,28 +712,28 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.rowFields}>
             <View style={{ flex: 1 }}>
               <Controller control={control} name="telefone" render={({ field: { onChange, onBlur, value } }) => (
-                <Input 
-                label="Telefone" 
-                placeholder="Telefone" 
-                keyboardType="phone-pad" 
-                maxLength={9}
-                value={value} 
-                onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))} 
-                onBlur={onBlur} 
-              />
+                <Input
+                  label="Telefone"
+                  placeholder="Telefone"
+                  keyboardType="phone-pad"
+                  maxLength={9}
+                  value={value}
+                  onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))}
+                  onBlur={onBlur}
+                />
               )} />
             </View>
             <View style={{ flex: 1 }}>
               <Controller control={control} name="celular" render={({ field: { onChange, onBlur, value } }) => (
-                <Input 
-                label="Celular" 
-                placeholder="Celular" 
-                keyboardType="phone-pad" 
-                maxLength={9}
-                value={value} 
-                onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))} 
-                onBlur={onBlur} 
-              />
+                <Input
+                  label="Celular"
+                  placeholder="Celular"
+                  keyboardType="phone-pad"
+                  maxLength={9}
+                  value={value}
+                  onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))}
+                  onBlur={onBlur}
+                />
               )} />
             </View>
           </View>
@@ -861,12 +862,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <ProprietariosFieldArray control={control} />
         </Card>
 
- 
+
 
         {/* Documentos Necessários */}
         <Card style={styles.infoCard}>
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIconContainer, { backgroundColor: COLORS.secondaryLight }] }>
+            <View style={[styles.cardIconContainer, { backgroundColor: COLORS.secondaryLight }]}>
               <Text style={styles.cardIcon}>📄</Text>
             </View>
             <Text style={styles.cardTitle}>Documentos Necessários</Text>
@@ -899,7 +900,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Footer com botão Continuar */}
       <View style={styles.footer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={handleSubmit(onSubmit, (errs) => {
             try {
               const keys = Object.keys(errs || {});
@@ -925,7 +926,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             } catch (err) {
               Alert.alert('Campos em falta', 'Verifique os campos obrigatórios destacados antes de continuar.');
             }
-          })} 
+          })}
           style={[styles.footerButtonPrimary, { flex: 1 }]}
           disabled={isLoading}
         >
@@ -944,8 +945,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: COLORS.background,
     // Garante altura total no Web para permitir scroll
     minHeight: '100vh' as any,
@@ -996,7 +997,7 @@ const styles = StyleSheet.create({
     color: COLORS.error,
     marginLeft: 6,
   },
-  content: { 
+  content: {
     padding: 16,
     // FlexGrow garante que o conteúdo expande e ativa scroll quando necessário
     flexGrow: 1,
@@ -1108,16 +1109,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
-  th: { 
-    flex: 1, 
+  th: {
+    flex: 1,
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.primary,
     textTransform: 'uppercase',
   },
-  tableRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 8,
     gap: 8,
@@ -1128,15 +1129,15 @@ const styles = StyleSheet.create({
   tableRowAlt: {
     backgroundColor: COLORS.background,
   },
-  td: { 
+  td: {
     flex: 1,
   },
-  rowActions: { 
-    flexDirection: 'row', 
+  rowActions: {
+    flexDirection: 'row',
     gap: 6,
     justifyContent: 'flex-end',
   },
-  cellText: { 
+  cellText: {
     fontSize: 14,
     color: COLORS.text,
   },
@@ -1264,8 +1265,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text,
   },
-  footer: { 
-    flexDirection: 'row', 
+  footer: {
+    flexDirection: 'row',
     gap: 12,
     padding: 16,
     backgroundColor: COLORS.white,

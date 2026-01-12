@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, Linking, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { Alert, StyleSheet, Text, View, TouchableOpacity, ScrollView, Image, ActivityIndicator, Linking } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Card } from '@/components';
@@ -31,7 +32,6 @@ const COLORS = {
 };
 
 import * as Print from 'expo-print';
-import * as FileSystem from 'expo-file-system/legacy';
 
 // ... (imports existentes: React, View, etc... mas adicione Print acima)
 // (Mantenha interfaces Props, COLORS, etc. inalterados até DocumentUploadScreen)
@@ -41,7 +41,8 @@ const getFileExtension = (uri: string) => {
   return parts[parts.length - 1]?.toLowerCase() || '';
 };
 
-// Modifique DocumentUploadScreen para incluir lógica de conversão
+
+// Modifique DocumentUploadScreen para incluir lógica de conversão base64 e debug
 export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => {
   const { commercialData } = route.params;
   const [docs, setDocs] = useState<DocumentsPayload>({});
@@ -49,13 +50,12 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
 
   const hasAnyDoc = Object.values(docs).some(Boolean);
 
-  const convertToPdf = async (imageUri: string): Promise<string> => {
+  const convertToPdf = async (imageUri: string, key: string): Promise<string> => {
     try {
-      // Lê a imagem como Base64 para garantir que apareça no PDF
+      // Ler imagem em Base64
       const base64 = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' });
       const src = `data:image/jpeg;base64,${base64}`;
 
-      // HTML simples para embutir a imagem em página cheia
       const html = `
         <html>
           <body style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh;">
@@ -63,12 +63,24 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
           </body>
         </html>
       `;
+
       const { uri } = await Print.printToFileAsync({ html, base64: false });
+
+      // DEBUG path
+      const docDir = (FileSystem as any).documentDirectory;
+      if (docDir) {
+        const dir = docDir + 'debug_docs/';
+        await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => { });
+        const debugPath = dir + `debug_${key}_${Date.now()}.pdf`;
+        await FileSystem.copyAsync({ from: uri, to: debugPath });
+        console.log(`PDF GERADO (Debug): ${debugPath}`);
+      }
+
       return uri;
-    } catch (e: any) {
+    } catch (e) {
       console.error('Erro ao converter para PDF:', e);
-      Alert.alert('Erro na conversão', `Não foi possível converter a imagem.\nDetalhe: ${e?.message || JSON.stringify(e)}`);
-      return imageUri; // Fallback, mas ideal avisar erro
+      Alert.alert('Erro', 'Falha na conversão do documento.');
+      return imageUri;
     }
   };
 
@@ -79,12 +91,9 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
       let finalUri = uri;
 
       if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
-        // Converter para PDF
-        finalUri = await convertToPdf(uri);
+        // Converter para PDF usando Base64
+        finalUri = await convertToPdf(uri, key);
       }
-
-      // Se já for PDF, mantém. Se for outro tipo não mapeado, mantém (mas backend pode rejeitar se validar mime).
-      // Como estamos usando expo-document-picker filtrado ou image-picker, deve ser img ou pdf.
 
       setDocs((d) => ({ ...d, [key]: finalUri }));
     } finally {
