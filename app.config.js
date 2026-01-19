@@ -6,20 +6,32 @@ module.exports = {
     version: '1.0.0',
     orientation: 'portrait',
     scheme: 'sirac',
-    userInterfaceStyle: 'light',
+    userInterfaceStyle: 'automatic',
     platforms: ['android', 'ios', 'web'],
     updates: {
       fallbackToCacheTimeout: 0,
     },
     assetBundlePatterns: ['**/*'],
+    icon: './logo_png.png',
     ios: {
       supportsTablet: true,
+      icon: './logo_png.png',
     },
     android: {
+      package: 'com.sirac.mobile',
       permissions: [],
+      adaptiveIcon: {
+        foregroundImage: './logo_png.png',
+        backgroundColor: '#FFFFFF',
+      },
     },
     web: {
       output: 'static',
+    },
+    extra: {
+      eas: {
+        projectId: '1d5f13c3-18c6-418b-ad75-9a41e922dc29',
+      },
     },
   },
 };
