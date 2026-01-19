@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useLayoutEffect } from 'react';
 import { SafeAreaView, View, Text, StyleSheet, Animated, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
@@ -29,11 +29,18 @@ const COLORS = {
 export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
   const { registrationId } = route.params;
   const insets = useSafeAreaInsets();
-  
+
   // Animações
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => null,
+      gestureEnabled: false,
+    });
+  }, [navigation]);
 
   useEffect(() => {
     // Animação de entrada
@@ -60,7 +67,7 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
   }, []);
 
   const nextSteps = [
-   
+
     {
       icon: '🔍',
       title: 'Análise de Documentos',
@@ -80,12 +87,12 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Success Icon com animação */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.iconContainer,
             {
@@ -146,9 +153,9 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
           </Card>
 
-        
 
-          
+
+
           <Card style={styles.contactCard}>
             <Text style={styles.contactTitle}>#SemStress</Text>
           </Card>
@@ -160,7 +167,7 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
         styles.footer,
         { paddingBottom: Math.max(20, insets.bottom + 12) }
       ]}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => {
             navigation.reset({
               index: 0,

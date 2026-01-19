@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View, TouchableOpacity, ScrollView, Image, ActivityIndicator, Linking } from 'react-native';
+import { Alert, StyleSheet, Text, View, TouchableOpacity, ScrollView, Image, ActivityIndicator, Linking, Modal, Dimensions } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
@@ -49,6 +49,17 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
   const [converting, setConverting] = useState(false);
 
   const hasAnyDoc = Object.values(docs).some(Boolean);
+
+  const documentItems = [
+    { key: 'biFrenteUri' as keyof DocumentsPayload, title: 'BI / Passaporte (Identificação)', icon: '🪪', type: 'image' },
+    // BI Verso opcional dependendo do documento, mas mantendo conforme solicitado "BI/passaporte..."
+    { key: 'biVersoUri' as keyof DocumentsPayload, title: 'Verso (se aplicável)', icon: '🪪', type: 'image' },
+    { key: 'nuitUri' as keyof DocumentsPayload, title: 'NUIT (Documento)', icon: '🔢', type: 'file' },
+    { key: 'alvaraUri' as keyof DocumentsPayload, title: 'Licença / Alvará', icon: '📜', type: 'file' },
+  ];
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [activeItem, setActiveItem] = useState<typeof documentItems[0] | null>(null);
 
   const convertToPdf = async (imageUri: string, key: string): Promise<string> => {
     try {
@@ -106,6 +117,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
       mediaTypes: ['images'],
       quality: 0.8,
       allowsEditing: true, // Permite cortar
+      aspect: [3, 4],
     });
     if (!res.canceled && res.assets && res.assets[0]?.uri) {
       await processAndSetDoc(key, res.assets[0].uri);
@@ -122,6 +134,44 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
     }
   };
 
+  const takePhoto = async (key: keyof DocumentsPayload) => {
+    try {
+      const res = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsEditing: true,
+        aspect: [3, 4],
+      });
+      if (!res.canceled && res.assets && res.assets[0]?.uri) {
+        await processAndSetDoc(key, res.assets[0].uri);
+      }
+    } catch (e) {
+      console.error('Erro camara:', e);
+      Alert.alert('Erro', 'Não foi possível abrir a câmera.');
+    }
+  };
+
+  const handleModalAction = async (action: 'camera' | 'gallery' | 'file') => {
+    setModalVisible(false);
+    if (!activeItem) return;
+
+    // Small delay to allow modal to close smoothly
+    setTimeout(async () => {
+      if (action === 'camera') {
+        await takePhoto(activeItem.key);
+      } else if (action === 'gallery') {
+        await pickImage(activeItem.key);
+      } else if (action === 'file') {
+        await pickFile(activeItem.key);
+      }
+    }, 400);
+  };
+
+  const handleAttachment = (item: typeof documentItems[0]) => {
+    setActiveItem(item);
+    setModalVisible(true);
+  };
+
   const removeDoc = (key: keyof DocumentsPayload) => {
     setDocs((d) => {
       const newDocs = { ...d };
@@ -134,13 +184,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
     navigation.navigate('ReviewSubmit', { commercialData, documents: docs });
   };
 
-  const documentItems = [
-    { key: 'biFrenteUri' as keyof DocumentsPayload, title: 'BI / Passaporte (Identificação)', icon: '🪪', type: 'image' },
-    // BI Verso opcional dependendo do documento, mas mantendo conforme solicitado "BI/passaporte..."
-    { key: 'biVersoUri' as keyof DocumentsPayload, title: 'Verso (se aplicável)', icon: '🪪', type: 'image' },
-    { key: 'nuitUri' as keyof DocumentsPayload, title: 'NUIT (Documento)', icon: '🔢', type: 'file' },
-    { key: 'alvaraUri' as keyof DocumentsPayload, title: 'Licença / Alvará', icon: '📜', type: 'file' },
-  ];
+
 
   const uploadedCount = Object.values(docs).filter(Boolean).length;
   // totalCount baseia-se nos itens obrigatórios? Vamos considerar todos itens listados como meta visual.
@@ -204,7 +248,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
                         {keyofDocumentsPayloadToLabel(item.key)}.pdf
                       </Text>
                       <TouchableOpacity
-                        onPress={() => Linking.openURL(uri)}
+                        onPress={() => Print.printAsync({ uri })}
                         style={styles.openFileButton}
                       >
                         <View style={styles.inlineRow}>
@@ -216,7 +260,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
                   </View>
                 ) : (
                   <TouchableOpacity
-                    onPress={() => item.type === 'image' ? pickImage(item.key) : pickFile(item.key)}
+                    onPress={() => handleAttachment(item)}
                     style={[styles.uploadButton, converting && styles.uploadButtonDisabled]}
                     disabled={converting}
                   >
@@ -304,6 +348,69 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
           </View>
         </TouchableOpacity>
       </View>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <TouchableOpacity activeOpacity={1}>
+              {/* Prevent closing when clicking content */}
+              <View style={styles.modalHeader}>
+                <View style={styles.modalDragIndicator} />
+                <Text style={styles.modalTitle}>Anexar Documento</Text>
+              </View>
+
+              <View style={styles.modalGrid}>
+                {/* Card Camera */}
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={() => handleModalAction('camera')}
+                >
+                  <View style={styles.modalOptionContent}>
+                    <View style={[styles.modalOptionIconContainer, { backgroundColor: COLORS.primaryLight }]}>
+                      <Ionicons name="camera" size={24} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.modalOptionText}>Tirar Foto</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Card Gallery/File */}
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={() => handleModalAction(activeItem?.type === 'image' ? 'gallery' : 'file')}
+                >
+                  <View style={styles.modalOptionContent}>
+                    <View style={[styles.modalOptionIconContainer, { backgroundColor: COLORS.secondaryLight }]}>
+                      <Ionicons
+                        name={activeItem?.type === 'image' ? "images" : "document-text"}
+                        size={24}
+                        color={'#d4a000'} // Darker yellow
+                      />
+                    </View>
+                    <Text style={styles.modalOptionText}>
+                      {activeItem?.type === 'image' ? 'Galeria' : 'Ficheiro'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -629,5 +736,87 @@ const styles = StyleSheet.create({
   },
   uploadButtonDisabled: {
     opacity: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalDragIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.border,
+    borderRadius: 2,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  modalGrid: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 24,
+  },
+  modalOption: {
+    flex: 1,
+    aspectRatio: 1,
+    backgroundColor: COLORS.background,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalOptionContent: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalOptionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modalOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  modalCancelButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.error,
   },
 });
