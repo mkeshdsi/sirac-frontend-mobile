@@ -12,16 +12,16 @@ module.exports = {
       fallbackToCacheTimeout: 0,
     },
     assetBundlePatterns: ['**/*'],
-    icon: './logo_png.png',
+    icon: './AdminLTELogo.png',
     ios: {
       supportsTablet: true,
-      icon: './logo_png.png',
+      icon: './AdminLTELogo.png',
     },
     android: {
       package: 'com.sirac.mobile',
       permissions: [],
       adaptiveIcon: {
-        foregroundImage: './logo_png.png',
+        foregroundImage: './AdminLTELogo.png',
         backgroundColor: '#FFFFFF',
       },
     },
