@@ -431,7 +431,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Location.LocationGeocodedAddress[]>([]);
   const [showSearch, setShowSearch] = useState(false);
-  
+
   // State for custom modals
   const [showLocationMethodModal, setShowLocationMethodModal] = useState(false);
   const [showCoordinateInputModal, setShowCoordinateInputModal] = useState(false);
@@ -440,7 +440,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const [coordinateInput, setCoordinateInput] = useState('');
   const [showErrorModal, setShowErrorModal] = useState('');
   const [showPermissionDeniedModal, setShowPermissionDeniedModal] = useState(false);
-  
+
   // Function to get current location
   const getCurrentLocation = async () => {
     try {
@@ -456,7 +456,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const handleGetCurrentLocation = async () => {
     setShowCurrentLocationModal(false);
     setShowLoadingLocationModal(true); // Mostrar modal de carregamento
-    
+
     try {
       // Request permission
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -465,16 +465,16 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
         setShowPermissionDeniedModal(true);
         return;
       }
-      
+
       // Get current position
       let location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-      
+
       // Set the coordinates in the form
       setValue('latitude', location.coords.latitude);
       setValue('longitude', location.coords.longitude);
-      
+
       setShowLoadingLocationModal(false); // Ocultar modal de carregamento
       Alert.alert('✅ Sucesso', `Localização obtida: ${location.coords.latitude}, ${location.coords.longitude}`);
     } catch (error) {
@@ -485,42 +485,44 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   // Function to get current location
-  
+
   // Function to take photo of the banca
   const takePhoto = async () => {
     try {
       // Request permission
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      
+
       if (permissionResult.granted === false) {
         Alert.alert('Permissão negada', 'É necessário conceder permissão para usar a câmera.');
         return;
       }
-      
+
       // Launch camera
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'], // Fix deprecated MediaTypeOptions
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.5, // Qualidade média viavel agora que enviamos como ficheiro
       });
-      
+
       if (!result.canceled && result.assets && result.assets[0]?.uri) {
-        setValue('fotografia', result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        console.log(`[CommercialDataForm] Foto capturada (URI: ${uri})`);
+        setValue('fotografia', uri);
       }
     } catch (error) {
       console.error('Error taking photo:', error);
       Alert.alert('Erro', 'Falha ao tirar foto. Tente novamente.');
     }
   };
-  
+
   // Function to search for locations
   const searchLocations = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
       return;
     }
-    
+
     try {
       const results = await Location.geocodeAsync(query);
       if (results.length > 0) {
@@ -573,12 +575,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
         setShowPermissionDeniedModal(true);
         return;
       }
-      
+
       // Get current position to center the map
       let location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-      
+
       // Show custom modal instead of system alert
       setShowLocationMethodModal(true);
     } catch (error) {
@@ -590,7 +592,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   // Function to handle location method selection
   const handleLocationMethod = async (method: 'search' | 'maps') => {
     setShowLocationMethodModal(false);
-    
+
     if (method === 'search') {
       setShowSearch(true);
     } else {
@@ -598,10 +600,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       let location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-      
+
       const url = `https://www.google.com/maps/search/?api=1&query=${location.coords.latitude},${location.coords.longitude}&center=${location.coords.latitude},${location.coords.longitude}&zoom=15`;
       await WebBrowser.openBrowserAsync(url);
-      
+
       // Show coordinate input modal after delay
       setTimeout(() => {
         setShowCoordinateInputModal(true);
@@ -614,11 +616,11 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
     if (coordinateInput) {
       const cleanedCoords = coordinateInput.replace(/\s/g, '');
       const [latStr, lngStr] = cleanedCoords.split(',');
-      
+
       if (latStr && lngStr) {
         const lat = parseFloat(latStr);
         const lng = parseFloat(lngStr);
-        
+
         if (!isNaN(lat) && !isNaN(lng)) {
           setValue('latitude', lat);
           setValue('longitude', lng);
@@ -716,8 +718,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator>
-        
-        
+
+
         {/* CONTACTO DO AGENTE E DOCUMENTO DE IDENTIFICAÇÃO */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
@@ -777,7 +779,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             )} />
           </View>
         </Card>
-{/* TIPO DE PARCEIRO */}
+        {/* TIPO DE PARCEIRO */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIconContainer}>
@@ -997,72 +999,72 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
         </Card>
 
         {/* Banca (for all partner types) */}
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardIconContainer}>
-                <Text style={styles.cardIcon}>📍</Text>
-              </View>
-              <Text style={styles.cardTitle}>Localização da Banca</Text>
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>📍</Text>
             </View>
-            
-            {/* Location coordinates */}
-            <View style={styles.rowFields}>
-              <View style={{ flex: 1 }}>
-                <Controller control={control} name="latitude" render={({ field: { onChange, onBlur, value } }) => (
-                  <Input 
-                    label="Latitude" 
-                    placeholder="Será preenchido"
-                    editable={false}
-                    value={value !== undefined ? String(value) : ''}
-                    onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
-                    onBlur={onBlur}
-                  />
-                )} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Controller control={control} name="longitude" render={({ field: { onChange, onBlur, value } }) => (
-                  <Input 
-                    label="Longitude" 
-                    placeholder="automaticamente"
-                    editable={false}
-                    value={value !== undefined ? String(value) : ''}
-                    onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
-                    onBlur={onBlur}
-                  />
-                )} />
-              </View>
+            <Text style={styles.cardTitle}>Localização da Banca</Text>
+          </View>
+
+          {/* Location coordinates */}
+          <View style={styles.rowFields}>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="latitude" render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Latitude"
+                  placeholder="Será preenchido"
+                  editable={false}
+                  value={value !== undefined ? String(value) : ''}
+                  onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
+                  onBlur={onBlur}
+                />
+              )} />
             </View>
-            
-            <View style={{ marginTop: 10 }}>
-              <TouchableOpacity onPress={openMapsForLocation} style={[styles.modalButton, styles.modalPrimary]}>
-                <Text style={styles.modalButtonText}>Abrir Google Maps</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity onPress={getCurrentLocation} style={[styles.modalButton, styles.modalOutline, { marginTop: 10 }]}> 
-                <Text style={styles.modalButtonTextOutline}>Usar Localização Atual</Text>
-              </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="longitude" render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Longitude"
+                  placeholder="automaticamente"
+                  editable={false}
+                  value={value !== undefined ? String(value) : ''}
+                  onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
+                  onBlur={onBlur}
+                />
+              )} />
             </View>
-            
-            {/* Photo of the banca (optional for all partner types) */}
-            <View style={{ marginTop: 15 }}>
-              <Text style={styles.helperText}>Fotografia da Banca (opcional)</Text>
-              {fotografiaValue ? (
-                <View style={{ alignItems: 'center', marginVertical: 10 }}>
-                  <Image source={{ uri: fotografiaValue }} style={{ width: 200, height: 200, resizeMode: 'cover', borderRadius: 8 }} />
-                  <TouchableOpacity 
-                    onPress={() => setValue('fotografia', '')} 
-                    style={[styles.modalButton, styles.modalDanger, { marginTop: 10 }]}
-                  >
-                    <Text style={styles.modalButtonText}>Remover Foto</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity onPress={takePhoto} style={[styles.modalButton, styles.modalWarning]}>
-                  <Text style={styles.modalButtonText}>Tirar Foto da Banca</Text>
+          </View>
+
+          <View style={{ marginTop: 10 }}>
+            <TouchableOpacity onPress={openMapsForLocation} style={[styles.modalButton, styles.modalPrimary]}>
+              <Text style={styles.modalButtonText}>Abrir Google Maps</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={getCurrentLocation} style={[styles.modalButton, styles.modalOutline, { marginTop: 10 }]}>
+              <Text style={styles.modalButtonTextOutline}>Usar Localização Atual</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Photo of the banca (optional for all partner types) */}
+          <View style={{ marginTop: 15 }}>
+            <Text style={styles.helperText}>Fotografia da Banca (opcional)</Text>
+            {fotografiaValue ? (
+              <View style={{ alignItems: 'center', marginVertical: 10 }}>
+                <Image source={{ uri: fotografiaValue }} style={{ width: 200, height: 200, resizeMode: 'cover', borderRadius: 8 }} />
+                <TouchableOpacity
+                  onPress={() => setValue('fotografia', '')}
+                  style={[styles.modalButton, styles.modalDanger, { marginTop: 10 }]}
+                >
+                  <Text style={styles.modalButtonText}>Remover Foto</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          </Card>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={takePhoto} style={[styles.modalButton, styles.modalWarning]}>
+                <Text style={styles.modalButtonText}>Tirar Foto da Banca</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </Card>
 
         {/* Estabelecimentos (antes de Assistentes) */}
         <Card style={styles.card}>
@@ -1233,7 +1235,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 <Ionicons name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.searchContainer}>
               <View style={styles.searchInputContainer}>
                 <Ionicons name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
@@ -1251,12 +1253,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                   }}
                 />
               </View>
-              
+
               {searchResults.length > 0 && (
                 <ScrollView style={styles.searchResultsContainer}>
                   {searchResults.map((result, index) => (
-                    <TouchableOpacity 
-                      key={index} 
+                    <TouchableOpacity
+                      key={index}
                       style={styles.searchResultItem}
                       onPress={() => selectLocation(result)}
                     >
@@ -1278,7 +1280,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                   ))}
                 </ScrollView>
               )}
-              
+
               {searchQuery.length > 0 && searchResults.length === 0 && (
                 <View style={styles.noResultsContainer}>
                   <Text style={styles.noResultsText}>Nenhum resultado encontrado</Text>
@@ -1290,41 +1292,41 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </Modal>
 
       {/* Custom Modals */}
-      
+
       {/* Location Method Selection Modal */}
-      <Modal 
-        visible={showLocationMethodModal} 
-        transparent 
-        animationType="fade" 
+      <Modal
+        visible={showLocationMethodModal}
+        transparent
+        animationType="fade"
         onRequestClose={() => setShowLocationMethodModal(false)}
       >
         <View style={styles.customModalBackdrop}>
           <View style={styles.customModalCard}>
             <View style={styles.customModalHeader}>
               <Text style={styles.customModalTitle}>📍 Selecionar Localização</Text>
-              <TouchableOpacity 
-                onPress={() => setShowLocationMethodModal(false)} 
+              <TouchableOpacity
+                onPress={() => setShowLocationMethodModal(false)}
                 style={styles.customModalCloseButton}
               >
                 <Ionicons name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.customModalContent}>
               <Text style={styles.customModalDescription}>
                 Escolha como deseja selecionar a localização da banca:
               </Text>
-              
+
               <View style={styles.customModalButtonsContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.customModalButton, styles.customModalButtonPrimary]}
                   onPress={() => handleLocationMethod('search')}
                 >
                   <Ionicons name="search" size={20} color={COLORS.white} />
                   <Text style={styles.customModalButtonText}>Pesquisar Endereço</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={[styles.customModalButton, styles.customModalButtonSecondary]}
                   onPress={() => handleLocationMethod('maps')}
                 >
@@ -1338,29 +1340,29 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </Modal>
 
       {/* Coordinate Input Modal */}
-      <Modal 
-        visible={showCoordinateInputModal} 
-        transparent 
-        animationType="slide" 
+      <Modal
+        visible={showCoordinateInputModal}
+        transparent
+        animationType="slide"
         onRequestClose={() => setShowCoordinateInputModal(false)}
       >
         <View style={styles.customModalBackdrop}>
           <View style={styles.customModalCard}>
             <View style={styles.customModalHeader}>
               <Text style={styles.customModalTitle}>📍 Inserir Coordenadas</Text>
-              <TouchableOpacity 
-                onPress={() => setShowCoordinateInputModal(false)} 
+              <TouchableOpacity
+                onPress={() => setShowCoordinateInputModal(false)}
                 style={styles.customModalCloseButton}
               >
                 <Ionicons name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.customModalContent}>
               <Text style={styles.customModalDescription}>
                 Cole as coordenadas copiadas do Google Maps:
               </Text>
-              
+
               <View style={styles.customInputContainer}>
                 <TextInput
                   style={styles.customTextInput}
@@ -1371,16 +1373,16 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                   autoFocus
                 />
               </View>
-              
+
               <View style={styles.customModalButtonsContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.customModalButton, styles.customModalButtonOutline]}
                   onPress={() => setShowCoordinateInputModal(false)}
                 >
                   <Text style={styles.customModalButtonTextOutline}>Cancelar</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={[styles.customModalButton, styles.customModalButtonPrimary]}
                   onPress={handleCoordinateSubmit}
                 >
@@ -1393,9 +1395,9 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </Modal>
 
       {/* Error Modal */}
-      <Modal 
-        visible={!!showErrorModal} 
-        transparent 
+      <Modal
+        visible={!!showErrorModal}
+        transparent
         animationType="fade"
         onRequestClose={() => setShowErrorModal('')}
       >
@@ -1407,7 +1409,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               <Text style={styles.customModalErrorTitle}>Erro</Text>
               <Text style={styles.customModalErrorMessage}>{showErrorModal}</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.customModalButton, styles.customModalButtonPrimary]}
                 onPress={() => setShowErrorModal('')}
               >
@@ -1419,9 +1421,9 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </Modal>
 
       {/* Permission Denied Modal */}
-      <Modal 
-        visible={showPermissionDeniedModal} 
-        transparent 
+      <Modal
+        visible={showPermissionDeniedModal}
+        transparent
         animationType="fade"
         onRequestClose={() => setShowPermissionDeniedModal(false)}
       >
@@ -1435,7 +1437,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.customModalErrorMessage}>
                 É necessário conceder permissão de localização para usar este recurso.
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.customModalButton, styles.customModalButtonPrimary]}
                 onPress={() => setShowPermissionDeniedModal(false)}
               >
@@ -1447,9 +1449,9 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </Modal>
 
       {/* Current Location Confirmation Modal */}
-      <Modal 
-        visible={showCurrentLocationModal} 
-        transparent 
+      <Modal
+        visible={showCurrentLocationModal}
+        transparent
         animationType="fade"
         onRequestClose={() => setShowCurrentLocationModal(false)}
       >
@@ -1457,14 +1459,14 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.customModalCard}>
             <View style={styles.customModalHeader}>
               <Text style={styles.customModalTitle}>📍 Usar Localização Atual</Text>
-              <TouchableOpacity 
-                onPress={() => setShowCurrentLocationModal(false)} 
+              <TouchableOpacity
+                onPress={() => setShowCurrentLocationModal(false)}
                 style={styles.customModalCloseButton}
               >
                 <Ionicons name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.customModalContentCentered}>
               <View style={styles.customModalIconContainer}>
                 <Ionicons name="locate" size={48} color={COLORS.primary} />
@@ -1475,14 +1477,14 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 Esta ação obterá sua latitude e longitude automaticamente.
               </Text>
               <View style={styles.customModalButtonsContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.customModalButton, styles.customModalButtonOutline]}
                   onPress={() => setShowCurrentLocationModal(false)}
                 >
                   <Text style={styles.customModalButtonTextOutline}>Cancelar</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={[styles.customModalButton, styles.customModalButtonPrimary]}
                   onPress={handleGetCurrentLocation}
                 >
@@ -1496,11 +1498,11 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </Modal>
 
       {/* Loading Location Modal */}
-      <Modal 
-        visible={showLoadingLocationModal} 
-        transparent 
+      <Modal
+        visible={showLoadingLocationModal}
+        transparent
         animationType="none"
-        onRequestClose={() => {}}
+        onRequestClose={() => { }}
       >
         <View style={styles.loadingModalBackdrop}>
           <View style={styles.loadingModalCard}>
@@ -2008,7 +2010,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.textSecondary,
   },
-  
+
   // Custom Modal Styles
   customModalBackdrop: {
     flex: 1,
@@ -2154,7 +2156,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 24,
   },
-  
+
   // Loading Modal Styles
   loadingModalBackdrop: {
     flex: 1,

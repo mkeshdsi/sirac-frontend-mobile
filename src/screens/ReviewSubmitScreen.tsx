@@ -56,8 +56,17 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           formData.append("banca", JSON.stringify({
             latitude: commercialData.latitude,
             longitude: commercialData.longitude,
-            fotografia: commercialData.fotografia  // Envia base64 diretamente
+            // fotografia não é mais enviada aqui como base64 no JSON
           }));
+
+          // Envia a fotografia como um arquivo real para evitar erro 413 de payload gigante
+          if (commercialData.fotografia) {
+            formData.append("fotografia_banca", {
+              uri: commercialData.fotografia,
+              name: "banca.jpg",
+              type: "image/jpeg",
+            } as any);
+          }
         }
 
         // 4. Append proprietarios
