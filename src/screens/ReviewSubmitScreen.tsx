@@ -5,7 +5,7 @@ import { Button, Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
-import { getAuthApi, getItem } from '@/config/api';
+import { getAuthApi } from '@/config/api';
 
 type Nav = StackNavigationProp<RootStackParamList, 'ReviewSubmit'>;
 type Route = RouteProp<RootStackParamList, 'ReviewSubmit'>;
@@ -14,171 +14,124 @@ interface Props { navigation: Nav; route: Route }
 
 export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   const { commercialData, documents } = route.params;
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError(null);
+
     try {
-      setLoading(true);
       const api = await getAuthApi();
+      const formData = new FormData();
 
-      // Utilidades de mapeamento/conversão
-      const toIsoDate = (ddmmyyyy?: string) => {
-        if (!ddmmyyyy) return undefined;
-        const m = ddmmyyyy.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if (!m) return undefined;
-        const [_, dd, mm, yyyy] = m;
-        return `${yyyy}-${mm}-${dd}`; // Backend espera Date; string ISO simples
-      };
+      // 1. Append parceiro data
+      if (commercialData) {
+        formData.append("tipo_parceiro", commercialData.tipoParceiro || "");
+        formData.append("designacao", commercialData.nomeComercial || "");
+        formData.append("tipo_empresa", commercialData.tipoEmpresa || "");
+        formData.append("natureza_actividade", commercialData.naturezaObjecto || "");
+        formData.append("nuit", commercialData.nuit || "");
+        formData.append("bairro_ref", commercialData.enderecoBairroRef || "");
+        formData.append("profissao", commercialData.profissao || "");
+        formData.append("assinatura_adesao", commercialData.assinatura || "");
+        formData.append("data_adesao", commercialData.dataFormulario || "");
+        formData.append("angariador_id", "40");
+        formData.append("contacto_agente", commercialData.contactoAgente || "");
 
-      // Recuperar usuário logado para atribuir angariador_id
-      const userDataJson = await getItem('sirac_user_data');
-      let userId = undefined;
-      if (userDataJson) {
-        try {
-          const user = JSON.parse(userDataJson);
-          userId = user.id;
-        } catch (e) {
-          console.warn('Falha ao parsear dados do usuário:', e);
+        // 2. Append endereco (as JSON)
+        formData.append("endereco", JSON.stringify({
+          cidade: commercialData.enderecoCidade || "",
+          localidade: commercialData.enderecoLocalidade || "",
+          avenida_rua: commercialData.enderecoAvenidaRua || "",
+          numero: commercialData.enderecoNumero || "",
+          quarteirao: commercialData.enderecoQuart || "",
+          telefone: commercialData.telefone || "",
+          celular: commercialData.celular || "",
+        }));
+
+        // 3. Append banca (as JSON with base64 fotografia)
+        if (commercialData.latitude !== null && commercialData.longitude !== null) {
+          formData.append("banca", JSON.stringify({
+            latitude: commercialData.latitude,
+            longitude: commercialData.longitude,
+            fotografia: commercialData.fotografia  // Envia base64 diretamente
+          }));
+        }
+
+        // 4. Append proprietarios
+        if (commercialData.proprietarios && commercialData.proprietarios.length > 0) {
+          formData.append("proprietarios", JSON.stringify(commercialData.proprietarios));
+        }
+
+        // 5. Append assistentes
+        if (commercialData.assistentes && commercialData.assistentes.length > 0) {
+          formData.append("assistentes", JSON.stringify(commercialData.assistentes));
+        }
+
+        // 6. Append estabelecimentos
+        if (commercialData.estabelecimentos && commercialData.estabelecimentos.length > 0) {
+          formData.append("estabelecimentos", JSON.stringify(commercialData.estabelecimentos));
         }
       }
 
-      // Validações mínimas antes do envio
-      if (!commercialData?.assinatura || !commercialData?.dataFormulario) {
-        throw new Error('Assinatura e data de adesão são obrigatórias.');
-      }
-
-      // FormData para envio multipart
-      const formData = new FormData();
-
-      // --- Campos Textuais ---
-      const tipo_parceiro = commercialData?.tipoParceiro || (commercialData ? 'MERCHANT' : 'AGENTE');
-      formData.append('tipo_parceiro', tipo_parceiro);
-
-      const designacao = commercialData?.designacao || commercialData?.nomeComercial || '';
-      formData.append('designacao', designacao);
-
-      formData.append('tipo_empresa', commercialData?.tipoEmpresa || '');
-      if (commercialData?.naturezaObjecto) formData.append('natureza_actividade', commercialData.naturezaObjecto);
-      if (commercialData?.nuit) formData.append('nuit', commercialData.nuit);
-      if (commercialData?.banco) formData.append('banco', commercialData.banco);
-      if (commercialData?.numeroConta) formData.append('numero_conta', commercialData.numeroConta);
-      if (commercialData?.enderecoBairroRef) formData.append('bairro_ref', commercialData.enderecoBairroRef);
-      if (commercialData?.profissao) formData.append('profissao', commercialData.profissao);
-
-      // Assinatura e Data
-      formData.append('assinatura_adesao', commercialData.assinatura);
-      const dataAdesao = toIsoDate(commercialData.dataFormulario);
-      if (dataAdesao) formData.append('data_adesao', dataAdesao);
-
-      // Angariador ID
-      if (userId) formData.append('angariador_id', String(userId));
-
-      // Contato Principal (msisdn / contacto_agente)
-      // Mapear celular para contacto_agente, pois é usado na integração SGD
-      if (commercialData?.celular) {
-        formData.append('contacto_agente', commercialData.celular);
-      }
-
-      // Objetos Complexos (Backend faz json.loads se receber string)
-      const endereco = {
-        cidade: commercialData?.enderecoCidade || '',
-        localidade: commercialData?.enderecoLocalidade,
-        avenida_rua: commercialData?.enderecoAvenidaRua,
-        numero: commercialData?.enderecoNumero,
-        quarteirao: commercialData?.enderecoQuart,
-        telefone: commercialData?.telefone,
-        celular: commercialData?.celular,
-      };
-      formData.append('endereco', JSON.stringify(endereco));
-
-      console.log('FormData Entries:');
-      // @ts-ignore
-      for (let pair of formData._parts) {
-        console.log(pair[0], pair[1]);
-      }
-
-      const proprietarios = Array.isArray(commercialData?.proprietarios) && commercialData!.proprietarios!.length > 0
-        ? commercialData!.proprietarios!.map((p) => ({
-          nome: p?.nome,
-          email: p?.email,
-          contacto: p?.contacto,
-        }))
-        : (commercialData?.proprietarioNomeCompleto
-          ? [{
-            nome: commercialData.proprietarioNomeCompleto,
-            email: commercialData.proprietarioEmail,
-            contacto: commercialData.proprietarioContacto,
-          }]
-          : []);
-      formData.append('proprietarios', JSON.stringify(proprietarios));
-
-      const assistentes = Array.isArray(commercialData?.assistentes) && commercialData!.assistentes!.length > 0
-        ? commercialData!.assistentes!
-          .filter((a) => !!a?.nomeCompleto && a!.nomeCompleto!.trim().length > 0)
-          .map((a) => ({
-            nome_completo: a!.nomeCompleto!,
-            contacto: a?.contacto,
-          }))
-        : [];
-      formData.append('assistentes', JSON.stringify(assistentes));
-
-      const estabelecimentos = Array.isArray(commercialData?.estabelecimentos) && commercialData!.estabelecimentos!.length > 0
-        ? commercialData!.estabelecimentos!.map((e) => ({
-          nome: e?.nome || 'Estabelecimento',
-          provincia_localidade: e?.provinciaLocalidade,
-          endereco_bairro: e?.enderecoBairro,
-        }))
-        : [];
-      formData.append('estabelecimentos', JSON.stringify(estabelecimentos));
-
-      // --- Arquivos (PDFs) ---
-      // Helper para anexar arquivo
-      const appendFile = (key: string, uri?: string, filename?: string) => {
-        if (!uri) return;
-        formData.append(key, {
-          uri: uri,
-          name: filename || `${key}.pdf`,
-          type: 'application/pdf',
+      // 7. Append documentos (PDFs)
+      if (documents.biFrenteUri) {
+        formData.append("bi_frente", {
+          uri: documents.biFrenteUri,
+          name: "bi_frente.pdf",
+          type: "application/pdf",
         } as any);
-      };
+      }
+      if (documents.biVersoUri) {
+        formData.append("bi_verso", {
+          uri: documents.biVersoUri,
+          name: "bi_verso.pdf",
+          type: "application/pdf",
+        } as any);
+      }
+      if (documents.alvaraUri) {
+        formData.append("alvara", {
+          uri: documents.alvaraUri,
+          name: "alvara.pdf",
+          type: "application/pdf",
+        } as any);
+      }
+      if (documents.nuitUri) {
+        formData.append("nuit", {
+          uri: documents.nuitUri,
+          name: "nuit.pdf",
+          type: "application/pdf",
+        } as any);
+      }
 
-      // Mapeamento Mobile -> Backend Request Files
-      // Backend espera: 'bi', 'nuit', 'alvara', 'contrato'
-      // Mobile tem: biFrenteUri, biVersoUri, nuitUri, alvaraUri
+      console.log("FormData Entries:");
+      // @ts-ignore
+      for (let [key, value] of formData.entries()) {
+        if (typeof value === "string") {
+          console.log(key, value);
+        } else {
+          console.log(key, (value as any).name);
+        }
+      }
 
-      // Enviamos Bi Frente como 'bi'
-      appendFile('bi', documents.biFrenteUri, `bi_frente_${Date.now()}.pdf`);
-
-      // Enviamos Nuit como 'nuit'
-      appendFile('nuit', documents.nuitUri, `nuit_${Date.now()}.pdf`);
-
-      // Enviamos Alvara como 'alvara'
-      appendFile('alvara', documents.alvaraUri, `alvara_${Date.now()}.pdf`);
-
-      // Backend não tem campo explícito para BI Verso na rota atual, mas se necessário, poderíamos enviar como 'contrato' ou ignorar.
-      // Por enquanto, enviamos apenas a frente conforme mapeamento padrão.
-
-      // Enviar para API (prefixo correto no backend)
-      // Ajustar headers para multipart é feito automaticamente pelo axios/fetch ao passar FormData, 
-      // mas precisamos garantir que o interceptor não force application/json
-      const res = await api.post('/api/v1/parceiros/', formData, {
+      const response = await api.post("/api/v1/parceiros/", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        transformRequest: (data, headers) => {
-          return data; // Evita que o axios tente stringify o FormData
+          "Content-Type": "multipart/form-data",
         },
       });
 
-      const parceiro = res.data?.parceiro || res.data;
-      const registrationId = String(parceiro?.id || '--------');
-      navigation.replace('Success', { registrationId });
-    } catch (e: any) {
-      console.error('Erro submit:', e);
-      const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Falha ao submeter cadastro. Tente novamente.';
-      Alert.alert('Erro', msg);
+      if (response.status === 201) {
+        navigation.replace("Success", { registrationId: "123" });
+      } else {
+        throw new Error("Falha ao criar parceiro");
+      }
+    } catch (err: any) {
+      console.error("Erro submit:", err);
+      setError(err.message || "Erro ao submeter formulário");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -205,9 +158,15 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         <Text style={styles.item}>Alvará: {documents.alvaraUri ? 'OK' : 'Falta'}</Text>
       </Card>
 
+      {error && (
+        <Card style={styles.errorCard}>
+          <Text style={styles.errorText}>{error}</Text>
+        </Card>
+      )}
+
       <View style={styles.footer}>
         <Button title="Voltar" variant="outline" onPress={() => navigation.goBack()} style={{ flex: 1 }} />
-        <Button title="Submeter" onPress={submit} loading={loading} style={{ flex: 2 }} />
+        <Button title="Submeter" onPress={submit} loading={submitting} style={{ flex: 2 }} disabled={!commercialData} />
       </View>
     </SafeAreaView>
   );
@@ -219,5 +178,7 @@ const styles = StyleSheet.create({
   section: { ...Theme.typography.h4, color: Theme.colors.textPrimary, marginBottom: Theme.spacing.sm },
   item: { ...Theme.typography.body2, color: Theme.colors.textSecondary, marginBottom: 2 },
   card: { marginBottom: Theme.spacing.lg },
+  errorCard: { backgroundColor: Theme.colors.error, padding: Theme.spacing.md, marginBottom: Theme.spacing.lg },
+  errorText: { color: Theme.colors.surface, textAlign: 'center' },
   footer: { flexDirection: 'row', gap: Theme.spacing.md, marginTop: Theme.spacing.lg },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform, Modal, Image, TextInput, ActivityIndicator } from 'react-native';
 import ReactNative from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
@@ -14,6 +14,10 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { listAngariadores, listAprovadores, listValidadores, createAdesao } from '@/services/apiResources';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import * as WebBrowser from 'expo-web-browser';
+import * as FileSystem from 'expo-file-system';
 
 type Nav = StackNavigationProp<RootStackParamList, 'CommercialDataForm'>;
 
@@ -137,7 +141,10 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   substituicaoProvinciaLocalidade: yup.string().optional(),
   substituicaoEnderecoBairro: yup.string().optional(),
   profissao: yup.string().optional(),
-}) as yup.ObjectSchema<CommercialData>;
+  latitude: yup.number().nullable(),
+  longitude: yup.number().nullable(),
+  fotografia: yup.string().optional(),
+}) as any;
 
 interface Props { navigation: Nav }
 
@@ -418,7 +425,216 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   });
   const tipoParceiro = useWatch({ control, name: 'tipoParceiro' });
   const tipoDocumento = useWatch({ control, name: 'tipoDocumento' });
+  const fotografiaValue = useWatch({ control, name: 'fotografia' });
   const [bankMode, setBankMode] = useState<'lista' | 'outro'>('lista');
+  // State for search functionality
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Location.LocationGeocodedAddress[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
+  
+  // State for custom modals
+  const [showLocationMethodModal, setShowLocationMethodModal] = useState(false);
+  const [showCoordinateInputModal, setShowCoordinateInputModal] = useState(false);
+  const [showCurrentLocationModal, setShowCurrentLocationModal] = useState(false);
+  const [showLoadingLocationModal, setShowLoadingLocationModal] = useState(false);
+  const [coordinateInput, setCoordinateInput] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState('');
+  const [showPermissionDeniedModal, setShowPermissionDeniedModal] = useState(false);
+  
+  // Function to get current location
+  const getCurrentLocation = async () => {
+    try {
+      // Show confirmation modal instead of requesting permission immediately
+      setShowCurrentLocationModal(true);
+    } catch (error) {
+      console.error('Error preparing location request:', error);
+      setShowErrorModal('Falha ao preparar obtenção de localização. Tente novamente.');
+    }
+  };
+
+  // Function to actually get the current location
+  const handleGetCurrentLocation = async () => {
+    setShowCurrentLocationModal(false);
+    setShowLoadingLocationModal(true); // Mostrar modal de carregamento
+    
+    try {
+      // Request permission
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setShowLoadingLocationModal(false); // Ocultar modal de carregamento
+        setShowPermissionDeniedModal(true);
+        return;
+      }
+      
+      // Get current position
+      let location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      
+      // Set the coordinates in the form
+      setValue('latitude', location.coords.latitude);
+      setValue('longitude', location.coords.longitude);
+      
+      setShowLoadingLocationModal(false); // Ocultar modal de carregamento
+      Alert.alert('✅ Sucesso', `Localização obtida: ${location.coords.latitude}, ${location.coords.longitude}`);
+    } catch (error) {
+      console.error('Error getting location:', error);
+      setShowLoadingLocationModal(false); // Ocultar modal de carregamento
+      setShowErrorModal('Falha ao obter localização. Tente novamente.');
+    }
+  };
+
+  // Function to get current location
+  
+  // Function to take photo of the banca
+  const takePhoto = async () => {
+    try {
+      // Request permission
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('Permissão negada', 'É necessário conceder permissão para usar a câmera.');
+        return;
+      }
+      
+      // Launch camera
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        setValue('fotografia', result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Erro', 'Falha ao tirar foto. Tente novamente.');
+    }
+  };
+  
+  // Function to search for locations
+  const searchLocations = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    try {
+      const results = await Location.geocodeAsync(query);
+      if (results.length > 0) {
+        // Get detailed address information for the first result
+        const addressResults = await Location.reverseGeocodeAsync(results[0]);
+        setSearchResults(addressResults);
+      } else {
+        setSearchResults([]);
+        Alert.alert('🔍 Nenhum resultado', 'Nenhuma localização encontrada para a pesquisa.');
+      }
+    } catch (error) {
+      console.error('Error searching locations:', error);
+      Alert.alert('❌ Erro', 'Falha ao pesquisar localizações. Tente novamente.');
+    }
+  };
+
+  // Function to select a location from search results
+  const selectLocation = (location: Location.LocationGeocodedAddress) => {
+    try {
+      // Get coordinates from the selected location
+      // We need to geocode again to get precise coordinates
+      Location.geocodeAsync(`${location.street}, ${location.city}, ${location.region}`)
+        .then(coords => {
+          if (coords.length > 0) {
+            const { latitude, longitude } = coords[0];
+            setValue('latitude', latitude);
+            setValue('longitude', longitude);
+            setSearchResults([]);
+            setShowSearch(false);
+            setSearchQuery('');
+            Alert.alert('✅ Localização selecionada', `${latitude}, ${longitude}`);
+          }
+        })
+        .catch(error => {
+          console.error('Error getting coordinates:', error);
+          Alert.alert('❌ Erro', 'Falha ao obter coordenadas da localização selecionada.');
+        });
+    } catch (error) {
+      console.error('Error selecting location:', error);
+      Alert.alert('❌ Erro', 'Falha ao selecionar localização.');
+    }
+  };
+
+  // Function to open Google Maps for location selection with coordinate capture
+  const openMapsForLocation = async () => {
+    try {
+      // Request location permission first
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setShowPermissionDeniedModal(true);
+        return;
+      }
+      
+      // Get current position to center the map
+      let location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      
+      // Show custom modal instead of system alert
+      setShowLocationMethodModal(true);
+    } catch (error) {
+      console.error('Error opening maps:', error);
+      setShowErrorModal('Falha ao abrir o Google Maps. Tente novamente.');
+    }
+  };
+
+  // Function to handle location method selection
+  const handleLocationMethod = async (method: 'search' | 'maps') => {
+    setShowLocationMethodModal(false);
+    
+    if (method === 'search') {
+      setShowSearch(true);
+    } else {
+      // Open Google Maps
+      let location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      
+      const url = `https://www.google.com/maps/search/?api=1&query=${location.coords.latitude},${location.coords.longitude}&center=${location.coords.latitude},${location.coords.longitude}&zoom=15`;
+      await WebBrowser.openBrowserAsync(url);
+      
+      // Show coordinate input modal after delay
+      setTimeout(() => {
+        setShowCoordinateInputModal(true);
+      }, 1000);
+    }
+  };
+
+  // Function to handle coordinate input submission
+  const handleCoordinateSubmit = () => {
+    if (coordinateInput) {
+      const cleanedCoords = coordinateInput.replace(/\s/g, '');
+      const [latStr, lngStr] = cleanedCoords.split(',');
+      
+      if (latStr && lngStr) {
+        const lat = parseFloat(latStr);
+        const lng = parseFloat(lngStr);
+        
+        if (!isNaN(lat) && !isNaN(lng)) {
+          setValue('latitude', lat);
+          setValue('longitude', lng);
+          setShowCoordinateInputModal(false);
+          setCoordinateInput('');
+          Alert.alert('✅ Sucesso', `Coordenadas definidas: ${lat}, ${lng}`);
+        } else {
+          setShowErrorModal('Formato de coordenadas inválido. Use: latitude,longitude');
+        }
+      } else {
+        setShowErrorModal('Formato inválido. Use: latitude,longitude');
+      }
+    }
+  };
+
+  // Function to open Google Maps for location selection with coordinate capture
 
   const handleLogout = () => {
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
@@ -500,6 +716,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator>
+        
+        
         {/* CONTACTO DO AGENTE E DOCUMENTO DE IDENTIFICAÇÃO */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
@@ -559,7 +777,41 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             )} />
           </View>
         </Card>
-
+{/* TIPO DE PARCEIRO */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>💼</Text>
+            </View>
+            <Text style={styles.cardTitle}>Tipo de Parceiro</Text>
+          </View>
+          <Controller
+            control={control}
+            name="tipoParceiro"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.radioGroup}>
+                <TouchableOpacity
+                  onPress={() => onChange('MERCHANT')}
+                  style={[styles.radioCard, value === 'MERCHANT' && styles.radioCardSelected]}
+                >
+                  <View style={[styles.radioIndicator, value === 'MERCHANT' && styles.radioIndicatorSelected]}>
+                    {value === 'MERCHANT' && <View style={styles.radioIndicatorInner} />}
+                  </View>
+                  <Text style={[styles.radioLabel, value === 'MERCHANT' && styles.radioLabelSelected]}>MERCHANT</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onChange('AGENTE')}
+                  style={[styles.radioCard, value === 'AGENTE' && styles.radioCardSelected]}
+                >
+                  <View style={[styles.radioIndicator, value === 'AGENTE' && styles.radioIndicatorSelected]}>
+                    {value === 'AGENTE' && <View style={styles.radioIndicatorInner} />}
+                  </View>
+                  <Text style={[styles.radioLabel, value === 'AGENTE' && styles.radioLabelSelected]}>AGENTE</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          />
+        </Card>
         {/* DADOS EMPRESA */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
@@ -633,42 +885,47 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             control={control}
             name="banco"
             render={({ field: { onChange, onBlur, value } }) => (
-
               <View>
-                <Text style={[styles.helperText, { marginBottom: 8 }]}>Banco</Text>
-                <Select
-                  label="Selecionar banco"
-                  // Se estiver em modo 'outro', mantemos o Select marcado em 'Outro' para o utilizador ver a seleção
-                  value={(bankMode === 'outro' ? 'Outro' : (value as any)) || (null as any)}
-                  onChange={(val: any) => {
-                    const found = MOZ_BANKS.find((b) => String(b.id) === String(val) || b.label === val);
-                    if (String(val) === 'Outro' || found?.label === 'Outro') {
-                      setBankMode('outro');
-                      onChange(''); // limpar para exigir preenchimento manual
-                    } else {
-                      setBankMode('lista');
-                      onChange(found?.label ?? String(val));
-                    }
-                  }}
-                  options={MOZ_BANKS}
-                />
-                {bankMode === 'outro' && (
-                  <Input
-                    label="Digite o nome do banco"
-                    placeholder="Digite o nome do banco"
-                    value={typeof value === 'string' ? value : ''}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    required={true}
-                    error={errors.banco?.message}
-                  />
+                {tipoParceiro === 'MERCHANT' && (
+                  <>
+                    <Text style={[styles.helperText, { marginBottom: 8 }]}>Banco</Text>
+                    <Select
+                      label="Selecionar banco"
+                      // Se estiver em modo 'outro', mantemos o Select marcado em 'Outro' para o utilizador ver a seleção
+                      value={(bankMode === 'outro' ? 'Outro' : (value as any)) || (null as any)}
+                      onChange={(val: any) => {
+                        const found = MOZ_BANKS.find((b) => String(b.id) === String(val) || b.label === val);
+                        if (String(val) === 'Outro' || found?.label === 'Outro') {
+                          setBankMode('outro');
+                          onChange(''); // limpar para exigir preenchimento manual
+                        } else {
+                          setBankMode('lista');
+                          onChange(found?.label ?? String(val));
+                        }
+                      }}
+                      options={MOZ_BANKS}
+                    />
+                    {bankMode === 'outro' && (
+                      <Input
+                        label="Digite o nome do banco"
+                        placeholder="Digite o nome do banco"
+                        value={typeof value === 'string' ? value : ''}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        required={true}
+                        error={errors.banco?.message}
+                      />
+                    )}
+                  </>
                 )}
               </View>
             )}
           />
-          <Controller control={control} name="numeroConta" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Nº da Conta" placeholder="0000000000" keyboardType="number-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
+          {tipoParceiro === 'MERCHANT' && (
+            <Controller control={control} name="numeroConta" render={({ field: { onChange, onBlur, value } }) => (
+              <Input label="Nº da Conta" placeholder="0000000000" keyboardType="number-pad" value={value} onChangeText={onChange} onBlur={onBlur} />
+            )} />
+          )}
           {/* Profissão dentro de Dados Empresa */}
           <Controller control={control} name="profissao" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Profissão" placeholder="Profissão" value={value} onChangeText={onChange} onBlur={onBlur} />
@@ -738,6 +995,74 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           </View>
         </Card>
+
+        {/* Banca (for all partner types) */}
+          <Card style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardIconContainer}>
+                <Text style={styles.cardIcon}>📍</Text>
+              </View>
+              <Text style={styles.cardTitle}>Localização da Banca</Text>
+            </View>
+            
+            {/* Location coordinates */}
+            <View style={styles.rowFields}>
+              <View style={{ flex: 1 }}>
+                <Controller control={control} name="latitude" render={({ field: { onChange, onBlur, value } }) => (
+                  <Input 
+                    label="Latitude" 
+                    placeholder="Será preenchido"
+                    editable={false}
+                    value={value !== undefined ? String(value) : ''}
+                    onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
+                    onBlur={onBlur}
+                  />
+                )} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Controller control={control} name="longitude" render={({ field: { onChange, onBlur, value } }) => (
+                  <Input 
+                    label="Longitude" 
+                    placeholder="automaticamente"
+                    editable={false}
+                    value={value !== undefined ? String(value) : ''}
+                    onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
+                    onBlur={onBlur}
+                  />
+                )} />
+              </View>
+            </View>
+            
+            <View style={{ marginTop: 10 }}>
+              <TouchableOpacity onPress={openMapsForLocation} style={[styles.modalButton, styles.modalPrimary]}>
+                <Text style={styles.modalButtonText}>Abrir Google Maps</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity onPress={getCurrentLocation} style={[styles.modalButton, styles.modalOutline, { marginTop: 10 }]}> 
+                <Text style={styles.modalButtonTextOutline}>Usar Localização Atual</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Photo of the banca (optional for all partner types) */}
+            <View style={{ marginTop: 15 }}>
+              <Text style={styles.helperText}>Fotografia da Banca (opcional)</Text>
+              {fotografiaValue ? (
+                <View style={{ alignItems: 'center', marginVertical: 10 }}>
+                  <Image source={{ uri: fotografiaValue }} style={{ width: 200, height: 200, resizeMode: 'cover', borderRadius: 8 }} />
+                  <TouchableOpacity 
+                    onPress={() => setValue('fotografia', '')} 
+                    style={[styles.modalButton, styles.modalDanger, { marginTop: 10 }]}
+                  >
+                    <Text style={styles.modalButtonText}>Remover Foto</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={takePhoto} style={[styles.modalButton, styles.modalWarning]}>
+                  <Text style={styles.modalButtonText}>Tirar Foto da Banca</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </Card>
 
         {/* Estabelecimentos (antes de Assistentes) */}
         <Card style={styles.card}>
@@ -897,6 +1222,296 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </Card>
       </ScrollView>
+
+      {/* Location Search Modal */}
+      <Modal visible={showSearch} transparent animationType="slide" onRequestClose={() => setShowSearch(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pesquisar Localização</Text>
+              <TouchableOpacity onPress={() => setShowSearch(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.searchContainer}>
+              <View style={styles.searchInputContainer}>
+                <Ionicons name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Digite o endereço ou nome do local"
+                  value={searchQuery}
+                  onChangeText={(text: string) => {
+                    setSearchQuery(text);
+                    if (text.length > 2) {
+                      searchLocations(text);
+                    } else {
+                      setSearchResults([]);
+                    }
+                  }}
+                />
+              </View>
+              
+              {searchResults.length > 0 && (
+                <ScrollView style={styles.searchResultsContainer}>
+                  {searchResults.map((result, index) => (
+                    <TouchableOpacity 
+                      key={index} 
+                      style={styles.searchResultItem}
+                      onPress={() => selectLocation(result)}
+                    >
+                      <View style={styles.searchResultContent}>
+                        <Text style={styles.searchResultTitle}>
+                          {result.name || result.street || 'Localização'}
+                        </Text>
+                        <Text style={styles.searchResultSubtitle}>
+                          {[
+                            result.street,
+                            result.city,
+                            result.region,
+                            result.country
+                          ].filter(Boolean).join(', ')}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+              
+              {searchQuery.length > 0 && searchResults.length === 0 && (
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.noResultsText}>Nenhum resultado encontrado</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Custom Modals */}
+      
+      {/* Location Method Selection Modal */}
+      <Modal 
+        visible={showLocationMethodModal} 
+        transparent 
+        animationType="fade" 
+        onRequestClose={() => setShowLocationMethodModal(false)}
+      >
+        <View style={styles.customModalBackdrop}>
+          <View style={styles.customModalCard}>
+            <View style={styles.customModalHeader}>
+              <Text style={styles.customModalTitle}>📍 Selecionar Localização</Text>
+              <TouchableOpacity 
+                onPress={() => setShowLocationMethodModal(false)} 
+                style={styles.customModalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.customModalContent}>
+              <Text style={styles.customModalDescription}>
+                Escolha como deseja selecionar a localização da banca:
+              </Text>
+              
+              <View style={styles.customModalButtonsContainer}>
+                <TouchableOpacity 
+                  style={[styles.customModalButton, styles.customModalButtonPrimary]}
+                  onPress={() => handleLocationMethod('search')}
+                >
+                  <Ionicons name="search" size={20} color={COLORS.white} />
+                  <Text style={styles.customModalButtonText}>Pesquisar Endereço</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.customModalButton, styles.customModalButtonSecondary]}
+                  onPress={() => handleLocationMethod('maps')}
+                >
+                  <Ionicons name="map" size={20} color={COLORS.primary} />
+                  <Text style={styles.customModalButtonTextSecondary}>Usar Google Maps</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Coordinate Input Modal */}
+      <Modal 
+        visible={showCoordinateInputModal} 
+        transparent 
+        animationType="slide" 
+        onRequestClose={() => setShowCoordinateInputModal(false)}
+      >
+        <View style={styles.customModalBackdrop}>
+          <View style={styles.customModalCard}>
+            <View style={styles.customModalHeader}>
+              <Text style={styles.customModalTitle}>📍 Inserir Coordenadas</Text>
+              <TouchableOpacity 
+                onPress={() => setShowCoordinateInputModal(false)} 
+                style={styles.customModalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.customModalContent}>
+              <Text style={styles.customModalDescription}>
+                Cole as coordenadas copiadas do Google Maps:
+              </Text>
+              
+              <View style={styles.customInputContainer}>
+                <TextInput
+                  style={styles.customTextInput}
+                  placeholder="Ex: -25.9667,32.5833"
+                  value={coordinateInput}
+                  onChangeText={setCoordinateInput}
+                  keyboardType="numbers-and-punctuation"
+                  autoFocus
+                />
+              </View>
+              
+              <View style={styles.customModalButtonsContainer}>
+                <TouchableOpacity 
+                  style={[styles.customModalButton, styles.customModalButtonOutline]}
+                  onPress={() => setShowCoordinateInputModal(false)}
+                >
+                  <Text style={styles.customModalButtonTextOutline}>Cancelar</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.customModalButton, styles.customModalButtonPrimary]}
+                  onPress={handleCoordinateSubmit}
+                >
+                  <Text style={styles.customModalButtonText}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal 
+        visible={!!showErrorModal} 
+        transparent 
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal('')}
+      >
+        <View style={styles.customModalBackdrop}>
+          <View style={[styles.customModalCard, styles.customModalError]}>
+            <View style={styles.customModalContentCentered}>
+              <View style={styles.customModalIconContainer}>
+                <Ionicons name="alert-circle" size={48} color={COLORS.error} />
+              </View>
+              <Text style={styles.customModalErrorTitle}>Erro</Text>
+              <Text style={styles.customModalErrorMessage}>{showErrorModal}</Text>
+              <TouchableOpacity 
+                style={[styles.customModalButton, styles.customModalButtonPrimary]}
+                onPress={() => setShowErrorModal('')}
+              >
+                <Text style={styles.customModalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Permission Denied Modal */}
+      <Modal 
+        visible={showPermissionDeniedModal} 
+        transparent 
+        animationType="fade"
+        onRequestClose={() => setShowPermissionDeniedModal(false)}
+      >
+        <View style={styles.customModalBackdrop}>
+          <View style={[styles.customModalCard, styles.customModalError]}>
+            <View style={styles.customModalContentCentered}>
+              <View style={styles.customModalIconContainer}>
+                <Ionicons name="lock-closed" size={48} color={COLORS.error} />
+              </View>
+              <Text style={styles.customModalErrorTitle}>Permissão Negada</Text>
+              <Text style={styles.customModalErrorMessage}>
+                É necessário conceder permissão de localização para usar este recurso.
+              </Text>
+              <TouchableOpacity 
+                style={[styles.customModalButton, styles.customModalButtonPrimary]}
+                onPress={() => setShowPermissionDeniedModal(false)}
+              >
+                <Text style={styles.customModalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Current Location Confirmation Modal */}
+      <Modal 
+        visible={showCurrentLocationModal} 
+        transparent 
+        animationType="fade"
+        onRequestClose={() => setShowCurrentLocationModal(false)}
+      >
+        <View style={styles.customModalBackdrop}>
+          <View style={styles.customModalCard}>
+            <View style={styles.customModalHeader}>
+              <Text style={styles.customModalTitle}>📍 Usar Localização Atual</Text>
+              <TouchableOpacity 
+                onPress={() => setShowCurrentLocationModal(false)} 
+                style={styles.customModalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.customModalContentCentered}>
+              <View style={styles.customModalIconContainer}>
+                <Ionicons name="locate" size={48} color={COLORS.primary} />
+              </View>
+              <Text style={styles.customModalSuccessTitle}>Localização Atual</Text>
+              <Text style={styles.customModalSuccessMessage}>
+                Deseja usar sua localização atual?
+                Esta ação obterá sua latitude e longitude automaticamente.
+              </Text>
+              <View style={styles.customModalButtonsContainer}>
+                <TouchableOpacity 
+                  style={[styles.customModalButton, styles.customModalButtonOutline]}
+                  onPress={() => setShowCurrentLocationModal(false)}
+                >
+                  <Text style={styles.customModalButtonTextOutline}>Cancelar</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.customModalButton, styles.customModalButtonPrimary]}
+                  onPress={handleGetCurrentLocation}
+                >
+                  <Ionicons name="checkmark" size={20} color={COLORS.white} />
+                  <Text style={styles.customModalButtonText}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Loading Location Modal */}
+      <Modal 
+        visible={showLoadingLocationModal} 
+        transparent 
+        animationType="none"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.loadingModalBackdrop}>
+          <View style={styles.loadingModalCard}>
+            <View style={styles.loadingModalContent}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.loadingModalText}>Obtendo localização...</Text>
+              <Text style={styles.loadingModalSubtext}>Por favor, aguarde</Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Footer com botão Continuar */}
       <View style={styles.footer}>
@@ -1333,5 +1948,246 @@ const styles = StyleSheet.create({
   modalWarning: {
     backgroundColor: COLORS.secondary,
     borderColor: COLORS.secondary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  searchContainer: {
+    flex: 1,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  searchResultsContainer: {
+    maxHeight: 300,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  searchResultContent: {
+    flex: 1,
+  },
+  searchResultTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  searchResultSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  noResultsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  
+  // Custom Modal Styles
+  customModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  customModalCard: {
+    width: '100%',
+    maxWidth: 500,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  customModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.background,
+  },
+  customModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  customModalCloseButton: {
+    padding: 4,
+  },
+  customModalContent: {
+    padding: 20,
+  },
+  customModalContentCentered: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customModalDescription: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    lineHeight: 24,
+    marginBottom: 20,
+    textAlign: 'left',
+  },
+  customModalButtonsContainer: {
+    flexDirection: 'column',
+    gap: 12,
+    marginTop: 10,
+  },
+  customModalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 10,
+  },
+  customModalButtonPrimary: {
+    backgroundColor: COLORS.primary,
+  },
+  customModalButtonSecondary: {
+    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  customModalButtonOutline: {
+    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  customModalButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  customModalButtonTextSecondary: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  customModalButtonTextOutline: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  customInputContainer: {
+    marginBottom: 20,
+  },
+  customTextInput: {
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: COLORS.text,
+    backgroundColor: COLORS.background,
+  },
+  customModalSuccess: {
+    backgroundColor: COLORS.success + '10',
+    borderColor: COLORS.success + '30',
+    borderWidth: 1,
+  },
+  customModalError: {
+    backgroundColor: COLORS.error + '10',
+    borderColor: COLORS.error + '30',
+    borderWidth: 1,
+  },
+  customModalIconContainer: {
+    marginBottom: 16,
+  },
+  customModalSuccessTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.success,
+    marginBottom: 8,
+  },
+  customModalErrorTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.error,
+    marginBottom: 8,
+  },
+  customModalSuccessMessage: {
+    fontSize: 16,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  customModalErrorMessage: {
+    fontSize: 16,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  
+  // Loading Modal Styles
+  loadingModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingModalCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 30,
+    minWidth: 280,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  loadingModalContent: {
+    alignItems: 'center',
+  },
+  loadingModalText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  loadingModalSubtext: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

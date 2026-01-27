@@ -51,6 +51,11 @@ export interface CommercialData {
 
   // Lista de estabelecimentos (novo)
   estabelecimentos?: Array<{ nome?: string; provinciaLocalidade?: string; enderecoBairro?: string }>;
+
+  // Banca fields (for AGENT partners)
+  latitude?: number;
+  longitude?: number;
+  fotografia?: string; // Photo of the banca
 }
 
 export interface DocumentsPayload {

@@ -13,10 +13,17 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs access to location to get the position of the banca.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to get the position of the banca."
+      }
     },
     "android": {
-      "permissions": []
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "output": "static"
