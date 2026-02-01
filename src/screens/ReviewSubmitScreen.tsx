@@ -6,6 +6,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { getAuthApi } from '@/config/api';
+import * as FileSystem from 'expo-file-system/legacy';
 
 type Nav = StackNavigationProp<RootStackParamList, 'ReviewSubmit'>;
 type Route = RouteProp<RootStackParamList, 'ReviewSubmit'>;
@@ -16,6 +17,15 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   const { commercialData, documents } = route.params;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const toISODate = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD/MM/YYYY -> YYYY-MM-DD
+    }
+    return dateStr;
+  };
 
   const submit = async () => {
     if (submitting) return;
@@ -32,13 +42,16 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         formData.append("designacao", commercialData.nomeComercial || "");
         formData.append("tipo_empresa", commercialData.tipoEmpresa || "");
         formData.append("natureza_actividade", commercialData.naturezaObjecto || "");
-        formData.append("nuit", commercialData.nuit || "");
+
+        // Evitar enviar string vazia para campos únicos se não preenchidos
+        if (commercialData.nuit) formData.append("nuit", commercialData.nuit);
+        if (commercialData.contactoAgente) formData.append("contacto_agente", commercialData.contactoAgente);
+
         formData.append("bairro_ref", commercialData.enderecoBairroRef || "");
         formData.append("profissao", commercialData.profissao || "");
         formData.append("assinatura_adesao", commercialData.assinatura || "");
-        formData.append("data_adesao", commercialData.dataFormulario || "");
+        formData.append("data_adesao", toISODate(commercialData.dataFormulario));
         formData.append("angariador_id", "40");
-        formData.append("contacto_agente", commercialData.contactoAgente || "");
 
         // 2. Append endereco (as JSON)
         formData.append("endereco", JSON.stringify({
@@ -53,20 +66,26 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
 
         // 3. Append banca (as JSON with base64 fotografia)
         if (commercialData.latitude !== null && commercialData.longitude !== null) {
-          formData.append("banca", JSON.stringify({
+          let base64Foto = "";
+          if (commercialData.fotografia) {
+            try {
+              base64Foto = await FileSystem.readAsStringAsync(commercialData.fotografia, {
+                encoding: 'base64',
+              });
+              // Se não tiver o prefixo, adicione (opcional, dependendo do backend, mas comum)
+              if (!base64Foto.startsWith('data:')) {
+                base64Foto = `data:image/jpeg;base64,${base64Foto}`;
+              }
+            } catch (err) {
+              console.error("Erro ao converter foto da banca para Base64:", err);
+            }
+          }
+
+          formData.append("banca", JSON.stringify([{
             latitude: commercialData.latitude,
             longitude: commercialData.longitude,
-            // fotografia não é mais enviada aqui como base64 no JSON
-          }));
-
-          // Envia a fotografia como um arquivo real para evitar erro 413 de payload gigante
-          if (commercialData.fotografia) {
-            formData.append("fotografia_banca", {
-              uri: commercialData.fotografia,
-              name: "banca.jpg",
-              type: "image/jpeg",
-            } as any);
-          }
+            fotografia: base64Foto, // Foto agora vai aqui como Base64
+          }]));
         }
 
         // 4. Append proprietarios
@@ -86,15 +105,16 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
       }
 
       // 7. Append documentos (PDFs)
+      // O backend espera o nome do campo como 'bi', 'nuit', 'alvara'
       if (documents.biFrenteUri) {
-        formData.append("bi_frente", {
+        formData.append("bi", {
           uri: documents.biFrenteUri,
           name: "bi_frente.pdf",
           type: "application/pdf",
         } as any);
       }
       if (documents.biVersoUri) {
-        formData.append("bi_verso", {
+        formData.append("bi", {
           uri: documents.biVersoUri,
           name: "bi_verso.pdf",
           type: "application/pdf",
@@ -137,8 +157,14 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         throw new Error("Falha ao criar parceiro");
       }
     } catch (err: any) {
-      console.error("Erro submit:", err);
-      setError(err.message || "Erro ao submeter formulário");
+      console.error("Erro submit (Full details):", err);
+      if (err.response) {
+        console.error("Backend Error Data:", err.response.data);
+        const backendMsg = err.response.data?.error || err.response.data?.message || JSON.stringify(err.response.data);
+        setError(`Erro: ${backendMsg}`);
+      } else {
+        setError(err.message || "Erro ao submeter formulário");
+      }
     } finally {
       setSubmitting(false);
     }

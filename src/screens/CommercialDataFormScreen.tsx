@@ -502,7 +502,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
         mediaTypes: ['images'], // Fix deprecated MediaTypeOptions
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.5, // Qualidade média viavel agora que enviamos como ficheiro
+        quality: 0.1, // Reduzido drasticamente para evitar erro 413 (Payload Too Large)
       });
 
       if (!result.canceled && result.assets && result.assets[0]?.uri) {
