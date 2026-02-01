@@ -17,6 +17,7 @@ interface Props {
   loading?: boolean;
   disabled?: boolean;
   iconName?: IoniconName;
+  icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   iconSize?: number;
   iconColor?: string;
@@ -31,6 +32,7 @@ export const Button: React.FC<Props> = ({
   loading = false,
   disabled = false,
   iconName,
+  icon,
   iconPosition = 'left',
   iconSize = 18,
   iconColor,
@@ -61,6 +63,7 @@ export const Button: React.FC<Props> = ({
         <ActivityIndicator color={variant === 'outline' ? Theme.colors.textPrimary : '#FFF'} />
       ) : (
         <View style={styles.contentRow}>
+          {icon && iconPosition === 'left' && icon}
           {iconName && iconPosition === 'left' && (
             <Ionicons name={iconName} size={iconSize} color={effectiveIconColor} style={styles.iconLeft} />
           )}
@@ -68,6 +71,7 @@ export const Button: React.FC<Props> = ({
           {iconName && iconPosition === 'right' && (
             <Ionicons name={iconName} size={iconSize} color={effectiveIconColor} style={styles.iconRight} />
           )}
+          {icon && iconPosition === 'right' && icon}
         </View>
       )}
     </TouchableOpacity>

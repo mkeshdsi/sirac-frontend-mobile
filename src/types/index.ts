@@ -29,20 +29,24 @@ export interface CommercialData {
   numeroConta?: string;
   profissao?: string;
 
-  // Endereço
-  enderecoCidade?: string;
-  enderecoLocalidade?: string;
-  enderecoAvenidaRua?: string;
-  enderecoNumero?: string;
-  enderecoQuart?: string;
-  enderecoBairroRef?: string;
-  telefone?: string;
-  celular?: string;
+  // Empresa/Banca - Endereço e Contactos
+  bancaEnderecoCidade?: string;
+  bancaEnderecoLocalidade?: string;
+  bancaEnderecoAvenidaRua?: string;
+  bancaEnderecoNumero?: string;
+  bancaEnderecoQuart?: string;
+  bancaEnderecoBairroRef?: string;
+  bancaTelefone?: string;
+  bancaCelular?: string;
 
-  // Proprietários
+  // Proprietário Principal
   proprietarioNomeCompleto?: string;
   proprietarioEmail?: string;
   proprietarioContacto?: string;
+  proprietarioEnderecoCidade?: string;
+  proprietarioEnderecoLocalidade?: string;
+  proprietarioEnderecoBairro?: string;
+
   // Lista de proprietários (novo)
   proprietarios?: Array<{ nome?: string; email?: string; contacto?: string }>;
 

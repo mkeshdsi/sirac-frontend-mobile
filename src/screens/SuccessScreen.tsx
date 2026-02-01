@@ -67,7 +67,6 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
   }, []);
 
   const nextSteps = [
-
     {
       icon: '🔍',
       title: 'Análise de Documentos',
@@ -152,9 +151,6 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
               ))}
             </View>
           </Card>
-
-
-
 
           <Card style={styles.contactCard}>
             <Text style={styles.contactTitle}>#SemStress</Text>
@@ -318,55 +314,6 @@ const styles = StyleSheet.create({
     height: 24,
     backgroundColor: COLORS.border,
   },
-  infoCard: {
-    backgroundColor: COLORS.secondaryLight,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.secondary + '30',
-  },
-  infoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  infoIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: COLORS.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  infoHeaderIcon: {
-    fontSize: 18,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  infoList: {
-    gap: 12,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  infoBullet: {
-    fontSize: 16,
-    color: COLORS.primary,
-    marginRight: 8,
-    fontWeight: '700',
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
-  },
   contactCard: {
     backgroundColor: COLORS.secondary,
     borderRadius: 16,
@@ -390,35 +337,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
-  },
-  contactText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  contactButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  contactButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  contactButtonIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  contactButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.primary,
   },
   footer: {
     position: 'absolute',
