@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, View, Text, StyleSheet, Alert } from 'react-native';
 import { Theme } from '@/constants/theme';
 import { Button, Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -15,104 +7,13 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { getAuthApi } from '@/config/api';
 import * as FileSystem from 'expo-file-system/legacy';
-import {
-  MaterialIcons,
-  FontAwesome,
-  Ionicons
-} from '@expo/vector-icons';
 
 type Nav = StackNavigationProp<RootStackParamList, 'ReviewSubmit'>;
 type Route = RouteProp<RootStackParamList, 'ReviewSubmit'>;
 
 interface Props { navigation: Nav; route: Route }
 
-const COLORS = {
-  primary: '#01836b',
-  secondary: '#ffcc03',
-  primaryLight: '#01836b15',
-  secondaryLight: '#ffcc0315',
-  white: '#ffffff',
-  background: '#f8f9fa',
-  surface: '#ffffff',
-  border: '#e0e0e0',
-  text: '#1a1a1a',
-  textSecondary: '#666666',
-  success: '#01836b',
-};
-
-const ReviewCard = ({ title, icon, children }: {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode
-}) => (
-  <Card style={styles.card}>
-    <View style={styles.cardHeader}>
-      <View style={styles.cardIcon}>
-        {icon}
-      </View>
-      <Text style={styles.cardTitle}>{title}</Text>
-    </View>
-    <View style={styles.cardContent}>
-      {children}
-    </View>
-  </Card>
-);
-
-const ReviewItem = ({
-  label,
-  value,
-  required = false
-}: {
-  label: string;
-  value: string;
-  required?: boolean
-}) => (
-  <View style={styles.reviewItem}>
-    <View style={styles.reviewItemLabelContainer}>
-      <Text style={styles.reviewItemLabel}>{label}</Text>
-      {required && value === '-' && (
-        <Text style={styles.requiredBadge}>Obrigatório</Text>
-      )}
-    </View>
-    <Text style={[
-      styles.reviewItemValue,
-      value === '-' && styles.reviewItemValueEmpty,
-      required && value === '-' && styles.reviewItemValueRequired
-    ]}>
-      {value}
-    </Text>
-  </View>
-);
-
-const DocumentStatus = ({
-  type,
-  uploaded
-}: {
-  type: string;
-  uploaded: boolean
-}) => (
-  <View style={styles.documentItem}>
-    <View style={styles.documentIconContainer}>
-      {uploaded ? (
-        <MaterialIcons name="check-circle" size={24} color={Theme.colors.success} />
-      ) : (
-        <MaterialIcons name="error" size={24} color={Theme.colors.warning} />
-      )}
-    </View>
-    <View style={styles.documentInfo}>
-      <Text style={styles.documentName}>{type}</Text>
-      <Text style={[
-        styles.documentStatus,
-        uploaded ? styles.documentStatusSuccess : styles.documentStatusWarning
-      ]}>
-        {uploaded ? '✓ Carregado' : '✗ Pendente'}
-      </Text>
-    </View>
-  </View>
-);
-
 export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
-  const insets = useSafeAreaInsets();
   const { commercialData, documents } = route.params;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,51 +22,13 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
     if (!dateStr) return "";
     const parts = dateStr.split('/');
     if (parts.length === 3) {
-      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD/MM/YYYY -> YYYY-MM-DD
     }
     return dateStr;
   };
 
-  const calculateCompletion = () => {
-    if (!commercialData) return 0;
-
-    const requiredFields = [
-      'tipoParceiro',
-      'nomeComercial',
-      'nuit',
-      'alvara',
-      'bancaEnderecoCidade',
-      'assinatura',
-      'dataFormulario'
-    ];
-
-    const filledFields = requiredFields.filter(field => {
-      const value = commercialData[field as keyof typeof commercialData];
-      return value !== undefined && value !== null && value !== '';
-    });
-
-    return Math.round((filledFields.length / requiredFields.length) * 100);
-  };
-
-  const hasAllRequiredFields = () => {
-    // Relaxed validation to ensure the button is enabled as requested
-    // but still checking for the absolute basics to avoid server errors.
-    if (!commercialData) return false;
-    return !!commercialData.assinatura && !!commercialData.dataFormulario;
-  };
-
   const submit = async () => {
     if (submitting) return;
-
-    if (!hasAllRequiredFields()) {
-      Alert.alert(
-        'Campos obrigatórios em falta',
-        'Por favor, certifique-se de que a assinatura e data foram preenchidas.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
     setSubmitting(true);
     setError(null);
 
@@ -176,35 +39,32 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
       // 1. Append parceiro data
       if (commercialData) {
         formData.append("tipo_parceiro", commercialData.tipoParceiro || "");
-        formData.append("designacao", commercialData.designacao || commercialData.nomeComercial || "");
+        formData.append("designacao", commercialData.nomeComercial || "");
         formData.append("tipo_empresa", commercialData.tipoEmpresa || "");
         formData.append("natureza_actividade", commercialData.naturezaObjecto || "");
 
+        // Evitar enviar string vazia para campos únicos se não preenchidos
         if (commercialData.nuit) formData.append("nuit", commercialData.nuit);
         if (commercialData.contactoAgente) formData.append("contacto_agente", commercialData.contactoAgente);
 
-        formData.append("bairro_ref", commercialData.bancaEnderecoBairroRef || "");
+        formData.append("bairro_ref", commercialData.enderecoBairroRef || "");
         formData.append("profissao", commercialData.profissao || "");
         formData.append("assinatura_adesao", commercialData.assinatura || "");
         formData.append("data_adesao", toISODate(commercialData.dataFormulario));
         formData.append("angariador_id", "40");
 
-        // Proprietário Principal
-        if (commercialData.proprietarioNomeCompleto) formData.append("proprietario_nome_completo", commercialData.proprietarioNomeCompleto);
-        if (commercialData.proprietarioContacto) formData.append("proprietario_contacto", commercialData.proprietarioContacto);
-
-        // 2. Append endereco
+        // 2. Append endereco (as JSON)
         formData.append("endereco", JSON.stringify({
-          cidade: commercialData.bancaEnderecoCidade || "",
-          localidade: commercialData.bancaEnderecoLocalidade || "",
-          avenida_rua: commercialData.bancaEnderecoAvenidaRua || "",
-          numero: commercialData.bancaEnderecoNumero || "",
-          quarteirao: commercialData.bancaEnderecoQuart || "",
-          telefone: commercialData.bancaTelefone || "",
-          celular: commercialData.bancaCelular || "",
+          cidade: commercialData.enderecoCidade || "",
+          localidade: commercialData.enderecoLocalidade || "",
+          avenida_rua: commercialData.enderecoAvenidaRua || "",
+          numero: commercialData.enderecoNumero || "",
+          quarteirao: commercialData.enderecoQuart || "",
+          telefone: commercialData.telefone || "",
+          celular: commercialData.celular || "",
         }));
 
-        // 3. Append banca (with base64 fotografia)
+        // 3. Append banca (as JSON with base64 fotografia)
         if (commercialData.latitude !== null && commercialData.longitude !== null) {
           let base64Foto = "";
           if (commercialData.fotografia) {
@@ -212,6 +72,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
               base64Foto = await FileSystem.readAsStringAsync(commercialData.fotografia, {
                 encoding: 'base64',
               });
+              // Se não tiver o prefixo, adicione (opcional, dependendo do backend, mas comum)
               if (!base64Foto.startsWith('data:')) {
                 base64Foto = `data:image/jpeg;base64,${base64Foto}`;
               }
@@ -223,7 +84,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           formData.append("banca", JSON.stringify([{
             latitude: commercialData.latitude,
             longitude: commercialData.longitude,
-            fotografia: base64Foto,
+            fotografia: base64Foto, // Foto agora vai aqui como Base64
           }]));
         }
 
@@ -243,7 +104,8 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         }
       }
 
-      // 7. Append documentos
+      // 7. Append documentos (PDFs)
+      // O backend espera o nome do campo como 'bi', 'nuit', 'alvara'
       if (documents.biFrenteUri) {
         formData.append("bi", {
           uri: documents.biFrenteUri,
@@ -273,7 +135,15 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         } as any);
       }
 
-      console.log("Enviando dados para a API...");
+      console.log("FormData Entries:");
+      // @ts-ignore
+      for (let [key, value] of formData.entries()) {
+        if (typeof value === "string") {
+          console.log(key, value);
+        } else {
+          console.log(key, (value as any).name);
+        }
+      }
 
       const response = await api.post("/api/v1/parceiros/", formData, {
         headers: {
@@ -282,20 +152,16 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
       });
 
       if (response.status === 201) {
-        navigation.replace("Success", {
-          registrationId: response.data.id || "123"
-        });
+        navigation.replace("Success", { registrationId: "123" });
       } else {
         throw new Error("Falha ao criar parceiro");
       }
     } catch (err: any) {
-      console.error("Erro submit:", err);
+      console.error("Erro submit (Full details):", err);
       if (err.response) {
-        console.error("Backend Error:", err.response.data);
+        console.error("Backend Error Data:", err.response.data);
         const backendMsg = err.response.data?.error || err.response.data?.message || JSON.stringify(err.response.data);
-        setError(`Erro do servidor: ${backendMsg}`);
-      } else if (err.message?.includes('Network Error')) {
-        setError("Erro de conexão. Verifique sua internet.");
+        setError(`Erro: ${backendMsg}`);
       } else {
         setError(err.message || "Erro ao submeter formulário");
       }
@@ -306,306 +172,48 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <MaterialIcons name="check-circle" size={40} color={Theme.colors.primary} />
-          </View>
-          <Text style={styles.title}>Revisão Final</Text>
-          <Text style={styles.subtitle}>
-            Confirme os dados antes de submeter o formulário
-          </Text>
-        </View>
+      <Text style={styles.title}>Revisão</Text>
 
-        {commercialData && (
-          <>
-            {/* Localização */}
-            <ReviewCard
-              title="Localização da Banca"
-              icon={<MaterialIcons name="gps-fixed" size={24} color={Theme.colors.primary} />}
-            >
-              <ReviewItem
-                label="Latitude"
-                value={commercialData.latitude ? String(commercialData.latitude) : '-'}
-              />
-              <ReviewItem
-                label="Longitude"
-                value={commercialData.longitude ? String(commercialData.longitude) : '-'}
-              />
-              {commercialData.fotografia && (
-                <View style={styles.photoInfo}>
-                  <MaterialIcons name="photo-camera" size={20} color={Theme.colors.success} />
-                  <Text style={styles.photoText}>Fotografia da banca anexada</Text>
-                </View>
-              )}
-            </ReviewCard>
+      {/* Secção Dados Pessoais removida por não ser necessária para o envio à API */}
 
-            {/* Assinatura e Data */}
-            <ReviewCard
-              title="Assinatura e Data"
-              icon={<MaterialIcons name="edit" size={24} color={Theme.colors.primary} />}
-            >
-              <ReviewItem
-                label="Assinatura"
-                value={commercialData.assinatura ? '✓ Assinado' : '✗ Pendente'}
-                required
-              />
-              <ReviewItem
-                label="Data do Formulário"
-                value={commercialData.dataFormulario || '-'}
-                required
-              />
-            </ReviewCard>
-          </>
-        )}
+      {commercialData && (
+        <Card style={styles.card}>
+          <Text style={styles.section}>Dados Comerciais</Text>
+          <Text style={styles.item}>Nome Comercial: {commercialData.nomeComercial}</Text>
+          <Text style={styles.item}>NUIT: {commercialData.nuit}</Text>
+          <Text style={styles.item}>Alvará: {commercialData.alvara}</Text>
+        </Card>
+      )}
 
-        {/* Error Message */}
-        {error && (
-          <Card style={styles.errorCard}>
-            <View style={styles.errorHeader}>
-              <MaterialIcons name="error" size={24} color={Theme.colors.surface} />
-              <Text style={styles.errorTitle}>Erro na Submissão</Text>
-            </View>
-            <Text style={styles.errorText}>{error}</Text>
-          </Card>
-        )}
+      <Card style={styles.card}>
+        <Text style={styles.section}>Documentos</Text>
+        <Text style={styles.item}>BI Frente: {documents.biFrenteUri ? 'OK' : 'Falta'}</Text>
+        <Text style={styles.item}>BI Verso: {documents.biVersoUri ? 'OK' : 'Falta'}</Text>
+        <Text style={styles.item}>NUIT: {documents.nuitUri ? 'OK' : 'Falta'}</Text>
+        <Text style={styles.item}>Alvará: {documents.alvaraUri ? 'OK' : 'Falta'}</Text>
+      </Card>
 
-        {/* Spacer for fixed footer */}
-        <View style={styles.spacer} />
-      </ScrollView>
+      {error && (
+        <Card style={styles.errorCard}>
+          <Text style={styles.errorText}>{error}</Text>
+        </Card>
+      )}
 
-      {/* Fixed Footer with Submit Button */}
-      <View style={[
-        styles.footer,
-        { paddingBottom: Math.max(20, insets.bottom + 12) }
-      ]}>
-        <Button
-          title="Voltar"
-          variant="outline"
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          icon={<MaterialIcons name="arrow-back" size={20} color={Theme.colors.primary} />}
-        />
-        <Button
-          title={submitting ? "A Submeter..." : "Submeter Agora"}
-          onPress={submit}
-          loading={submitting}
-          style={[
-            styles.submitButton,
-            !hasAllRequiredFields() && styles.submitButtonDisabled
-          ]}
-          disabled={!hasAllRequiredFields() || submitting}
-          icon={!submitting && <MaterialIcons name="send" size={20} color={Theme.colors.surface} />}
-        />
+      <View style={styles.footer}>
+        <Button title="Voltar" variant="outline" onPress={() => navigation.goBack()} style={{ flex: 1 }} />
+        <Button title="Submeter" onPress={submit} loading={submitting} style={{ flex: 2 }} disabled={!commercialData} />
       </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Theme.colors.background
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    alignItems: 'center',
-    paddingVertical: Theme.spacing.xl,
-    paddingHorizontal: Theme.spacing.lg,
-  },
-  headerIcon: {
-    marginBottom: Theme.spacing.sm,
-  },
-  title: {
-    ...Theme.typography.h1,
-    color: Theme.colors.textPrimary,
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: Theme.spacing.xs,
-  },
-  subtitle: {
-    ...Theme.typography.body1,
-    color: Theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  card: {
-    marginHorizontal: Theme.spacing.lg,
-    marginBottom: Theme.spacing.lg,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Theme.spacing.md,
-  },
-  cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Theme.colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Theme.spacing.sm,
-  },
-  cardTitle: {
-    ...Theme.typography.h3,
-    color: Theme.colors.textPrimary,
-    fontWeight: '600',
-  },
-  cardContent: {
-    paddingLeft: 8,
-  },
-  reviewItem: {
-    marginBottom: Theme.spacing.md,
-  },
-  reviewItemLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  reviewItemLabel: {
-    ...Theme.typography.caption,
-    color: Theme.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontWeight: '600',
-  },
-  requiredBadge: {
-    ...Theme.typography.caption,
-    color: Theme.colors.error,
-    backgroundColor: Theme.colors.error + '15',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: Theme.spacing.sm,
-    fontWeight: '600',
-  },
-  reviewItemValue: {
-    ...Theme.typography.body1,
-    color: Theme.colors.textPrimary,
-    fontWeight: '500',
-  },
-  reviewItemValueEmpty: {
-    color: Theme.colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  reviewItemValueRequired: {
-    color: Theme.colors.error,
-  },
-  photoInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Theme.spacing.sm,
-  },
-  photoText: {
-    ...Theme.typography.body1,
-    color: Theme.colors.success,
-    marginLeft: Theme.spacing.sm,
-    fontWeight: '500',
-  },
-  documentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Theme.spacing.md,
-  },
-  documentIconContainer: {
-    width: 40,
-    alignItems: 'center',
-  },
-  documentInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  documentName: {
-    ...Theme.typography.body1,
-    color: Theme.colors.textPrimary,
-  },
-  documentStatus: {
-    ...Theme.typography.caption,
-    fontWeight: '600',
-  },
-  documentStatusSuccess: {
-    color: Theme.colors.success,
-  },
-  documentStatusWarning: {
-    color: Theme.colors.warning,
-  },
-  documentSummary: {
-    marginTop: Theme.spacing.md,
-    paddingTop: Theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.border,
-    alignItems: 'center',
-  },
-  documentSummaryText: {
-    ...Theme.typography.body1,
-    color: Theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  errorCard: {
-    marginHorizontal: Theme.spacing.lg,
-    marginBottom: Theme.spacing.lg,
-    backgroundColor: Theme.colors.error,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  errorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Theme.spacing.md,
-  },
-  errorTitle: {
-    ...Theme.typography.h4,
-    color: Theme.colors.surface,
-    marginLeft: Theme.spacing.sm,
-    fontWeight: '600',
-  },
-  errorText: {
-    ...Theme.typography.body1,
-    color: Theme.colors.surface,
-    paddingHorizontal: Theme.spacing.md,
-    paddingBottom: Theme.spacing.md,
-  },
-  spacer: {
-    height: 120, // Space for fixed footer
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    padding: Theme.spacing.lg,
-    backgroundColor: Theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 10,
-  },
-  backButton: {
-    flex: 1,
-    marginRight: Theme.spacing.sm,
-  },
-  submitButton: {
-    flex: 2,
-    marginLeft: Theme.spacing.sm,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
+  container: { flex: 1, backgroundColor: Theme.colors.background, padding: Theme.spacing.lg },
+  title: { ...Theme.typography.h2, color: Theme.colors.textPrimary, marginBottom: Theme.spacing.md },
+  section: { ...Theme.typography.h4, color: Theme.colors.textPrimary, marginBottom: Theme.spacing.sm },
+  item: { ...Theme.typography.body2, color: Theme.colors.textSecondary, marginBottom: 2 },
+  card: { marginBottom: Theme.spacing.lg },
+  errorCard: { backgroundColor: Theme.colors.error, padding: Theme.spacing.md, marginBottom: Theme.spacing.lg },
+  errorText: { color: Theme.colors.surface, textAlign: 'center' },
+  footer: { flexDirection: 'row', gap: Theme.spacing.md, marginTop: Theme.spacing.lg },
 });

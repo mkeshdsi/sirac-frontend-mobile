@@ -39,11 +39,7 @@ export const Select: React.FC<SelectProps> = ({
       )}
 
       <TouchableOpacity style={styles.selector} onPress={() => !loading && setOpen(true)}>
-        <Text
-          style={selected ? styles.valueText : styles.placeholderText}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
+        <Text style={selected ? styles.valueText : styles.placeholderText}>
           {loading ? 'A carregar...' : selected ? selected.label : placeholder}
         </Text>
       </TouchableOpacity>
