@@ -6,7 +6,7 @@ import { getItem, setItem, deleteItem } from '@/utils/storage';
 export { getItem, setItem, deleteItem };
 
 const KEY_API_BASE_URL = 'sirac_api_base_url';
-const DEFAULT_BASE_URL = 'http://10.100.33.169:8055'; // IP da máquina para uso no Expo Go
+const DEFAULT_BASE_URL = 'http://10.100.59.17'; // IP do backend 
 const KEY_AUTH_TOKEN = 'sirac_auth_token';
 
 function normalizeBase(url: string): string {
@@ -21,8 +21,8 @@ function deriveBaseFromExpo(): string | null {
     if (!hostUri || typeof hostUri !== 'string') return null;
     const host = hostUri.split(':')[0];
     if (!host || host.includes('exp.host')) return null;
-    // Porta padrão do backend conforme main.py: 8055
-    return `http://${host}:8055`;
+    // Backend agora usa IP fixo sem porta; não derivar do Expo
+    return null;
   } catch {
     return null;
   }
@@ -30,16 +30,17 @@ function deriveBaseFromExpo(): string | null {
 
 export async function getBaseUrl(): Promise<string> {
   try {
-    // Para Web, usa o hostname atual (ex.: localhost) e porta 8055
+    // Para Web, usar base fixa do backend (sem porta)
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const host = window.location.hostname || 'localhost';
-      const url = `http://${host}:8055`;
+      const url = DEFAULT_BASE_URL;
       if (__DEV__) console.log('[API] baseURL (web):', url);
       return normalizeBase(url);
     }
     const saved = await getItem(KEY_API_BASE_URL);
+    const invalidSaved = !!saved && (saved.includes(':8055') || saved.includes('10.100.33.169'));
+    const effectiveSaved = invalidSaved ? null : saved;
     const derived = deriveBaseFromExpo();
-    const url = normalizeBase(saved || derived || DEFAULT_BASE_URL);
+    const url = normalizeBase(effectiveSaved || derived || DEFAULT_BASE_URL);
     if (__DEV__) console.log('[API] baseURL (native):', url);
     return url;
   } catch {

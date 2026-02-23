@@ -6,13 +6,19 @@
     "orientation": "portrait",
     "scheme": "sirac",
     "userInterfaceStyle": "automatic",
+    "icon": "./logo_png.png",
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/1d5f13c3-18c6-418b-ad75-9a41e922dc29"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
+      "bundleIdentifier": "com.eleuterio.sirac",
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to get the position of the banca.",
@@ -20,13 +26,16 @@
       }
     },
     "android": {
+      "package": "com.eleuterio.sirac",
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
-    "web": {
-      "output": "static"
+    "extra": {
+      "eas": {
+        "projectId": "1d5f13c3-18c6-418b-ad75-9a41e922dc29"
+      }
     }
   }
 }

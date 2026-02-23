@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform, Modal, Image, TextInput, ActivityIndicator } from 'react-native';
+// import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'; // removido para evitar erro com Expo Go
 import ReactNative from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
@@ -46,12 +47,7 @@ const normalizePhone = (s?: string) => (s ? s.replace(/[^0-9]/g, '') : '');
 
 const schema: yup.ObjectSchema<CommercialData> = yup.object({
   tipoParceiro: yup.string().oneOf(['AGENTE', 'MERCHANT'], 'Tipo de parceiro inválido').required('Tipo de parceiro é obrigatório'),
-  nomeComercial: yup.string()
-    .when('tipoParceiro', {
-      is: (v: string) => v === 'MERCHANT',
-      then: (s) => s.required('Nome comercial é obrigatório').min(2, 'Mínimo 2 caracteres'),
-      otherwise: (s) => s.optional(),
-    }),
+  nomeComercial: yup.string().required('Nome comercial é obrigatório').min(2, 'Mínimo 2 caracteres'),
   nuit: yup.string()
     .when('tipoParceiro', {
       is: 'MERCHANT',
@@ -84,11 +80,7 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   tipoEmpresa: yup
     .string()
     .oneOf(['SOCIEDADE', 'INDIVIDUAL'], 'Tipo de empresa inválido')
-    .when('tipoParceiro', {
-      is: 'MERCHANT',
-      then: (s) => s.required('Tipo de empresa é obrigatório'),
-      otherwise: (s) => s.optional(),
-    }),
+    .required('Tipo de empresa é obrigatório'),
   designacao: yup.string().optional(),
   naturezaObjecto: yup.string().optional(),
   banco: yup.string().optional(),
@@ -426,6 +418,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const tipoParceiro = useWatch({ control, name: 'tipoParceiro' });
   const tipoDocumento = useWatch({ control, name: 'tipoDocumento' });
   const fotografiaValue = useWatch({ control, name: 'fotografia' });
+  const watchedLatitude = useWatch({ control, name: 'latitude' });
+  const watchedLongitude = useWatch({ control, name: 'longitude' });
   const [bankMode, setBankMode] = useState<'lista' | 'outro'>('lista');
   // State for search functionality
   const [searchQuery, setSearchQuery] = useState('');
@@ -440,6 +434,26 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const [coordinateInput, setCoordinateInput] = useState('');
   const [showErrorModal, setShowErrorModal] = useState('');
   const [showPermissionDeniedModal, setShowPermissionDeniedModal] = useState(false);
+
+  // Carregar react-native-maps dinamicamente para evitar erro RNMapsAirModule no Expo Go
+  const [mapsLib, setMapsLib] = useState<any | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    import('react-native-maps')
+      .then((mod) => {
+        if (mounted) setMapsLib(mod);
+      })
+      .catch((err) => {
+        console.warn('react-native-maps indisponível neste runtime', err);
+        setMapsLib(null);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  // Componentes dinamicamente resolvidos
+  const MapViewComp = mapsLib?.default;
+  const MarkerComp = mapsLib?.Marker;
+  const PROVIDER_GOOGLE_CONST = mapsLib?.PROVIDER_GOOGLE;
 
   // Function to get current location
   const getCurrentLocation = async () => {
@@ -664,18 +678,13 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
     })();
   }, []);
 
-  // Define um default para tipoEmpresa quando MERCHANT
+  // Garante valor padrão para tipoEmpresa se não estiver preenchido
   useEffect(() => {
-    if (tipoParceiro === 'MERCHANT') {
-      const current = getValues('tipoEmpresa');
-      if (!current) {
-        setValue('tipoEmpresa', 'SOCIEDADE', { shouldValidate: true });
-      }
-    } else {
-      // Não obrigatório quando AGENTE
-      setValue('tipoEmpresa', undefined as any, { shouldValidate: false });
+    const current = getValues('tipoEmpresa');
+    if (!current) {
+      setValue('tipoEmpresa', 'INDIVIDUAL', { shouldValidate: true });
     }
-  }, [tipoParceiro]);
+  }, []);
 
   const onSubmit = async (data: CommercialData) => {
     // Não enviar para a API aqui. O envio correto é feito na ReviewSubmitScreen,
@@ -793,15 +802,6 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             render={({ field: { onChange, value } }) => (
               <View style={styles.radioGroup}>
                 <TouchableOpacity
-                  onPress={() => onChange('MERCHANT')}
-                  style={[styles.radioCard, value === 'MERCHANT' && styles.radioCardSelected]}
-                >
-                  <View style={[styles.radioIndicator, value === 'MERCHANT' && styles.radioIndicatorSelected]}>
-                    {value === 'MERCHANT' && <View style={styles.radioIndicatorInner} />}
-                  </View>
-                  <Text style={[styles.radioLabel, value === 'MERCHANT' && styles.radioLabelSelected]}>MERCHANT</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                   onPress={() => onChange('AGENTE')}
                   style={[styles.radioCard, value === 'AGENTE' && styles.radioCardSelected]}
                 >
@@ -809,6 +809,15 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                     {value === 'AGENTE' && <View style={styles.radioIndicatorInner} />}
                   </View>
                   <Text style={[styles.radioLabel, value === 'AGENTE' && styles.radioLabelSelected]}>AGENTE</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onChange('MERCHANT')}
+                  style={[styles.radioCard, value === 'MERCHANT' && styles.radioCardSelected]}
+                >
+                  <View style={[styles.radioIndicator, value === 'MERCHANT' && styles.radioIndicatorSelected]}>
+                    {value === 'MERCHANT' && <View style={styles.radioIndicatorInner} />}
+                  </View>
+                  <Text style={[styles.radioLabel, value === 'MERCHANT' && styles.radioLabelSelected]}>MERCHANT</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1007,33 +1016,46 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.cardTitle}>Localização da Banca</Text>
           </View>
 
-          {/* Location coordinates */}
-          <View style={styles.rowFields}>
-            <View style={{ flex: 1 }}>
-              <Controller control={control} name="latitude" render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Latitude"
-                  placeholder="Será preenchido"
-                  editable={false}
-                  value={value !== undefined ? String(value) : ''}
-                  onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
-                  onBlur={onBlur}
-                />
-              )} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Controller control={control} name="longitude" render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Longitude"
-                  placeholder="automaticamente"
-                  editable={false}
-                  value={value !== undefined ? String(value) : ''}
-                  onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
-                  onBlur={onBlur}
-                />
-              )} />
-            </View>
+          {/* Google Maps Component */}
+          <View style={styles.mapContainer}>
+            {MapViewComp ? (
+              <MapViewComp
+                provider={PROVIDER_GOOGLE_CONST}
+                style={styles.map}
+                initialRegion={{
+                  latitude: watchedLatitude || -25.9667, // Default to Mozambique capital or current location
+                  longitude: watchedLongitude || 32.5833,
+                  latitudeDelta: 0.0922,
+                  longitudeDelta: 0.0421,
+                }}
+                showsUserLocation={true}
+                showsMyLocationButton={false}
+                onPress={(event: any) => {
+                  // Capture coordinates when user taps on map
+                  const { latitude, longitude } = event.nativeEvent.coordinate;
+                  setValue('latitude', latitude);
+                  setValue('longitude', longitude);
+                }}
+              >
+                {(watchedLatitude !== undefined && watchedLongitude !== undefined) && MarkerComp && (
+                  <MarkerComp
+                    coordinate={{
+                      latitude: watchedLatitude,
+                      longitude: watchedLongitude,
+                    }}
+                    title="Localização da Banca"
+                  />
+                )}
+              </MapViewComp>
+            ) : (
+              <View style={[styles.map, { alignItems: 'center', justifyContent: 'center', padding: 16 }]}>
+                <Text style={{ textAlign: 'center', color: COLORS.textSecondary }}>
+                  Mapa indisponível no cliente atual. Utilize "Abrir Google Maps" ou "Usar Localização Atual".
+                </Text>
+              </View>
+            )}
           </View>
+
 
           <View style={{ marginTop: 10 }}>
             <TouchableOpacity onPress={openMapsForLocation} style={[styles.modalButton, styles.modalPrimary]}>
@@ -2191,5 +2213,18 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 8,
     textAlign: 'center',
+  },
+
+  // Map Styles
+  mapContainer: {
+    height: 250,
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
