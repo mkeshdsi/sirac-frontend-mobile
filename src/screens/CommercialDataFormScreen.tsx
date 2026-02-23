@@ -1018,26 +1018,27 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Google Maps Component */}
           <View style={styles.mapContainer}>
-            {MapViewComp ? (
+            {MapViewComp && (watchedLatitude || watchedLongitude) ? (
               <MapViewComp
                 provider={PROVIDER_GOOGLE_CONST}
                 style={styles.map}
                 initialRegion={{
-                  latitude: watchedLatitude || -25.9667, // Default to Mozambique capital or current location
-                  longitude: watchedLongitude || 32.5833,
-                  latitudeDelta: 0.0922,
-                  longitudeDelta: 0.0421,
+                  latitude: watchedLatitude || -18.6657, // Centro aproximado de Moçambique
+                  longitude: watchedLongitude || 35.5296,
+                  latitudeDelta: 10,
+                  longitudeDelta: 10,
                 }}
                 showsUserLocation={true}
                 showsMyLocationButton={false}
                 onPress={(event: any) => {
-                  // Capture coordinates when user taps on map
                   const { latitude, longitude } = event.nativeEvent.coordinate;
-                  setValue('latitude', latitude);
-                  setValue('longitude', longitude);
+                  if (latitude && longitude) {
+                    setValue('latitude', latitude);
+                    setValue('longitude', longitude);
+                  }
                 }}
               >
-                {(watchedLatitude !== undefined && watchedLongitude !== undefined) && MarkerComp && (
+                {typeof watchedLatitude === 'number' && typeof watchedLongitude === 'number' && MarkerComp && (
                   <MarkerComp
                     coordinate={{
                       latitude: watchedLatitude,
@@ -1048,9 +1049,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 )}
               </MapViewComp>
             ) : (
-              <View style={[styles.map, { alignItems: 'center', justifyContent: 'center', padding: 16 }]}>
-                <Text style={{ textAlign: 'center', color: COLORS.textSecondary }}>
-                  Mapa indisponível no cliente atual. Utilize "Abrir Google Maps" ou "Usar Localização Atual".
+              <View style={[styles.map, { alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: COLORS.background }]}>
+                <Ionicons name="map-outline" size={40} color={COLORS.textSecondary} style={{ marginBottom: 8 }} />
+                <Text style={{ textAlign: 'center', color: COLORS.textSecondary, fontSize: 13 }}>
+                  {watchedLatitude ? 'Carregando mapa...' : 'Mapa aguardando localização.\nUtilize os botões abaixo.'}
                 </Text>
               </View>
             )}
@@ -1587,8 +1589,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    // Garante altura total no Web para permitir scroll
-    minHeight: '100vh' as any,
   },
   scroll: {
     flex: 1,
