@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform, Modal, Image, TextInput, ActivityIndicator } from 'react-native';
 // import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'; // removido para evitar erro com Expo Go
-import ReactNative from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Input, Card, Select } from '@/components';
@@ -18,7 +17,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
-import * as FileSystem from 'expo-file-system';
 
 type Nav = StackNavigationProp<RootStackParamList, 'CommercialDataForm'>;
 
@@ -396,7 +394,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
-  const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
+  const fieldPositions = useRef<Record<string, number>>({});
   const [tempDate, setTempDate] = useState<Date | null>(null);
   const [showSignature, setShowSignature] = useState(false);
 
@@ -429,11 +427,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   // State for custom modals
   const [showLocationMethodModal, setShowLocationMethodModal] = useState(false);
   const [showCoordinateInputModal, setShowCoordinateInputModal] = useState(false);
-  const [showCurrentLocationModal, setShowCurrentLocationModal] = useState(false);
   const [showLoadingLocationModal, setShowLoadingLocationModal] = useState(false);
   const [coordinateInput, setCoordinateInput] = useState('');
   const [showErrorModal, setShowErrorModal] = useState('');
   const [showPermissionDeniedModal, setShowPermissionDeniedModal] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
   // Carregar react-native-maps dinamicamente para evitar erro RNMapsAirModule no Expo Go
   const [mapsLib, setMapsLib] = useState<any | null>(null);
@@ -455,46 +454,76 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const MarkerComp = mapsLib?.Marker;
   const PROVIDER_GOOGLE_CONST = mapsLib?.PROVIDER_GOOGLE;
 
-  // Function to get current location
-  const getCurrentLocation = async () => {
-    try {
-      // Show confirmation modal instead of requesting permission immediately
-      setShowCurrentLocationModal(true);
-    } catch (error) {
-      console.error('Error preparing location request:', error);
-      setShowErrorModal('Falha ao preparar obtenção de localização. Tente novamente.');
-    }
+  // Helper for location with timeout
+  const getLocationWithTimeout = async (options: Location.LocationOptions, timeoutMs: number = 10000) => {
+    return Promise.race([
+      Location.getCurrentPositionAsync(options),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeoutMs))
+    ]) as Promise<Location.LocationObject>;
   };
 
   // Function to actually get the current location
   const handleGetCurrentLocation = async () => {
-    setShowCurrentLocationModal(false);
-    setShowLoadingLocationModal(true); // Mostrar modal de carregamento
+    setShowLoadingLocationModal(true);
 
     try {
-      // Request permission
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      // 1. Solicitar permissão com timeout
+      const { status } = await Promise.race([
+        Location.requestForegroundPermissionsAsync(),
+        new Promise<{ status: string }>((_, reject) => setTimeout(() => reject(new Error('PermissionTimeout')), 5000))
+      ]) as any;
+
       if (status !== 'granted') {
-        setShowLoadingLocationModal(false); // Ocultar modal de carregamento
         setShowPermissionDeniedModal(true);
         return;
       }
 
-      // Get current position
-      let location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      // 2. Tentar obter a ultima posição conhecida (muito rápido)
+      try {
+        const lastKnown = await Promise.race([
+          Location.getLastKnownPositionAsync({}),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('LastKnownTimeout')), 2000))
+        ]) as Location.LocationObject;
 
-      // Set the coordinates in the form
-      setValue('latitude', location.coords.latitude);
-      setValue('longitude', location.coords.longitude);
+        if (lastKnown && lastKnown.coords) {
+          setValue('latitude', lastKnown.coords.latitude);
+          setValue('longitude', lastKnown.coords.longitude);
+        }
+      } catch (e) {
+        console.log('Last known position failed, continuing to current position...');
+      }
 
-      setShowLoadingLocationModal(false); // Ocultar modal de carregamento
-      Alert.alert('✅ Sucesso', `Localização obtida: ${location.coords.latitude}, ${location.coords.longitude}`);
-    } catch (error) {
+      // 3. Obter posição atual
+      const location = await getLocationWithTimeout({
+        accuracy: Location.Accuracy.Balanced,
+      }, 12000);
+
+      if (location && location.coords) {
+        setValue('latitude', location.coords.latitude);
+        setValue('longitude', location.coords.longitude);
+        Alert.alert('✅ Sucesso', 'Localização capturada com sucesso.');
+      }
+    } catch (error: any) {
       console.error('Error getting location:', error);
-      setShowLoadingLocationModal(false); // Ocultar modal de carregamento
-      setShowErrorModal('Falha ao obter localização. Tente novamente.');
+      const errMsg = error?.message || '';
+
+      const isEnabledCheck = await Location.hasServicesEnabledAsync();
+      if (!isEnabledCheck) {
+        setShowErrorModal('Os serviços de localização estão desativados. Por favor, ative o GPS.');
+      } else if (errMsg.includes('Timeout')) {
+        // Se temos pelo menos a ultima conhecida, não damos erro fatal
+        const lat = getValues('latitude');
+        if (!lat) {
+          setShowErrorModal('Tempo esgotado ao buscar localização. Tente novamente em um local mais aberto.');
+        } else {
+          Alert.alert('Aviso', 'Usando última localização conhecida (sinal de GPS fraco).');
+        }
+      } else {
+        setShowErrorModal('Falha ao obter localização. Verifique o seu GPS.');
+      }
+    } finally {
+      // GARANTE que o modal de loading desaparece sempre
+      setShowLoadingLocationModal(false);
     }
   };
 
@@ -584,16 +613,22 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const openMapsForLocation = async () => {
     try {
       // Request location permission first
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      let { status } = await Promise.race([
+        Location.requestForegroundPermissionsAsync(),
+        new Promise<{ status: string }>((_, reject) => setTimeout(() => reject(new Error('PermissionTimeout')), 5000))
+      ]) as any;
+
       if (status !== 'granted') {
         setShowPermissionDeniedModal(true);
         return;
       }
 
-      // Get current position to center the map
-      let location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      // Just check if services are on, don't wait for fresh position here to avoid hang
+      const isEnabled = await Location.hasServicesEnabledAsync().catch(() => false);
+      if (!isEnabled) {
+        setShowErrorModal('Ative o GPS para abrir o mapa.');
+        return;
+      }
 
       // Show custom modal instead of system alert
       setShowLocationMethodModal(true);
@@ -611,12 +646,21 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       setShowSearch(true);
     } else {
       // Open Google Maps
-      let location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      try {
+        const location = await getLocationWithTimeout({
+          accuracy: Location.Accuracy.Balanced,
+        }, 8000).catch(() => null);
 
-      const url = `https://www.google.com/maps/search/?api=1&query=${location.coords.latitude},${location.coords.longitude}&center=${location.coords.latitude},${location.coords.longitude}&zoom=15`;
-      await WebBrowser.openBrowserAsync(url);
+        let url = 'https://www.google.com/maps/search/?api=1';
+        if (location) {
+          url += `&query=${location.coords.latitude},${location.coords.longitude}&center=${location.coords.latitude},${location.coords.longitude}&zoom=15`;
+        }
+
+        await WebBrowser.openBrowserAsync(url);
+      } catch (e) {
+        // Fallback if location fetch itself crashes or hangs
+        await WebBrowser.openBrowserAsync('https://www.google.com/maps/');
+      }
 
       // Show coordinate input modal after delay
       setTimeout(() => {
@@ -666,7 +710,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   // Regista a posição Y de cada campo para possibilitar scroll até ao primeiro erro
   const onLayoutField = (name: keyof CommercialData | string) => (e: any) => {
     const y = e?.nativeEvent?.layout?.y ?? 0;
-    setFieldPositions((s) => ({ ...s, [String(name)]: y }));
+    fieldPositions.current[String(name)] = y;
   };
 
   useEffect(() => {
@@ -837,7 +881,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             )} />
           </View>
 
-          <View onLayout={onLayoutField('nuit')}>
+          <View onLayout={onLayoutField('alvara')}>
             <Controller control={control} name="alvara" render={({ field: { onChange, onBlur, value } }) => (
               <Input
                 label="Número do Alvará/Licença"
@@ -1018,18 +1062,18 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Google Maps Component */}
           <View style={styles.mapContainer}>
-            {MapViewComp && (watchedLatitude || watchedLongitude) ? (
+            {MapViewComp && showMap && (watchedLatitude || watchedLongitude) && !mapError ? (
               <MapViewComp
                 provider={PROVIDER_GOOGLE_CONST}
                 style={styles.map}
+                onError={() => setMapError(true)}
                 initialRegion={{
-                  latitude: watchedLatitude || -18.6657, // Centro aproximado de Moçambique
+                  latitude: watchedLatitude || -18.6657,
                   longitude: watchedLongitude || 35.5296,
-                  latitudeDelta: 10,
-                  longitudeDelta: 10,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
                 }}
                 showsUserLocation={true}
-                showsMyLocationButton={false}
                 onPress={(event: any) => {
                   const { latitude, longitude } = event.nativeEvent.coordinate;
                   if (latitude && longitude) {
@@ -1051,9 +1095,25 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             ) : (
               <View style={[styles.map, { alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: COLORS.background }]}>
                 <Ionicons name="map-outline" size={40} color={COLORS.textSecondary} style={{ marginBottom: 8 }} />
-                <Text style={{ textAlign: 'center', color: COLORS.textSecondary, fontSize: 13 }}>
-                  {watchedLatitude ? 'Carregando mapa...' : 'Mapa aguardando localização.\nUtilize os botões abaixo.'}
-                </Text>
+                {watchedLatitude ? (
+                  <>
+                    <Text style={{ textAlign: 'center', color: COLORS.textSecondary, fontSize: 13, marginBottom: 12 }}>
+                      {mapError ? 'Erro ao carregar o mapa. Verifique a chave da API.' : 'Coordenadas capturadas.\nClique abaixo para visualizar no mapa.'}
+                    </Text>
+                    {!mapError && (
+                      <TouchableOpacity
+                        onPress={() => setShowMap(true)}
+                        style={[styles.modalButton, styles.modalOutline, { paddingVertical: 8 }]}
+                      >
+                        <Text style={styles.modalButtonTextOutline}>Visualizar no Mapa</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                ) : (
+                  <Text style={{ textAlign: 'center', color: COLORS.textSecondary, fontSize: 13 }}>
+                    Mapa aguardando localização.
+                  </Text>
+                )}
               </View>
             )}
           </View>
@@ -1064,7 +1124,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.modalButtonText}>Abrir Google Maps</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={getCurrentLocation} style={[styles.modalButton, styles.modalOutline, { marginTop: 10 }]}>
+            <TouchableOpacity onPress={handleGetCurrentLocation} style={[styles.modalButton, styles.modalOutline, { marginTop: 10 }]}>
               <Text style={styles.modalButtonTextOutline}>Usar Localização Atual</Text>
             </TouchableOpacity>
           </View>
@@ -1128,7 +1188,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 <View>
                   {value ? (
                     <View style={styles.signaturePreviewBlock}>
-                      <ReactNative.Image
+                      <Image
                         source={{ uri: value }}
                         style={styles.signaturePreview}
                         resizeMode="contain"
@@ -1472,54 +1532,6 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Current Location Confirmation Modal */}
-      <Modal
-        visible={showCurrentLocationModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowCurrentLocationModal(false)}
-      >
-        <View style={styles.customModalBackdrop}>
-          <View style={styles.customModalCard}>
-            <View style={styles.customModalHeader}>
-              <Text style={styles.customModalTitle}>📍 Usar Localização Atual</Text>
-              <TouchableOpacity
-                onPress={() => setShowCurrentLocationModal(false)}
-                style={styles.customModalCloseButton}
-              >
-                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.customModalContentCentered}>
-              <View style={styles.customModalIconContainer}>
-                <Ionicons name="locate" size={48} color={COLORS.primary} />
-              </View>
-              <Text style={styles.customModalSuccessTitle}>Localização Atual</Text>
-              <Text style={styles.customModalSuccessMessage}>
-                Deseja usar sua localização atual?
-                Esta ação obterá sua latitude e longitude automaticamente.
-              </Text>
-              <View style={styles.customModalButtonsContainer}>
-                <TouchableOpacity
-                  style={[styles.customModalButton, styles.customModalButtonOutline]}
-                  onPress={() => setShowCurrentLocationModal(false)}
-                >
-                  <Text style={styles.customModalButtonTextOutline}>Cancelar</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.customModalButton, styles.customModalButtonPrimary]}
-                  onPress={handleGetCurrentLocation}
-                >
-                  <Ionicons name="checkmark" size={20} color={COLORS.white} />
-                  <Text style={styles.customModalButtonText}>Confirmar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Loading Location Modal */}
       <Modal
@@ -1554,7 +1566,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 .filter((e) => !!e.message);
               console.log('[CommercialDataForm] Erros de validação:', allErrors);
               // Scroll até o primeiro campo com erro (se mapeado)
-              const y = firstKey ? fieldPositions[firstKey] : undefined;
+              const y = firstKey ? fieldPositions.current[firstKey] : undefined;
               if (typeof y === 'number' && scrollRef.current) {
                 scrollRef.current.scrollTo({ y: Math.max(y - 12, 0), animated: true });
               }

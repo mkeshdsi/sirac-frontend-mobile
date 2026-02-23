@@ -69,7 +69,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
 
       const html = `
         <html>
-          <body style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh;">
+          <body style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100%;">
             <img src="${src}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
           </body>
         </html>
