@@ -428,6 +428,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const [showLocationMethodModal, setShowLocationMethodModal] = useState(false);
   const [showCoordinateInputModal, setShowCoordinateInputModal] = useState(false);
   const [showLoadingLocationModal, setShowLoadingLocationModal] = useState(false);
+  const [showLocationSuccessModal, setShowLocationSuccessModal] = useState(false);
   const [coordinateInput, setCoordinateInput] = useState('');
   const [showErrorModal, setShowErrorModal] = useState('');
   const [showPermissionDeniedModal, setShowPermissionDeniedModal] = useState(false);
@@ -501,7 +502,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       if (location && location.coords) {
         setValue('latitude', location.coords.latitude);
         setValue('longitude', location.coords.longitude);
-        Alert.alert('✅ Sucesso', 'Localização capturada com sucesso.');
+        setShowLocationSuccessModal(true);
       }
     } catch (error: any) {
       console.error('Error getting location:', error);
@@ -1532,6 +1533,34 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </Modal>
 
+
+      {/* Location Success Modal */}
+      <Modal
+        visible={showLocationSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLocationSuccessModal(false)}
+      >
+        <View style={styles.customModalBackdrop}>
+          <View style={styles.customModalCard}>
+            <View style={styles.customModalContentCentered}>
+              <View style={[styles.customModalIconContainer, { backgroundColor: COLORS.primaryLight, marginBottom: 20 }]}>
+                <Ionicons name="checkmark-circle" size={64} color={COLORS.primary} />
+              </View>
+              <Text style={[styles.customModalSuccessTitle, { fontSize: 22, color: COLORS.primary }]}>Sucesso!</Text>
+              <Text style={[styles.customModalSuccessMessage, { fontSize: 16, marginBottom: 24 }]}>
+                Localização capturada com sucesso.
+              </Text>
+              <TouchableOpacity
+                style={[styles.customModalButton, styles.customModalButtonPrimary, { width: '100%' }]}
+                onPress={() => setShowLocationSuccessModal(false)}
+              >
+                <Text style={styles.customModalButtonText}>Continuar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Loading Location Modal */}
       <Modal
