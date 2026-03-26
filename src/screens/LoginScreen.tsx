@@ -67,7 +67,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.welcomeText}>Bem-vindo de volta</Text>
+            <Text style={styles.welcomeText}>Bem-vindo</Text>
             <Text style={styles.subtitleText}>Inicie sessão para continuar</Text>
           </View>
         </LinearGradient>

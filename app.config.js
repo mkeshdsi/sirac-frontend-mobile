@@ -19,7 +19,7 @@ module.exports = {
       permissions: [],
     },
     web: {
-      output: 'static',
+      output: 'single',
     },
   },
 };
