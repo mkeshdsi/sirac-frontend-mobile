@@ -6,7 +6,7 @@ import { getItem, setItem, deleteItem } from '@/utils/storage';
 export { getItem, setItem, deleteItem };
 
 const KEY_API_BASE_URL = 'sirac_api_base_url';
-const DEFAULT_BASE_URL = 'http://10.100.33.169:8055'; // IP da máquina para uso no Expo Go
+const DEFAULT_BASE_URL = 'http://41.220.193.110';
 const KEY_AUTH_TOKEN = 'sirac_auth_token';
 
 function normalizeBase(url: string): string {
@@ -30,22 +30,14 @@ function deriveBaseFromExpo(): string | null {
 
 export async function getBaseUrl(): Promise<string> {
   try {
-    // Para Web, usa o hostname atual (ex.: localhost) e porta 8055
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const host = window.location.hostname || 'localhost';
-      const url = `http://${host}:8055`;
-      if (__DEV__) console.log('[API] baseURL (web):', url);
-      return normalizeBase(url);
-    }
     const saved = await getItem(KEY_API_BASE_URL);
-    const derived = deriveBaseFromExpo();
-    const url = normalizeBase(saved || derived || DEFAULT_BASE_URL);
-    if (__DEV__) console.log('[API] baseURL (native):', url);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return normalizeBase(saved || DEFAULT_BASE_URL);
+    }
+    const url = normalizeBase(saved || DEFAULT_BASE_URL);
     return url;
   } catch {
-    const derived = deriveBaseFromExpo();
-    const url = normalizeBase(derived || DEFAULT_BASE_URL);
-    if (__DEV__) console.log('[API] baseURL (fallback):', url);
+    const url = normalizeBase(DEFAULT_BASE_URL);
     return url;
   }
 }
