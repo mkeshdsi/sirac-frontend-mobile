@@ -42,6 +42,8 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         formData.append("designacao", commercialData.nomeComercial || "");
         formData.append("tipo_empresa", commercialData.tipoEmpresa || "");
         formData.append("natureza_actividade", commercialData.naturezaObjecto || "");
+        if (commercialData.banco) formData.append("banco", commercialData.banco);
+        if (commercialData.numeroConta) formData.append("numero_conta", commercialData.numeroConta);
 
         // Evitar enviar string vazia para campos únicos se não preenchidos
         if (commercialData.nuit) formData.append("nuit", commercialData.nuit);
@@ -95,12 +97,21 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
 
         // 5. Append assistentes
         if (commercialData.assistentes && commercialData.assistentes.length > 0) {
-          formData.append("assistentes", JSON.stringify(commercialData.assistentes));
+          const assistentesPayload = commercialData.assistentes.map((a: any) => ({
+            nome_completo: a.nomeCompleto,
+            contacto: a.contacto,
+          }));
+          formData.append("assistentes", JSON.stringify(assistentesPayload));
         }
 
         // 6. Append estabelecimentos
         if (commercialData.estabelecimentos && commercialData.estabelecimentos.length > 0) {
-          formData.append("estabelecimentos", JSON.stringify(commercialData.estabelecimentos));
+          const estabelecimentosPayload = commercialData.estabelecimentos.map((e: any) => ({
+            nome: e.nome,
+            provincia_localidade: e.provinciaLocalidade,
+            endereco_bairro: e.enderecoBairro,
+          }));
+          formData.append("estabelecimentos", JSON.stringify(estabelecimentosPayload));
         }
       }
 
