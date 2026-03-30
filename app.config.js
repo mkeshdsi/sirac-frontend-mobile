@@ -6,20 +6,44 @@ module.exports = {
     version: '1.0.0',
     orientation: 'portrait',
     scheme: 'sirac',
-    userInterfaceStyle: 'light',
+    userInterfaceStyle: 'automatic',
     platforms: ['android', 'ios', 'web'],
+    runtimeVersion: { policy: 'sdkVersion' },
     updates: {
       fallbackToCacheTimeout: 0,
     },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
+      bundleIdentifier: 'com.sirac.app',
+      buildNumber: '1.0.0',
+      infoPlist: {
+        NSLocationWhenInUseUsageDescription:
+          'This app needs access to location to get the position of the banca.',
+        NSLocationAlwaysAndWhenInUseUsageDescription:
+          'This app needs access to location to get the position of the banca.',
+      },
     },
     android: {
-      permissions: [],
+      package: 'com.sirac.app',
+      versionCode: 1,
+      permissions: [
+        'android.permission.ACCESS_FINE_LOCATION',
+        'android.permission.ACCESS_COARSE_LOCATION',
+      ],
+      adaptiveIcon: {
+        foregroundImage: './logo_png.png',
+        backgroundColor: '#FFFFFF',
+      },
     },
     web: {
       output: 'single',
+    },
+    icon: './logo_png.png',
+    extra: {
+      eas: {
+        projectId: '1d5f13c3-18c6-418b-ad75-9a41e922dc29',
+      },
     },
   },
 };

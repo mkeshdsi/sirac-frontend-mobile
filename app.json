@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "scheme": "sirac",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "updates": {
       "fallbackToCacheTimeout": 0
     },
@@ -14,17 +17,26 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.sirac.app",
+      "buildNumber": "1.0.0",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to get the position of the banca.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to get the position of the banca."
       }
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./logo_png.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.sirac.app",
+      "versionCode": 1,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
+    "icon": "./logo_png.png",
     "web": {
       "output": "single"
     }

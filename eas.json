@@ -1,0 +1,32 @@
+{
+  "cli": {
+    "version": ">= 3.14.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
+      },
+      "distribution": "internal"
+    },
+    "preview": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "distribution": "internal"
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "distribution": "store"
+    }
+  }
+}
