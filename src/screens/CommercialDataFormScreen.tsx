@@ -56,7 +56,7 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
       then: (s) => s.required('NUIT é obrigatório').matches(/^[0-9]{9}$/, 'NUIT deve ter 9 dígitos'),
       otherwise: (s) => s.optional(),
     }),
-  contactoAgente: yup.string().optional().test('tel', 'O contacto do agente deve ser 82 ou 83 + 7 dígitos (ex: 821234567)', (v) => !v || agentPhoneRegex.test(v)),
+  contactoAgente: yup.string().optional().test('tel', 'O contacto do agente deve ser 82 ou 83 (ex: 821234567)', (v) => !v || agentPhoneRegex.test(v)),
   tipoDocumento: yup.string().oneOf(['BI', 'PASSAPORTE', 'CARTAO_ELEITOR', 'CARTA_CONDUCAO'], 'Tipo de documento inválido').optional(),
   numeroDocumento: yup.string()
     .when('tipoDocumento', {
@@ -743,7 +743,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                   onBlur={onBlur}
                   error={errors.contactoAgente?.message}
                 />
-                <Text style={styles.helperText}>Apenas números 82 ou 83 são aceites</Text>
+                <View style={styles.alertBadge}>
+                  <Ionicons name="information-circle" size={14} color={COLORS.primary} />
+                  <Text style={styles.alertBadgeText}>Apenas prefixos 82 ou 83 são aceitos</Text>
+                </View>
               </>
             )} />
           </View>
@@ -780,7 +783,22 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                   value={value}
                   maxLength={13}
                   autoCapitalize="characters"
-                  onChangeText={(t) => onChange(t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase().slice(0, 13))}
+                  onChangeText={(t) => {
+                    if (tipoDocumento === 'BI') {
+                      const clean = t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
+                      let result = '';
+                      for (let i = 0; i < Math.min(clean.length, 13); i++) {
+                        if (i < 12) {
+                          if (/[0-9]/.test(clean[i])) result += clean[i];
+                        } else {
+                          if (/[A-Z]/.test(clean[i])) result += clean[i];
+                        }
+                      }
+                      onChange(result);
+                    } else {
+                      onChange(t.toUpperCase().slice(0, 13));
+                    }
+                  }}
                   onBlur={onBlur}
                   error={errors.numeroDocumento?.message}
                 />
@@ -1021,33 +1039,52 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.cardTitle}>Localização da Banca</Text>
           </View>
 
-          {/* Location coordinates */}
-          <View style={styles.rowFields}>
-            <View style={{ flex: 1 }}>
-              <Controller control={control} name="latitude" render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Latitude"
-                  placeholder="Será preenchido"
-                  editable={false}
-                  value={value !== undefined ? String(value) : ''}
-                  onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
-                  onBlur={onBlur}
-                />
-              )} />
+          {/* Location coordinates - Premium Display */}
+          {(getValues('latitude') && getValues('longitude')) ? (
+            <View style={styles.coordinatesCard}>
+              <View style={styles.coordinatesHeader}>
+                <View style={styles.coordinatesIconBg}>
+                  <Ionicons name="location" size={20} color={COLORS.primary} />
+                </View>
+                <Text style={styles.coordinatesTitle}>Localização Capturada</Text>
+                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+              </View>
+              <View style={styles.coordinatesContent}>
+                <View style={styles.coordinateItem}>
+                  <Text style={styles.coordinateLabel}>LATITUDE</Text>
+                  <Text style={styles.coordinateValue}>{getValues('latitude')?.toFixed(6)}</Text>
+                </View>
+                <View style={styles.coordinateDivider} />
+                <View style={styles.coordinateItem}>
+                  <Text style={styles.coordinateLabel}>LONGITUDE</Text>
+                  <Text style={styles.coordinateValue}>{getValues('longitude')?.toFixed(6)}</Text>
+                </View>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Controller control={control} name="longitude" render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Longitude"
-                  placeholder="automaticamente"
-                  editable={false}
-                  value={value !== undefined ? String(value) : ''}
-                  onChangeText={(text) => onChange(text ? parseFloat(text) : null)}
-                  onBlur={onBlur}
-                />
-              )} />
+          ) : (
+            <View style={styles.rowFields}>
+              <View style={{ flex: 1 }}>
+                <Controller control={control} name="latitude" render={({ field: { value, onBlur, onChange } }) => (
+                  <Input
+                    label="Latitude"
+                    placeholder="Pendente..."
+                    editable={false}
+                    value={value !== undefined && value !== null ? String(value) : ''}
+                  />
+                )} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Controller control={control} name="longitude" render={({ field: { value, onBlur, onChange } }) => (
+                  <Input
+                    label="Longitude"
+                    placeholder="Pendente..."
+                    editable={false}
+                    value={value !== undefined && value !== null ? String(value) : ''}
+                  />
+                )} />
+              </View>
             </View>
-          </View>
+          )}
 
           <View style={{ marginTop: 10 }}>
             <TouchableOpacity onPress={openMapsForLocation} style={[styles.modalButton, styles.modalPrimary]}>
@@ -1549,7 +1586,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 scrollRef.current.scrollTo({ y: Math.max(y - 12, 0), animated: true });
               }
               // Mostrar todas as mensagens no Alert (até um limite razoável)
-              const list = allErrors.slice(0, 6).map((e) => `• ${e.field}: ${e.message}`).join('\n');
+              const list = allErrors.slice(0, 6).map((e) => `• ${e.field === 'numeroDocumento' ? 'Nº do BI' : e.field}: ${e.message}`).join('\n');
               Alert.alert(
                 'Campos em falta',
                 list || firstMsg || 'Verifique os campos obrigatórios destacados antes de continuar.'
@@ -2205,5 +2242,80 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 8,
     textAlign: 'center',
+  },
+  alertBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primaryLight,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    marginTop: -8,
+    marginBottom: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '20',
+  },
+  alertBadgeText: {
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  coordinatesCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  coordinatesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 10,
+  },
+  coordinatesIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coordinatesTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  coordinatesContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    padding: 12,
+  },
+  coordinateItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  coordinateLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  coordinateValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  coordinateDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 8,
   },
 });

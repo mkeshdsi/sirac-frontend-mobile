@@ -110,9 +110,18 @@ export const PersonalDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 autoCapitalize="characters"
                 maxLength={13}
                 value={value}
-                onChangeText={(t) =>
-                  onChange(t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase().slice(0, 13))
-                }
+                onChangeText={(t) => {
+                  const clean = t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
+                  let result = '';
+                  for (let i = 0; i < Math.min(clean.length, 13); i++) {
+                    if (i < 12) {
+                      if (/[0-9]/.test(clean[i])) result += clean[i];
+                    } else {
+                      if (/[A-Z]/.test(clean[i])) result += clean[i];
+                    }
+                  }
+                  onChange(result);
+                }}
                 onBlur={onBlur}
                 error={errors.biNumero?.message}
                 required

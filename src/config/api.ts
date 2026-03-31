@@ -39,7 +39,7 @@ export async function getApi(): Promise<AxiosInstance> {
   const baseURL = await getBaseUrl();
   return axios.create({
     baseURL,
-    timeout: 15000,
+    timeout: 60000,
     headers: { 'Content-Type': 'application/json' },
   });
 }
@@ -49,7 +49,7 @@ export async function getAuthApi(): Promise<AxiosInstance> {
   const token = await getItem(KEY_AUTH_TOKEN);
   const instance = axios.create({
     baseURL,
-    timeout: 15000,
+    timeout: 60000,
     headers: { 'Content-Type': 'application/json' },
   });
   if (token) {
