@@ -1,27 +1,24 @@
 import axios, { AxiosInstance } from 'axios';
-import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { getItem, setItem, deleteItem } from '@/utils/storage';
 export { getItem, setItem, deleteItem };
 
 const KEY_API_BASE_URL = 'sirac_api_base_url';
-const DEFAULT_BASE_URL = 'http://41.220.193.110';
 const KEY_AUTH_TOKEN = 'sirac_auth_token';
 
 function normalizeBase(url: string): string {
-  if (!url) return url;
-  return url.replace(/\/$/, '');
+  return url ? url.replace(/\/$/, '') : '';
 }
 
 export async function getBaseUrl(): Promise<string> {
-  // Priority: app.config.js extra.apiBaseUrl > SecureStore saved > hardcoded default
-  const extraBase =
+  const envUrl =
+    process.env.EXPO_PUBLIC_API_BASE_URL ||
     (Constants as any)?.expoConfig?.extra?.apiBaseUrl ||
     (Constants as any)?.manifest2?.extra?.apiBaseUrl ||
     (Constants as any)?.manifest?.extra?.apiBaseUrl;
 
-  if (extraBase && typeof extraBase === 'string') {
-    return normalizeBase(extraBase);
+  if (envUrl && typeof envUrl === 'string') {
+    return normalizeBase(envUrl);
   }
 
   try {
@@ -31,7 +28,7 @@ export async function getBaseUrl(): Promise<string> {
     // ignore
   }
 
-  return normalizeBase(DEFAULT_BASE_URL);
+  return '';
 }
 
 export async function setBaseUrl(url: string): Promise<void> {

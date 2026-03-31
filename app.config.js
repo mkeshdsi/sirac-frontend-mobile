@@ -48,7 +48,7 @@ module.exports = {
       eas: {
         projectId: '1d5f13c3-18c6-418b-ad75-9a41e922dc29',
       },
-      apiBaseUrl: 'http://41.220.193.110',
+      apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || '',
     },
   },
 };

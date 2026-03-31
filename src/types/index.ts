@@ -10,26 +10,20 @@ export interface CommercialData {
   nomeComercial: string;
   nuit: string;
   alvara: string;
-  // Add new fields for agent contact and document identification
   contactoAgente?: string;
   tipoDocumento?: 'BI' | 'PASSAPORTE' | 'CARTAO_ELEITOR' | 'CARTA_CONDUCAO';
   numeroDocumento?: string;
-  // Campos adicionais
   assinatura?: string;
-  dataFormulario?: string; // dd/mm/aaaa
-
-  // Tipo de Parceiro (alinhado com API)
+  dataFormulario?: string;
+  dataValidacao?: string;
+  dataAprovacao?: string;
   tipoParceiro?: 'AGENTE' | 'MERCHANT';
-
-  // Empresa
   tipoEmpresa?: 'SOCIEDADE' | 'INDIVIDUAL';
   designacao?: string;
   naturezaObjecto?: string;
   banco?: string;
   numeroConta?: string;
   profissao?: string;
-
-  // Endereço
   enderecoCidade?: string;
   enderecoLocalidade?: string;
   enderecoAvenidaRua?: string;
@@ -38,24 +32,18 @@ export interface CommercialData {
   enderecoBairroRef?: string;
   telefone?: string;
   celular?: string;
-
-  // Proprietários
   proprietarioNomeCompleto?: string;
   proprietarioEmail?: string;
   proprietarioContacto?: string;
-  // Lista de proprietários (novo)
   proprietarios?: Array<{ nome?: string; email?: string; contacto?: string }>;
-
-  // Assistentes (lista dinâmica)
   assistentes?: Array<{ nomeCompleto?: string; contacto?: string }>;
-
-  // Lista de estabelecimentos (novo)
   estabelecimentos?: Array<{ nome?: string; provinciaLocalidade?: string; enderecoBairro?: string }>;
-
-  // Banca fields (for AGENT partners)
+  substituicaoNomeAgente?: string;
+  substituicaoProvinciaLocalidade?: string;
+  substituicaoEnderecoBairro?: string;
   latitude?: number;
   longitude?: number;
-  fotografia?: string; // Photo of the banca
+  fotografia?: string;
 }
 
 export interface DocumentsPayload {
@@ -70,8 +58,8 @@ export type RootStackParamList = {
   ApiConfig: undefined;
   Welcome: undefined;
   UserTypeSelection: undefined;
-  PersonalDataForm: undefined; // removido do fluxo principal
-  PasswordCreation: undefined; // removido do fluxo principal
+  PersonalDataForm: undefined;
+  PasswordCreation: undefined;
   CommercialDataForm: undefined;
   DocumentUpload: { commercialData?: CommercialData };
   ReviewSubmit: { commercialData?: CommercialData; documents: DocumentsPayload };

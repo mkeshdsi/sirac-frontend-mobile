@@ -28,6 +28,11 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
-# IDE
 .vscode/
 .idea/
+
+# Environment – never commit secrets
+.env
+.env.local
+.env.*.local
+

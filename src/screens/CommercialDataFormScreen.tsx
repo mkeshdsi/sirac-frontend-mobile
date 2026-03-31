@@ -38,10 +38,8 @@ const COLORS = {
 
 
 const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-// Regex estrito para prefixos 82 ou 83 (com ou sem 258)
-const phoneRegex = /^(258)?(82|83)\d{7}$/;
-
-// Normaliza contactos: mantém apenas dígitos
+const phoneRegex = /^(258)?(82|83|84|85|86|87)\d{7}$/;
+const agentPhoneRegex = /^(258)?(82|83)\d{7}$/; // Backend only accepts 82/83 for contacto_agente
 const normalizePhone = (s?: string) => (s ? s.replace(/[^0-9]/g, '') : '');
 
 const schema: yup.ObjectSchema<CommercialData> = yup.object({
@@ -58,8 +56,7 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
       then: (s) => s.required('NUIT é obrigatório').matches(/^[0-9]{9}$/, 'NUIT deve ter 9 dígitos'),
       otherwise: (s) => s.optional(),
     }),
-  // Add new fields for agent contact and document identification
-  contactoAgente: yup.string().optional().test('tel', 'Deve começar com 82 ou 83 (9 dígitos)', (v) => !v || phoneRegex.test(v)),
+  contactoAgente: yup.string().optional().test('tel', 'O contacto do agente deve ser 82 ou 83 + 7 dígitos (ex: 821234567)', (v) => !v || agentPhoneRegex.test(v)),
   tipoDocumento: yup.string().oneOf(['BI', 'PASSAPORTE', 'CARTAO_ELEITOR', 'CARTA_CONDUCAO'], 'Tipo de documento inválido').optional(),
   numeroDocumento: yup.string()
     .when('tipoDocumento', {
@@ -98,9 +95,9 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   naturezaObjecto: yup.string().optional(),
   banco: yup.string().optional(),
   numeroConta: yup.string().optional().test('accnum', 'Nº da conta deve conter apenas dígitos', (v) => !v || /^\d+$/.test(v)),
-  telefone: yup.string().optional().test('tel', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
-  celular: yup.string().optional().test('cel', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
-  proprietarioContacto: yup.string().optional().test('propcont', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
+  telefone: yup.string().optional().test('tel', 'Use 82, 83, 84, 85, 86 ou 87 + 7 dígitos', (v) => !v || phoneRegex.test(v)),
+  celular: yup.string().optional().test('cel', 'Use 82, 83, 84, 85, 86 ou 87 + 7 dígitos', (v) => !v || phoneRegex.test(v)),
+  proprietarioContacto: yup.string().optional().test('propcont', 'Use 82, 83, 84, 85, 86 ou 87 + 7 dígitos', (v) => !v || phoneRegex.test(v)),
   assistentes: yup
     .array(
       yup.object({
@@ -111,7 +108,7 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
         contacto: yup
           .string()
           .optional()
-          .test('ass-contact', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
+          .test('ass-contact', 'Use 82, 83, 84, 85, 86 ou 87 + 7 dígitos', (v) => !v || phoneRegex.test(v)),
       })
     )
     .optional(),
@@ -120,7 +117,7 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
       yup.object({
         nome: yup.string().optional(),
         email: yup.string().optional().email('Email inválido'),
-        contacto: yup.string().optional().test('prop-contact', 'Deve começar com 82 ou 83', (v) => !v || phoneRegex.test(v)),
+        contacto: yup.string().optional().test('prop-contact', 'Use 82, 83, 84, 85, 86 ou 87 + 7 dígitos', (v) => !v || phoneRegex.test(v)),
       })
     )
     .optional(),
@@ -735,16 +732,19 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View onLayout={onLayoutField('contactoAgente')}>
             <Controller control={control} name="contactoAgente" render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Contacto do Agente"
-                placeholder="Contacto do Agente"
-                keyboardType="phone-pad"
-                maxLength={9}
-                value={value}
-                onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))}
-                onBlur={onBlur}
-                error={errors.contactoAgente?.message}
-              />
+              <>
+                <Input
+                  label="Contacto do Agente"
+                  placeholder="Ex: 821234567"
+                  keyboardType="phone-pad"
+                  maxLength={9}
+                  value={value}
+                  onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))}
+                  onBlur={onBlur}
+                  error={errors.contactoAgente?.message}
+                />
+                <Text style={styles.helperText}>Apenas números 82 ou 83 são aceites</Text>
+              </>
             )} />
           </View>
 
@@ -773,19 +773,21 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
 
           <View onLayout={onLayoutField('numeroDocumento')}>
             <Controller control={control} name="numeroDocumento" render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Número do Documento"
-                placeholder="Número do Documento"
-                value={value}
-                maxLength={13}
-                autoCapitalize="characters"
-                onChangeText={(t) => {
-                  const normalized = t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase().slice(0, 13);
-                  onChange(normalized);
-                }}
-                onBlur={onBlur}
-                error={errors.numeroDocumento?.message}
-              />
+              <>
+                <Input
+                  label="Número do Documento"
+                  placeholder={tipoDocumento === 'BI' ? 'Ex: 123456789012A' : 'Número do Documento'}
+                  value={value}
+                  maxLength={13}
+                  autoCapitalize="characters"
+                  onChangeText={(t) => onChange(t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase().slice(0, 13))}
+                  onBlur={onBlur}
+                  error={errors.numeroDocumento?.message}
+                />
+                {tipoDocumento === 'BI' && (
+                  <Text style={styles.helperText}>12 dígitos numéricos + 1 letra no final</Text>
+                )}
+              </>
             )} />
           </View>
         </Card>
@@ -983,12 +985,13 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               <Controller control={control} name="telefone" render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Telefone"
-                  placeholder="Telefone"
+                  placeholder="Ex: 821234567"
                   keyboardType="phone-pad"
                   maxLength={9}
                   value={value}
                   onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))}
                   onBlur={onBlur}
+                  error={errors.telefone?.message}
                 />
               )} />
             </View>
@@ -996,12 +999,13 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
               <Controller control={control} name="celular" render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Celular"
-                  placeholder="Celular"
+                  placeholder="Ex: 841234567"
                   keyboardType="phone-pad"
                   maxLength={9}
                   value={value}
                   onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))}
                   onBlur={onBlur}
+                  error={errors.celular?.message}
                 />
               )} />
             </View>
