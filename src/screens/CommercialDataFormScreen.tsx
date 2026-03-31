@@ -61,7 +61,12 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   // Add new fields for agent contact and document identification
   contactoAgente: yup.string().optional().test('tel', 'Deve começar com 82 ou 83 (9 dígitos)', (v) => !v || phoneRegex.test(v)),
   tipoDocumento: yup.string().oneOf(['BI', 'PASSAPORTE', 'CARTAO_ELEITOR', 'CARTA_CONDUCAO'], 'Tipo de documento inválido').optional(),
-  numeroDocumento: yup.string().optional(),
+  numeroDocumento: yup.string()
+    .when('tipoDocumento', {
+      is: 'BI',
+      then: (s) => s.required('Nº do BI é obrigatório').matches(/^[0-9]{12}[A-Za-z]$/, 'BI deve ter 12 dígitos e 1 letra no final'),
+      otherwise: (s) => s.optional(),
+    }),
   alvara: yup.string()
     .when(['tipoParceiro', 'tipoDocumento'], {
       is: (tipoParceiro: string, tipoDocumento: string) =>
@@ -772,7 +777,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 label="Número do Documento"
                 placeholder="Número do Documento"
                 value={value}
-                onChangeText={onChange}
+                maxLength={13}
+                autoCapitalize="characters"
+                onChangeText={(t) => {
+                  const normalized = t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase().slice(0, 13);
+                  onChange(normalized);
+                }}
                 onBlur={onBlur}
                 error={errors.numeroDocumento?.message}
               />

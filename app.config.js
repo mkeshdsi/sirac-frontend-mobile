@@ -27,6 +27,7 @@ module.exports = {
     android: {
       package: 'com.sirac.app',
       versionCode: 1,
+      usesCleartextTraffic: true,
       permissions: [
         'android.permission.ACCESS_FINE_LOCATION',
         'android.permission.ACCESS_COARSE_LOCATION',
@@ -40,10 +41,14 @@ module.exports = {
       output: 'single',
     },
     icon: './logo_png.png',
+    plugins: [
+      './plugins/withNetworkSecurityConfig',
+    ],
     extra: {
       eas: {
         projectId: '1d5f13c3-18c6-418b-ad75-9a41e922dc29',
       },
+      apiBaseUrl: 'http://41.220.193.110',
     },
   },
 };

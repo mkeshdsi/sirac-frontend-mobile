@@ -1,6 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
 import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import { getItem, setItem, deleteItem } from '@/utils/storage';
 export { getItem, setItem, deleteItem };
@@ -11,35 +10,28 @@ const KEY_AUTH_TOKEN = 'sirac_auth_token';
 
 function normalizeBase(url: string): string {
   if (!url) return url;
-  return url.replace(/\/$/, ''); // remove barra no final
-}
-
-function deriveBaseFromExpo(): string | null {
-  try {
-    // hostUri exemplos: '192.168.0.10:19000', 'exp.host/...', etc.
-    const hostUri = (Constants as any)?.expoConfig?.hostUri || (Constants as any)?.manifest2?.hostUri || (Constants as any)?.manifest?.hostUri;
-    if (!hostUri || typeof hostUri !== 'string') return null;
-    const host = hostUri.split(':')[0];
-    if (!host || host.includes('exp.host')) return null;
-    // Porta padrão do backend conforme main.py: 8055
-    return `http://${host}:8055`;
-  } catch {
-    return null;
-  }
+  return url.replace(/\/$/, '');
 }
 
 export async function getBaseUrl(): Promise<string> {
+  // Priority: app.config.js extra.apiBaseUrl > SecureStore saved > hardcoded default
+  const extraBase =
+    (Constants as any)?.expoConfig?.extra?.apiBaseUrl ||
+    (Constants as any)?.manifest2?.extra?.apiBaseUrl ||
+    (Constants as any)?.manifest?.extra?.apiBaseUrl;
+
+  if (extraBase && typeof extraBase === 'string') {
+    return normalizeBase(extraBase);
+  }
+
   try {
     const saved = await getItem(KEY_API_BASE_URL);
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      return normalizeBase(saved || DEFAULT_BASE_URL);
-    }
-    const url = normalizeBase(saved || DEFAULT_BASE_URL);
-    return url;
+    if (saved) return normalizeBase(saved);
   } catch {
-    const url = normalizeBase(DEFAULT_BASE_URL);
-    return url;
+    // ignore
   }
+
+  return normalizeBase(DEFAULT_BASE_URL);
 }
 
 export async function setBaseUrl(url: string): Promise<void> {

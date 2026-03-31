@@ -29,6 +29,7 @@
         "foregroundImage": "./logo_png.png",
         "backgroundColor": "#FFFFFF"
       },
+      "usesCleartextTraffic": true,
       "package": "com.sirac.app",
       "versionCode": 1,
       "permissions": [
