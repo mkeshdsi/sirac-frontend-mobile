@@ -55,6 +55,7 @@ export interface DocumentsPayload {
 
 export type RootStackParamList = {
   Login: undefined;
+  Dashboard: undefined; // The nested tab navigator
   ApiConfig: undefined;
   Welcome: undefined;
   UserTypeSelection: undefined;
@@ -64,4 +65,10 @@ export type RootStackParamList = {
   DocumentUpload: { commercialData?: CommercialData };
   ReviewSubmit: { commercialData?: CommercialData; documents: DocumentsPayload };
   Success: { registrationId: string };
+  AngariadorDataForm: undefined;
+  AngariadoresList: undefined;
+};
+export type DashboardTabParamList = {
+  Home: undefined;
+  AngariadoresList: undefined; // where TVR grouped list lives
 };

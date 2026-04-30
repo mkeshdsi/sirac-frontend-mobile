@@ -17,6 +17,7 @@ import { Button, Input } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/types';
 import { login } from '@/services/auth';
+import { useAuth } from '@/context/AuthContext';
 
 type Nav = StackNavigationProp<RootStackParamList, 'Login'>;
 interface Props { navigation: Nav }
@@ -27,6 +28,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const { signIn } = useAuth();
 
   const onSubmit = async () => {
     setError('');
@@ -37,8 +39,11 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         setError(res.message || 'Falha ao iniciar sessão.');
         return;
       }
-      // Login concluído, segue diretamente para Dados Comerciais
-      navigation.reset({ index: 0, routes: [{ name: 'CommercialDataForm' }] });
+      
+      const roleMatch = (res.user?.user_type || res.user?.usertype || 'user') as 'user' | 'angariador' | 'tvr';
+      await signIn(roleMatch, res.user);
+      
+      // O RootNavigator vai reagir ao signIn e desenhar as BottomTabs (Dashboard)
     } catch (e) {
       setError('Falha ao iniciar sessão. Tente novamente.');
     } finally {

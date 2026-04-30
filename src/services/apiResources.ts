@@ -79,3 +79,21 @@ export async function createAdesao(payload: any) {
   const res = await api.post('/api/v1/parceiros/', payload);
   return res.data;
 }
+
+export async function getAngariadoresGrouped() {
+  const api = await getAuthApi();
+  try {
+    const res = await api.get('/api/v1/angariadores/grouped-by-tvr');
+    return res.data;
+  } catch (e) {
+    console.error('Error fetching grouped angariadores:', e);
+    return { data: [], total_geral: 0 };
+  }
+}
+
+export async function cadastrarAngariador(payload: any) {
+  const api = await getAuthApi();
+  const res = await api.post('/api/v1/angariadores/', payload);
+  return res.data;
+}
+
