@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Text, Alert, KeyboardAvoidingView, Platform, TouchableOpacity, Modal } from 'react-native';
+import {
+  View, StyleSheet, ScrollView, Text, KeyboardAvoidingView,
+  Platform, TouchableOpacity, Modal, Animated
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input, Card } from '@/components';
@@ -9,6 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const COLORS = {
   primary: '#01836b',
@@ -16,11 +20,11 @@ const COLORS = {
   primaryLight: '#01836b15',
   secondaryLight: '#ffcc0315',
   white: '#ffffff',
-  background: '#f8f9fa',
+  background: '#f4f6f8',
   surface: '#ffffff',
-  border: '#e0e0e0',
+  border: '#e8ecf0',
   text: '#1a1a1a',
-  textSecondary: '#666666',
+  textSecondary: '#6b7280',
   error: '#d32f2f',
   success: '#01836b',
 };
@@ -35,7 +39,7 @@ const schema = yup.object({
     .required('Nº do BI é obrigatório')
     .test('len', 'O BI deve ter exatamente 13 caracteres', val => val ? val.length === 13 : false)
     .test('numbers', 'Os primeiros 12 caracteres devem ser números', val => val ? /^\d{12}/.test(val) : false)
-    .test('letter', 'O 13º caracter deve ser uma letra. Não pode ser número.', val => val ? /[a-zA-Z]$/.test(val) : false),
+    .test('letter', 'O 13º caracter deve ser uma letra', val => val ? /[a-zA-Z]$/.test(val) : false),
   password: yup.string().min(6, 'Mínimo de 6 caracteres').required('Palavra-passe é obrigatória'),
   nuit: yup.string()
     .optional()
@@ -46,35 +50,78 @@ const schema = yup.object({
 
 type AngariadorForm = yup.InferType<typeof schema>;
 
+// ── Section card wrapper ────────────────────────────────
+const SectionCard = ({ icon, iconBg, iconColor, title, children }: any) => (
+  <View style={styles.card}>
+    <View style={styles.cardHeader}>
+      <View style={[styles.cardIconContainer, { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={18} color={iconColor} />
+      </View>
+      <Text style={styles.cardTitle}>{title}</Text>
+    </View>
+    {children}
+  </View>
+);
+
+// ── Document upload button ──────────────────────────────
+const DocButton = ({ attached, onPress, label, error }: any) => {
+  const scale = React.useRef(new Animated.Value(1)).current;
+  const onPressIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 40 }).start();
+  const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
+
+  return (
+    <View style={styles.docButtonContainer}>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <TouchableOpacity
+          style={[styles.docButton, attached && styles.docButtonSuccess]}
+          onPress={onPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          activeOpacity={1}
+        >
+          {attached ? (
+            <LinearGradient colors={[COLORS.primary, '#02a882']} style={styles.docButtonInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <View style={styles.docCheckCircle}>
+                <Ionicons name="checkmark" size={14} color={COLORS.primary} />
+              </View>
+              <Text style={[styles.docButtonText, { color: COLORS.white }]}>{label.replace('Anexar', '')} Anexado</Text>
+              <Ionicons name="swap-horizontal-outline" size={16} color="rgba(255,255,255,0.7)" />
+            </LinearGradient>
+          ) : (
+            <View style={styles.docButtonInner}>
+              <View style={styles.docCameraCircle}>
+                <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
+              </View>
+              <Text style={styles.docButtonText}>{label}</Text>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+            </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+      {!!error && (
+        <View style={styles.errorRow}>
+          <Ionicons name="alert-circle-outline" size={12} color={COLORS.error} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
+// ── Main screen ─────────────────────────────────────────
 export const AngariadorDataFormScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState({ visible: false, title: '', message: '' });
 
   React.useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState({ visible: false, title: '', message: '' });
-
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<AngariadorForm>({
+  const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm<AngariadorForm>({
     resolver: yupResolver(schema),
-    defaultValues: {
-      nome: '',
-      email: '',
-      msisdn: '',
-      bi: '',
-      password: '',
-      nuit: '',
-      bi_frente: '',
-      bi_verso: '',
-    },
+    defaultValues: { nome: '', email: '', msisdn: '', bi: '', password: '', nuit: '', bi_frente: '', bi_verso: '' },
   });
 
   const pickImage = async (field: 'bi_frente' | 'bi_verso') => {
@@ -83,14 +130,12 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
       setShowErrorModal({ visible: true, title: 'Permissão Negada', message: 'Precisamos de permissão para aceder à galeria.' });
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.5,
-      base64: true
+      base64: true,
     });
-
     if (!result.canceled && result.assets[0].base64) {
       setValue(field, `data:image/jpeg;base64,${result.assets[0].base64}`, { shouldValidate: true });
     }
@@ -106,12 +151,11 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
         setShowErrorModal({ visible: true, title: 'Falha no Registo', message: 'Falha ao cadastrar. Verifique os dados e tente novamente.' });
       }
     } catch (e: any) {
-      console.log("Erro ao cadastrar angariador:", e?.response?.data || e.message);
       const apiMessage = e?.response?.data?.msg || e?.response?.data?.message;
-      setShowErrorModal({ 
-        visible: true, 
-        title: 'Erro no Cadastro', 
-        message: apiMessage || 'Ocorreu um erro no servidor ao cadastrar o angariador. Verifique se os dados já não existem (BI, Contacto, NUIT).'
+      setShowErrorModal({
+        visible: true,
+        title: 'Erro no Cadastro',
+        message: apiMessage || 'Ocorreu um erro no servidor. Verifique se os dados já não existem (BI, Contacto, NUIT).',
       });
     } finally {
       setLoading(false);
@@ -120,8 +164,8 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
 
   const onError = (errs: any) => {
     const keys = Object.keys(errs || {});
-    const list = keys.slice(0, 5).map((k) => `• ${(errs as any)[k]?.message}`).join('\n');
-    setShowErrorModal({ visible: true, title: 'Campos em falta', message: list || 'Verifique os campos obrigatórios e tente novamente.' });
+    const list = keys.slice(0, 5).map(k => `• ${(errs as any)[k]?.message}`).join('\n');
+    setShowErrorModal({ visible: true, title: 'Campos em falta', message: list || 'Verifique os campos obrigatórios.' });
   };
 
   const biFrente = watch('bi_frente');
@@ -129,253 +173,149 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color={COLORS.text} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Novo Angariador</Text>
             <Text style={styles.headerSubtitle}>Preencha os dados e documentos</Text>
           </View>
+          {/* Step indicator */}
+          <View style={styles.stepPill}>
+            <Text style={styles.stepPillText}>3 secções</Text>
+          </View>
+        </View>
+
+        {/* ── Progress bar ── */}
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: loading ? '100%' : '60%' }]} />
         </View>
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.cardIconContainer, { backgroundColor: COLORS.primaryLight }]}>
-                <Ionicons name="person" size={20} color={COLORS.primary} />
-              </View>
-              <Text style={styles.cardTitle}>Dados Pessoais</Text>
-            </View>
 
-            <Controller
-              control={control}
-              name="nome"
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  label="Nome Completo *"
-                  placeholder="Ex: João da Silva"
-                  value={value}
-                  onChangeText={onChange}
-                  error={errors.nome?.message}
-                  leftIcon={<Ionicons name="person-outline" size={20} color={COLORS.textSecondary} />}
-                />
-              )}
-            />
+          {/* 1 — Dados Pessoais */}
+          <SectionCard icon="person-outline" iconBg={COLORS.primaryLight} iconColor={COLORS.primary} title="Dados Pessoais">
+            <Controller control={control} name="nome" render={({ field: { onChange, value } }) => (
+              <Input label="Nome Completo *" placeholder="Ex: João da Silva" value={value} onChangeText={onChange}
+                error={errors.nome?.message}
+                leftIcon={<Ionicons name="person-outline" size={18} color={COLORS.textSecondary} />} />
+            )} />
+            <Controller control={control} name="email" render={({ field: { onChange, value } }) => (
+              <Input label="Email *" placeholder="exemplo@email.com" keyboardType="email-address" autoCapitalize="none"
+                value={value} onChangeText={onChange} error={errors.email?.message}
+                leftIcon={<Ionicons name="mail-outline" size={18} color={COLORS.textSecondary} />} />
+            )} />
+            <Controller control={control} name="msisdn" render={({ field: { onChange, value } }) => (
+              <Input label="Contacto (MSISDN) *" placeholder="Ex: 840000000" keyboardType="phone-pad" maxLength={9}
+                value={value} onChangeText={onChange} error={errors.msisdn?.message}
+                leftIcon={<Ionicons name="call-outline" size={18} color={COLORS.textSecondary} />} />
+            )} />
+          </SectionCard>
 
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  label="Email *"
-                  placeholder="exemplo@email.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={value}
-                  onChangeText={onChange}
-                  error={errors.email?.message}
-                  leftIcon={<Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} />}
-                />
-              )}
-            />
+          {/* 2 — Identificação e Acesso */}
+          <SectionCard icon="card-outline" iconBg={COLORS.secondaryLight} iconColor="#c49b00" title="Identificação e Acesso">
+            <Controller control={control} name="bi" render={({ field: { onChange, value } }) => (
+              <Input label="Nº do BI *" placeholder="Ex: 123456789012A" maxLength={13} autoCapitalize="characters"
+                value={value} onChangeText={t => onChange(t.toUpperCase())} error={errors.bi?.message}
+                leftIcon={<Ionicons name="id-card-outline" size={18} color={COLORS.textSecondary} />} />
+            )} />
+            <Controller control={control} name="nuit" render={({ field: { onChange, value } }) => (
+              <Input label="NUIT (Opcional)" placeholder="Ex: 123456789" keyboardType="number-pad" maxLength={9}
+                value={value} onChangeText={onChange} error={errors.nuit?.message}
+                leftIcon={<Ionicons name="document-text-outline" size={18} color={COLORS.textSecondary} />} />
+            )} />
+            <Controller control={control} name="password" render={({ field: { onChange, value } }) => (
+              <Input label="Palavra-passe *" placeholder="Mínimo 6 caracteres" secureTextEntry={!showPassword}
+                value={value} onChangeText={onChange} error={errors.password?.message}
+                leftIcon={<Ionicons name="lock-closed-outline" size={18} color={COLORS.textSecondary} />}
+                rightIcon={
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                    <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                } />
+            )} />
+          </SectionCard>
 
-            <Controller
-              control={control}
-              name="msisdn"
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  label="Contacto (MSISDN) *"
-                  placeholder="Ex: 840000000"
-                  keyboardType="phone-pad"
-                  maxLength={9}
-                  value={value}
-                  onChangeText={onChange}
-                  error={errors.msisdn?.message}
-                  leftIcon={<Ionicons name="call-outline" size={20} color={COLORS.textSecondary} />}
-                />
-              )}
-            />
-          </Card>
+          {/* 3 — Documentos */}
+          <SectionCard icon="images-outline" iconBg="#e3f2fd" iconColor="#1976d2" title="Documentos Anexos">
+            <Text style={styles.sectionDescription}>
+              Anexe imagens claras da frente e do verso do BI do angariador.
+            </Text>
+            <DocButton attached={!!biFrente} onPress={() => pickImage('bi_frente')}
+              label="Anexar BI Frente *" error={errors.bi_frente?.message} />
+            <DocButton attached={!!biVerso} onPress={() => pickImage('bi_verso')}
+              label="Anexar BI Verso *" error={errors.bi_verso?.message} />
+          </SectionCard>
 
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.cardIconContainer, { backgroundColor: COLORS.secondaryLight }]}>
-                <Ionicons name="card" size={20} color={COLORS.secondary} />
-              </View>
-              <Text style={styles.cardTitle}>Identificação e Acesso</Text>
-            </View>
-
-            <Controller
-              control={control}
-              name="bi"
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  label="Nº do BI *"
-                  placeholder="Ex: 123456789012A"
-                  maxLength={13}
-                  autoCapitalize="characters"
-                  value={value}
-                  onChangeText={(text) => onChange(text.toUpperCase())}
-                  error={errors.bi?.message}
-                  leftIcon={<Ionicons name="id-card-outline" size={20} color={COLORS.textSecondary} />}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="nuit"
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  label="NUIT (Opcional)"
-                  placeholder="Ex: 123456789"
-                  keyboardType="number-pad"
-                  maxLength={9}
-                  value={value}
-                  onChangeText={onChange}
-                  error={errors.nuit?.message}
-                  leftIcon={<Ionicons name="document-text-outline" size={20} color={COLORS.textSecondary} />}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  label="Palavra-passe *"
-                  placeholder="Defina uma palavra-passe inicial"
-                  secureTextEntry={!showPassword}
-                  value={value}
-                  onChangeText={onChange}
-                  error={errors.password?.message}
-                  leftIcon={<Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} />}
-                  rightIcon={
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
-                      <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={COLORS.textSecondary} />
-                    </TouchableOpacity>
-                  }
-                />
-              )}
-            />
-          </Card>
-
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.cardIconContainer, { backgroundColor: '#e3f2fd' }]}>
-                <Ionicons name="images" size={20} color="#1976d2" />
-              </View>
-              <Text style={styles.cardTitle}>Documentos Anexos</Text>
-            </View>
-
-            <Text style={styles.sectionDescription}>Anexe as imagens claras da frente e do verso do BI do angariador.</Text>
-
-            <View style={styles.docButtonContainer}>
-              <TouchableOpacity 
-                style={[styles.docButton, biFrente ? styles.docButtonSuccess : {}]} 
-                onPress={() => pickImage('bi_frente')}
-              >
-                <Ionicons name={biFrente ? "checkmark-circle" : "camera"} size={24} color={biFrente ? COLORS.white : COLORS.primary} />
-                <Text style={[styles.docButtonText, biFrente ? { color: COLORS.white } : {}]}>
-                  {biFrente ? "BI Frente Anexado" : "Anexar BI Frente *"}
-                </Text>
-              </TouchableOpacity>
-              {!!errors.bi_frente?.message && <Text style={styles.errorText}>{errors.bi_frente.message}</Text>}
-            </View>
-
-            <View style={styles.docButtonContainer}>
-              <TouchableOpacity 
-                style={[styles.docButton, biVerso ? styles.docButtonSuccess : {}]} 
-                onPress={() => pickImage('bi_verso')}
-              >
-                <Ionicons name={biVerso ? "checkmark-circle" : "camera"} size={24} color={biVerso ? COLORS.white : COLORS.primary} />
-                <Text style={[styles.docButtonText, biVerso ? { color: COLORS.white } : {}]}>
-                  {biVerso ? "BI Verso Anexado" : "Anexar BI Verso *"}
-                </Text>
-              </TouchableOpacity>
-              {!!errors.bi_verso?.message && <Text style={styles.errorText}>{errors.bi_verso.message}</Text>}
-            </View>
-          </Card>
-
+          <View style={{ height: 8 }} />
         </ScrollView>
 
+        {/* ── Footer ── */}
         <View style={styles.footer}>
           <TouchableOpacity
-            style={styles.footerButtonPrimary}
             onPress={handleSubmit(onSubmit, onError)}
             disabled={loading}
+            activeOpacity={0.85}
+            style={styles.submitBtn}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={styles.footerButtonPrimaryText}>
-                {loading ? 'Cadastrando...' : 'Salvar Angariador'}
-              </Text>
-              {!loading && <Ionicons name="save-outline" size={20} color={COLORS.white} style={{ marginLeft: 8 }} />}
-            </View>
+            <LinearGradient
+              colors={loading ? ['#aaa', '#aaa'] : [COLORS.primary, '#02a882']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.submitBtnInner}
+            >
+              {loading ? (
+                <Text style={styles.submitBtnText}>A cadastrar...</Text>
+              ) : (
+                <>
+                  <Ionicons name="save-outline" size={18} color="white" style={{ marginRight: 8 }} />
+                  <Text style={styles.submitBtnText}>Salvar Angariador</Text>
+                </>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
       </KeyboardAvoidingView>
 
-      {/* Success Modal */}
-      <Modal
-        visible={showSuccessModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {}}
-      >
-        <View style={styles.customModalBackdrop}>
-          <View style={styles.customModalCard}>
-            <View style={styles.customModalContentCentered}>
-              <View style={[styles.customModalIconContainer, { backgroundColor: COLORS.primaryLight }]}>
-                <Ionicons name="checkmark-circle" size={56} color={COLORS.success} />
-              </View>
-              <Text style={styles.customModalTitle}>Sucesso!</Text>
-              <Text style={styles.customModalMessage}>Angariador cadastrado com sucesso.</Text>
-              <View style={styles.customModalButtonsContainer}>
-                <TouchableOpacity
-                  style={[styles.customModalButton, styles.customModalButtonPrimary]}
-                  onPress={() => {
-                    setShowSuccessModal(false);
-                    navigation.goBack();
-                  }}
-                >
-                  <Text style={styles.customModalButtonText}>OK</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+      {/* ── Success Modal ── */}
+      <Modal visible={showSuccessModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <LinearGradient colors={[COLORS.primary, '#02a882']} style={styles.modalIconRing}>
+              <Ionicons name="checkmark" size={36} color="white" />
+            </LinearGradient>
+            <Text style={styles.modalTitle}>Cadastrado!</Text>
+            <Text style={styles.modalMessage}>Angariador registado com sucesso.</Text>
+            <TouchableOpacity
+              style={styles.modalBtn}
+              onPress={() => { setShowSuccessModal(false); navigation.goBack(); }}
+            >
+              <Text style={styles.modalBtnText}>Concluir</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Error Modal */}
-      <Modal
-        visible={showErrorModal.visible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowErrorModal({ visible: false, title: '', message: '' })}
-      >
-        <View style={styles.customModalBackdrop}>
-          <View style={styles.customModalCard}>
-            <View style={styles.customModalContentCentered}>
-              <View style={[styles.customModalIconContainer, { backgroundColor: '#ffebee' }]}>
-                <Ionicons name="alert-circle" size={56} color={COLORS.error} />
-              </View>
-              <Text style={[styles.customModalTitle, { color: COLORS.error }]}>{showErrorModal.title}</Text>
-              <Text style={styles.customModalMessage}>{showErrorModal.message}</Text>
-              <View style={styles.customModalButtonsContainer}>
-                <TouchableOpacity
-                  style={[styles.customModalButton, styles.customModalButtonPrimary, { backgroundColor: COLORS.error }]}
-                  onPress={() => setShowErrorModal({ visible: false, title: '', message: '' })}
-                >
-                  <Text style={styles.customModalButtonText}>OK</Text>
-                </TouchableOpacity>
-              </View>
+      {/* ── Error Modal ── */}
+      <Modal visible={showErrorModal.visible} transparent animationType="fade"
+        onRequestClose={() => setShowErrorModal({ visible: false, title: '', message: '' })}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={[styles.modalIconRing, { backgroundColor: '#ffebee' }]}>
+              <Ionicons name="alert-circle" size={36} color={COLORS.error} />
             </View>
+            <Text style={[styles.modalTitle, { color: COLORS.error }]}>{showErrorModal.title}</Text>
+            <Text style={styles.modalMessage}>{showErrorModal.message}</Text>
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: COLORS.error }]}
+              onPress={() => setShowErrorModal({ visible: false, title: '', message: '' })}
+            >
+              <Text style={styles.modalBtnText}>Fechar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -385,182 +325,244 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  flex: { flex: 1 },
+  container: { flex: 1, backgroundColor: COLORS.background },
+
+  // ── Header ────────────────────────────────────────────
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.white,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   backButton: {
-    marginRight: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  headerTitleContainer: {
-    flex: 1,
-  },
+  headerTitleContainer: { flex: 1 },
   headerTitle: {
-    ...Theme.typography.h2,
+    fontSize: 17,
+    fontWeight: '700',
     color: COLORS.text,
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
-    ...Theme.typography.body2,
+    fontSize: 12,
     color: COLORS.textSecondary,
-    marginTop: 2,
+    marginTop: 1,
   },
-  scroll: {
-    flex: 1,
+  stepPill: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
+  stepPillText: {
+    fontSize: 11,
+    color: COLORS.primary,
+    fontWeight: '700',
   },
+
+  // ── Progress ───────────────────────────────────────────
+  progressBar: {
+    height: 3,
+    backgroundColor: COLORS.border,
+  },
+  progressFill: {
+    height: 3,
+    backgroundColor: COLORS.primary,
+    borderRadius: 2,
+  },
+
+  // ── Scroll ─────────────────────────────────────────────
+  scroll: { flex: 1 },
+  content: { padding: 16, paddingBottom: 40 },
+
+  // ── Section card ───────────────────────────────────────
   card: {
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
+    marginBottom: 14,
+    padding: 18,
+    borderRadius: 18,
     backgroundColor: COLORS.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowColor: '#1a1a2e',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   cardIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   cardTitle: {
-    ...Theme.typography.h3,
+    fontSize: 15,
+    fontWeight: '700',
     color: COLORS.text,
+    letterSpacing: -0.2,
   },
   sectionDescription: {
-    ...Theme.typography.body2,
+    fontSize: 13,
     color: COLORS.textSecondary,
-    marginBottom: 16,
+    marginBottom: 14,
+    lineHeight: 19,
   },
-  docButtonContainer: {
-    marginBottom: 12,
-  },
+
+  // ── Doc buttons ────────────────────────────────────────
+  docButtonContainer: { marginBottom: 10 },
   docButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
+    overflow: 'hidden',
   },
   docButtonSuccess: {
-    backgroundColor: COLORS.success,
-    borderColor: COLORS.success,
+    borderColor: 'transparent',
+  },
+  docButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  docCameraCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  docCheckCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   docButtonText: {
-    ...Theme.typography.body,
+    flex: 1,
+    fontSize: 14,
     fontWeight: '600',
     color: COLORS.primary,
-    marginLeft: 8,
+    letterSpacing: -0.1,
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+    marginLeft: 4,
+    gap: 4,
   },
   errorText: {
-    ...Theme.typography.caption,
+    fontSize: 12,
     color: COLORS.error,
-    marginTop: 4,
-    marginLeft: 4,
   },
+
+  // ── Footer ─────────────────────────────────────────────
   footer: {
     padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
   },
-  footerButtonPrimary: {
-    backgroundColor: COLORS.primary,
+  submitBtn: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  submitBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    elevation: 2,
   },
-  footerButtonPrimaryText: {
-    ...Theme.typography.h4,
-    color: COLORS.white,
-    fontWeight: 'bold',
+  submitBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: -0.2,
   },
-  customModalBackdrop: {
+
+  // ── Modals ─────────────────────────────────────────────
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-  },
-  customModalCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 24,
-    width: '100%',
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
   },
-  customModalContentCentered: {
+  modalCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 28,
+    width: '100%',
+    padding: 28,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 12,
   },
-  customModalIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  modalIconRing: {
+    width: 76,
+    height: 76,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
-  customModalTitle: {
-    ...Theme.typography.h2,
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
     color: COLORS.text,
+    letterSpacing: -0.4,
     marginBottom: 8,
-    textAlign: 'center',
   },
-  customModalMessage: {
-    ...Theme.typography.body,
+  modalMessage: {
+    fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
+    lineHeight: 21,
     marginBottom: 24,
-    lineHeight: 22,
   },
-  customModalButtonsContainer: {
+  modalBtn: {
     width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  customModalButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customModalButtonPrimary: {
     backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: 13,
+    alignItems: 'center',
   },
-  customModalButtonText: {
-    ...Theme.typography.h4,
-    color: COLORS.white,
-    fontWeight: 'bold',
+  modalBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: -0.1,
   },
 });

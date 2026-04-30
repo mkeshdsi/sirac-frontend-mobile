@@ -45,12 +45,12 @@ export const RootNavigator = () => {
         // Private Flow
         <>
           <Stack.Screen name="Dashboard" component={DashboardTabs} options={{ headerShown: false, title: 'SIRAC' }} />
-          <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ title: ' SIRAC' }} />
-          <Stack.Screen name="PasswordCreation" component={PasswordCreationScreen} options={{ title: 'Palavra‑Passe' }} />
-          <Stack.Screen name="PersonalDataForm" component={PersonalDataFormScreen} options={{ title: 'Dados Pessoais' }} />
-          <Stack.Screen name="CommercialDataForm" component={CommercialDataFormScreen} options={{ title: 'Dados Comerciais' }} />
-          <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} options={{ title: 'Documentos' }} />
-          <Stack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} options={{ title: 'Revisão' }} />
+          <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="PasswordCreation" component={PasswordCreationScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="PersonalDataForm" component={PersonalDataFormScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CommercialDataForm" component={CommercialDataFormScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Success" component={SuccessScreen} options={{ title: 'Sucesso', headerShown: false }} />
           
           <Stack.Screen name="AngariadorDataForm" component={AngariadorDataFormScreen} options={{ title: 'Novo Angariador' }} />
