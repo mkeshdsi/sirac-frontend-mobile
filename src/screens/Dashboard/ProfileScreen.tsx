@@ -16,7 +16,7 @@ export const ProfileScreen = () => {
       {/* Space with Logo */}
       <View style={styles.logoContainer}>
         <Image 
-          source={require('../../../logo_png.png')} 
+          source={require('../../../AdminLTELogo.png')} 
           style={styles.logo} 
           resizeMode="contain" 
         />

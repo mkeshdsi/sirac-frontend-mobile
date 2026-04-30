@@ -443,6 +443,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   const [coordinateInput, setCoordinateInput] = useState('');
   const [showErrorModal, setShowErrorModal] = useState('');
   const [showPermissionDeniedModal, setShowPermissionDeniedModal] = useState(false);
+  const [showSuccessLocationModal, setShowSuccessLocationModal] = useState(false);
+  const [successLocationMessage, setSuccessLocationMessage] = useState('');
 
   // Function to get current location
   const getCurrentLocation = async () => {
@@ -479,7 +481,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       setValue('longitude', location.coords.longitude);
 
       setShowLoadingLocationModal(false); // Ocultar modal de carregamento
-      Alert.alert('✅ Sucesso', `Localização obtida: ${location.coords.latitude}, ${location.coords.longitude}`);
+      setSuccessLocationMessage(`Localização obtida com sucesso:\nLat: ${location.coords.latitude.toFixed(6)}\nLng: ${location.coords.longitude.toFixed(6)}`);
+      setShowSuccessLocationModal(true);
     } catch (error) {
       console.error('Error getting location:', error);
       setShowLoadingLocationModal(false); // Ocultar modal de carregamento
@@ -556,7 +559,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
             setSearchResults([]);
             setShowSearch(false);
             setSearchQuery('');
-            Alert.alert('✅ Localização selecionada', `${latitude}, ${longitude}`);
+            setSuccessLocationMessage(`Localização selecionada com sucesso:\nLat: ${latitude.toFixed(6)}\nLng: ${longitude.toFixed(6)}`);
+            setShowSuccessLocationModal(true);
           }
         })
         .catch(error => {
@@ -629,7 +633,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
           setValue('longitude', lng);
           setShowCoordinateInputModal(false);
           setCoordinateInput('');
-          Alert.alert('✅ Sucesso', `Coordenadas definidas: ${lat}, ${lng}`);
+          setSuccessLocationMessage(`Coordenadas definidas com sucesso:\nLat: ${lat.toFixed(6)}\nLng: ${lng.toFixed(6)}`);
+          setShowSuccessLocationModal(true);
         } else {
           setShowErrorModal('Formato de coordenadas inválido. Use: latitude,longitude');
         }
@@ -1548,6 +1553,36 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
                 >
                   <Ionicons name="checkmark" size={20} color={COLORS.white} />
                   <Text style={styles.customModalButtonText}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success Location Modal */}
+      <Modal
+        visible={showSuccessLocationModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSuccessLocationModal(false)}
+      >
+        <View style={styles.customModalBackdrop}>
+          <View style={styles.customModalCard}>
+            <View style={styles.customModalContentCentered}>
+              <View style={[styles.customModalIconContainer, { backgroundColor: COLORS.primaryLight }]}>
+                <Ionicons name="checkmark-circle" size={56} color={COLORS.success} />
+              </View>
+              <Text style={styles.customModalTitle}>Sucesso!</Text>
+              <Text style={styles.customModalSuccessMessage}>
+                {successLocationMessage}
+              </Text>
+              <View style={[styles.customModalButtonsContainer, { justifyContent: 'center' }]}>
+                <TouchableOpacity
+                  style={[styles.customModalButton, styles.customModalButtonPrimary, { minWidth: 150 }]}
+                  onPress={() => setShowSuccessLocationModal(false)}
+                >
+                  <Text style={styles.customModalButtonText}>OK</Text>
                 </TouchableOpacity>
               </View>
             </View>
