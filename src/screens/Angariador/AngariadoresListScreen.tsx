@@ -6,7 +6,7 @@ import { Theme } from '@/constants/theme';
 import { getAngariadoresGrouped } from '@/services/apiResources';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export const AngariadoresListScreen = () => {
+export const AngariadoresListScreen = ({ navigation }: any) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSections, setActiveSections] = useState<number[]>([]);
@@ -43,7 +43,12 @@ export const AngariadoresListScreen = () => {
   return (
     <View style={styles.container}>
       <LinearGradient colors={[Theme.colors.primary, Theme.colors.secondary]} style={styles.header}>
-        <Text style={styles.headerTitle}>Angariadores</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 16 }}>
+            <Ionicons name="arrow-back" size={28} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Angariadores</Text>
+        </View>
         <Text style={styles.headerSubtitle}>Listagem agrupada por Técnico de Venda</Text>
       </LinearGradient>
 

@@ -3,7 +3,7 @@ import { getApi, getBaseUrl, setAuthToken, setItem } from '@/config/api';
 export async function login(
   email: string,
   password: string
-): Promise<{ success: boolean; token?: string; user?: any; message?: string; status?: number }> {
+): Promise<{ success: boolean; token?: string; user?: any; type?: string; message?: string; status?: number }> {
   try {
     const base = await getBaseUrl();
 
@@ -23,6 +23,7 @@ export async function login(
 
     const token = (data as any)?.access_token;
     const user = (data as any)?.user;
+    const type = (data as any)?.type;
 
     if (!token) {
       return { success: false, message: 'Resposta do servidor sem access_token', status: response.status };
@@ -33,7 +34,7 @@ export async function login(
       await setItem('sirac_user_data', JSON.stringify(user));
     }
 
-    return { success: true, token, user };
+    return { success: true, token, user, type };
   } catch (e: any) {
     const msg = e?.message || 'Falha ao iniciar sessão. Verifique a sua ligação.';
     return { success: false, message: msg };

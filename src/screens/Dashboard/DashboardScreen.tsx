@@ -15,7 +15,7 @@ export const DashboardScreen = ({ navigation }: any) => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>Olá, {userData?.name || 'Utilizador'}</Text>
+        <Text style={styles.greeting}>Olá, {userData?.nome || userData?.name || 'Utilizador'}</Text>
         <Text style={styles.role}>
           {userRole === 'tvr' ? 'Técnico de Vendas' : userRole === 'angariador' ? 'Angariador' : 'Administrador'}
         </Text>

@@ -40,7 +40,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         return;
       }
       
-      const roleMatch = (res.user?.user_type || res.user?.usertype || 'user') as 'user' | 'angariador' | 'tvr';
+      const roleMatch = (res.type || res.user?.type || res.user?.usertype || 'user') as 'user' | 'angariador' | 'tvr';
       await signIn(roleMatch, res.user);
       
       // O RootNavigator vai reagir ao signIn e desenhar as BottomTabs (Dashboard)

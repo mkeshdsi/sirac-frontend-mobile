@@ -9,6 +9,7 @@ import { MOZ_BANKS } from '@/components/constants/moz_banks';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, CommercialData } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -640,8 +641,14 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
 
   // Function to open Google Maps for location selection with coordinate capture
 
-  const handleLogout = () => {
-    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  const { signOut } = useAuth();
+  
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (e) {
+      console.log('Error signing out', e);
+    }
   };
 
   const formatDate = (d: Date) => {
