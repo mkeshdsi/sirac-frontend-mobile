@@ -25,17 +25,14 @@ const CardItem = ({ item, isExpanded, onToggle }: any) => {
     <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
       <TouchableOpacity style={styles.cardHeader} onPress={handlePress} activeOpacity={0.85}>
         <View style={styles.cardHeaderLeft}>
-          <LinearGradient
-            colors={[Theme.colors.primary, Theme.colors.secondary]}
-            style={styles.avatarGradient}
-          >
-            <Ionicons name="briefcase-outline" size={18} color="white" />
-          </LinearGradient>
+          <View style={styles.avatarPlaceholder}>
+            <Ionicons name="briefcase-outline" size={18} color={Theme.colors.primary} />
+          </View>
           <View style={styles.cardHeaderText}>
             <Text style={styles.tvrName}>{tvrName}</Text>
             <View style={styles.badgeRow}>
               <View style={styles.badge}>
-                <Ionicons name="people" size={11} color={Theme.colors.primary} style={{ marginRight: 4 }} />
+                <Ionicons name="people-outline" size={11} color={Theme.colors.primary} style={{ marginRight: 4 }} />
                 <Text style={styles.totalBadge}>{item.total_angariadores} Angariador(es)</Text>
               </View>
             </View>
@@ -45,7 +42,7 @@ const CardItem = ({ item, isExpanded, onToggle }: any) => {
           <Ionicons
             name={isExpanded ? 'chevron-up' : 'chevron-down'}
             size={16}
-            color={isExpanded ? Theme.colors.primary : Theme.colors.textSecondary}
+            color={Theme.colors.textSecondary}
           />
         </View>
       </TouchableOpacity>
@@ -59,7 +56,7 @@ const CardItem = ({ item, isExpanded, onToggle }: any) => {
                 <Image source={{ uri: ang.bi_frente }} style={styles.angariadorImg} />
               ) : (
                 <View style={[styles.angariadorImg, styles.placeholderImg]}>
-                  <Ionicons name="person" size={16} color={Theme.colors.textSecondary} />
+                  <Ionicons name="person-outline" size={16} color={Theme.colors.textSecondary} />
                 </View>
               )}
               <View style={styles.angariadorInfo}>
@@ -131,7 +128,7 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
 
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={22} color={Theme.colors.secondary} />
+            <Ionicons name="arrow-back" size={22} color="white" />
           </TouchableOpacity>
           <View style={styles.headerPill}>
             <Text style={styles.headerPillText}>{data.length} Grupos</Text>
@@ -268,10 +265,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  avatarGradient: {
+  avatarPlaceholder: {
     width: 46,
     height: 46,
     borderRadius: 14,
+    backgroundColor: `${Theme.colors.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -307,7 +305,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chevronWrapActive: {
-    backgroundColor: `${Theme.colors.primary}15`,
+    backgroundColor: Theme.colors.gray200,
   },
 
   // ── Collapsible ─────────────────────────────────────────

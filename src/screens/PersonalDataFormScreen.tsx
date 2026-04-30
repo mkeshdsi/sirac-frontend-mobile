@@ -58,7 +58,7 @@ export const PersonalDataFormScreen: React.FC<Props> = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Theme.colors.secondary} />
+          <Ionicons name="arrow-back" size={24} color={Theme.colors.textPrimary} />
         </TouchableOpacity>
         <View>
           <Text style={styles.title}>Dados Pessoais</Text>

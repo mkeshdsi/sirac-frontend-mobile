@@ -190,7 +190,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.secondary} />
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Revisão Final</Text>
         <View style={{ width: 40 }} />
@@ -232,7 +232,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
           <InfoRow label="Cidade" value={commercialData?.enderecoCidade} icon="map-outline" />
           <InfoRow label="Telefone" value={commercialData?.telefone} icon="call-outline" />
-          <InfoRow label="Celular" value={commercialData?.celular} icon="smartphone-outline" />
+          <InfoRow label="Celular" value={commercialData?.celular} icon="phone-portrait" />
           <InfoRow label="Coordenadas" value={commercialData?.latitude ? `${commercialData.latitude.toFixed(4)}, ${commercialData.longitude?.toFixed(4)}` : undefined} icon="pin-outline" />
         </Card>
 

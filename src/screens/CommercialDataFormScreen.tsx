@@ -440,7 +440,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonHeader} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.secondary} />
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </TouchableOpacity>
           <View>
             <Text style={styles.headerTitle}>Formulário de Adesão</Text>

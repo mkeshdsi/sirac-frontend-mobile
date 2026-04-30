@@ -28,7 +28,7 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
           {/* Header Section */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={Theme.colors.secondary} />
+              <Ionicons name="arrow-back" size={24} color={Theme.colors.primary} />
             </TouchableOpacity>
             <View style={styles.logoContainer}>
               <Image 
