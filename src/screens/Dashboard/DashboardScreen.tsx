@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +14,8 @@ export const DashboardScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.greeting}>Olá, {userData?.nome || userData?.name || 'Utilizador'}</Text>
         <Text style={styles.role}>
@@ -63,10 +65,15 @@ export const DashboardScreen = ({ navigation }: any) => {
 
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Theme.colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: Theme.colors.background,
