@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Input } from '@/components';
@@ -8,6 +8,7 @@ import { RootStackParamList, PersonalData } from '@/types';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { Ionicons } from '@expo/vector-icons';
 
 type Nav = StackNavigationProp<RootStackParamList, 'PersonalDataForm'>;
 
@@ -50,14 +51,19 @@ export const PersonalDataFormScreen: React.FC<Props> = ({ navigation }) => {
   });
 
   const onSubmit = (data: PersonalData) => {
-    navigation.navigate('PasswordCreation');
+    navigation.navigate('PasswordCreation', { userType: 'Comerciante', personalData: data });
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Dados Pessoais</Text>
-        <Text style={styles.subtitle}>Preencha as suas informações</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={Theme.colors.secondary} />
+        </TouchableOpacity>
+        <View>
+          <Text style={styles.title}>Dados Pessoais</Text>
+          <Text style={styles.subtitle}>Preencha as suas informações</Text>
+        </View>
       </View>
 
       <View style={styles.form}>
@@ -141,7 +147,8 @@ export const PersonalDataFormScreen: React.FC<Props> = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Theme.colors.background, padding: Theme.spacing.lg },
-  header: { marginTop: Theme.spacing.lg, marginBottom: Theme.spacing.lg },
+  header: { marginTop: Theme.spacing.lg, marginBottom: Theme.spacing.lg, flexDirection: 'row', alignItems: 'center', gap: 16 },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: Theme.colors.surface, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
   title: { ...Theme.typography.h2, color: Theme.colors.textPrimary },
   subtitle: { ...Theme.typography.body2, color: Theme.colors.textSecondary, marginTop: Theme.spacing.xs },
   form: {},

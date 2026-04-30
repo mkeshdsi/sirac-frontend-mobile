@@ -8,6 +8,7 @@ import SignaturePadModal from '@/components/SignaturePadModal';
 import { MOZ_BANKS } from '@/components/constants/moz_banks';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, CommercialData } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
@@ -292,7 +293,8 @@ const EstabelecimentosFieldArray: React.FC<{ control: any }> = ({ control }) => 
 };
 
 // ── Main screen ──────────────────────────────────────────
-export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
+export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { personalData, password } = route.params || {};
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
@@ -413,8 +415,6 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const { signOut } = useAuth();
-  const handleLogout = async () => { try { await signOut(); } catch (e) { console.log('Error signing out', e); } };
   const formatDate = (d: Date) => { const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}/${mm}/${yyyy}`; };
   const onLayoutField = (name: keyof CommercialData | string) => (e: any) => { const y = e?.nativeEvent?.layout?.y ?? 0; setFieldPositions((s) => ({ ...s, [String(name)]: y })); };
 
@@ -428,7 +428,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
   }, [tipoParceiro]);
 
   const onSubmit = async (data: CommercialData) => {
-    try { setIsLoading(true); navigation.navigate('DocumentUpload', { commercialData: data }); }
+    try { setIsLoading(true); navigation.navigate('DocumentUpload', { ...route.params, commercialData: data }); }
     finally { setIsLoading(false); }
   };
 
@@ -439,18 +439,14 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation }) => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <LinearGradient colors={[COLORS.primary, '#02a882']} style={styles.headerIconWrap}>
-            <Ionicons name="document-text-outline" size={18} color="white" />
-          </LinearGradient>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonHeader} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.secondary} />
+          </TouchableOpacity>
           <View>
             <Text style={styles.headerTitle}>Formulário de Adesão</Text>
             <Text style={styles.headerSubtitle}>Preencha as informações do parceiro</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} activeOpacity={0.8}>
-          <Ionicons name="log-out-outline" size={16} color={COLORS.error} />
-          <Text style={styles.logoutText}>Sair</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -987,15 +983,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  headerIconWrap: { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  backButtonHeader: { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, letterSpacing: -0.3 },
   headerSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 1 },
-  logoutButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingVertical: 7, paddingHorizontal: 11, borderRadius: 10,
-    borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.background,
-  },
-  logoutText: { fontSize: 12, fontWeight: '700', color: COLORS.error },
 
   // ── Content ─────────────────────────────────────────────
   content: { padding: 16, flexGrow: 1, paddingBottom: 140 },

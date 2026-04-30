@@ -131,7 +131,7 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
 
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={22} color="white" />
+            <Ionicons name="arrow-back" size={22} color={Theme.colors.secondary} />
           </TouchableOpacity>
           <View style={styles.headerPill}>
             <Text style={styles.headerPillText}>{data.length} Grupos</Text>

@@ -60,9 +60,9 @@ export type RootStackParamList = {
   Welcome: undefined;
   UserTypeSelection: undefined;
   PersonalDataForm: undefined;
-  PasswordCreation: undefined;
-  CommercialDataForm: undefined;
-  DocumentUpload: { commercialData?: CommercialData };
+  PasswordCreation: { userType: UserType; personalData: PersonalData };
+  CommercialDataForm: { personalData: PersonalData; password?: string; userType?: UserType };
+  DocumentUpload: { commercialData?: CommercialData; personalData?: PersonalData; password?: string; userType?: UserType };
   ReviewSubmit: { commercialData?: CommercialData; documents: DocumentsPayload };
   Success: { registrationId: string };
   AngariadorDataForm: undefined;

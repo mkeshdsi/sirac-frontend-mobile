@@ -177,8 +177,8 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
 
         {/* ── Header ── */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.secondary} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Novo Angariador</Text>

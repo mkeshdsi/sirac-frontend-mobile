@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '@/constants/theme';
 import { Button } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
 
 type Nav = StackNavigationProp<RootStackParamList, 'Welcome'>;
 
@@ -26,6 +27,9 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
         >
           {/* Header Section */}
           <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={Theme.colors.secondary} />
+            </TouchableOpacity>
             <View style={styles.logoContainer}>
               <Image 
                 source={require('../../logo.jpg')} 
@@ -109,8 +113,25 @@ const styles = StyleSheet.create({
   
   // Header Styles
   header: {
+    paddingHorizontal: Theme.spacing.lg,
+    paddingTop: Theme.spacing.md,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
     marginBottom: Theme.spacing.xxl,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   logoContainer: {
     backgroundColor: Theme.colors.surface,

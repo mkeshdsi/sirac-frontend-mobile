@@ -190,7 +190,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={24} color={COLORS.secondary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Revisão Final</Text>
         <View style={{ width: 40 }} />
