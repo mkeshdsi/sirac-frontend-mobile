@@ -172,15 +172,19 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const InfoRow = ({ label, value, icon }: { label: string; value?: string; icon?: string }) => (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabelContainer}>
-        {icon && <Ionicons name={icon as any} size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />}
-        <Text style={styles.infoLabel}>{label}</Text>
+  const InfoRow = ({ label, value, icon }: { label: string; value?: string; icon?: string }) => {
+    if (!value || value.trim() === "") return null;
+    
+    return (
+      <View style={styles.infoRow}>
+        <View style={styles.infoLabelContainer}>
+          {icon && <Ionicons name={icon as any} size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />}
+          <Text style={styles.infoLabel}>{label}</Text>
+        </View>
+        <Text style={styles.infoValue}>{value}</Text>
       </View>
-      <Text style={styles.infoValue}>{value || "Não informado"}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -229,7 +233,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           <InfoRow label="Cidade" value={commercialData?.enderecoCidade} icon="map-outline" />
           <InfoRow label="Telefone" value={commercialData?.telefone} icon="call-outline" />
           <InfoRow label="Celular" value={commercialData?.celular} icon="smartphone-outline" />
-          <InfoRow label="Coordenadas" value={commercialData?.latitude ? `${commercialData.latitude.toFixed(4)}, ${commercialData.longitude?.toFixed(4)}` : "Não capturadas"} icon="pin-outline" />
+          <InfoRow label="Coordenadas" value={commercialData?.latitude ? `${commercialData.latitude.toFixed(4)}, ${commercialData.longitude?.toFixed(4)}` : undefined} icon="pin-outline" />
         </Card>
 
         <Card style={styles.card}>
@@ -305,7 +309,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: Platform.OS === 'ios' ? 10 : 40,
+    paddingBottom: 16,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
