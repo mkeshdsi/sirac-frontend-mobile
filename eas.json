@@ -8,6 +8,7 @@
       "android": {
         "buildType": "apk"
       },
+      "channel": "production",
       "ios": {
         "simulator": true
       },

@@ -11,6 +11,7 @@ module.exports = {
     runtimeVersion: { policy: 'sdkVersion' },
     updates: {
       fallbackToCacheTimeout: 0,
+      url: 'https://u.expo.dev/1d5f13c3-18c6-418b-ad75-9a41e922dc29',
     },
     assetBundlePatterns: ['**/*'],
     ios: {
