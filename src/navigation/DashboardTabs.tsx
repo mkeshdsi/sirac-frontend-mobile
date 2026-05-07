@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     ...Theme.typography.h2,
-    color: Theme.colors.text,
+    color: Theme.colors.textPrimary,
     marginBottom: 12,
     textAlign: 'center',
     fontWeight: 'bold',

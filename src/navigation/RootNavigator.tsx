@@ -6,6 +6,9 @@ import { Theme } from '@/constants/theme';
 
 // Public Screens
 import { LoginScreen } from '@/screens/LoginScreen';
+import { FirstLoginPasswordChangeScreen } from '@/screens/FirstLoginPasswordChangeScreen';
+import { ForgotPasswordScreen } from '@/screens/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '@/screens/ResetPasswordScreen';
 
 // Private Screens (Dashboard & Flow)
 import { DashboardTabs } from '@/navigation/DashboardTabs';
@@ -40,7 +43,12 @@ export const RootNavigator = () => {
     >
       {!userRole ? (
         // Public Flow
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="FirstLoginPasswordChange" component={FirstLoginPasswordChangeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
+        </>
       ) : (
         // Private Flow
         <>

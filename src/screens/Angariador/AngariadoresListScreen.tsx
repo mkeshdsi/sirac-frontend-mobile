@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Animated, Switch, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import Collapsible from 'react-native-collapsible';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/theme';
-import { getAngariadoresGrouped } from '@/services/apiResources';
+import { getAngariadoresGrouped, toggleAngariadorActive, updateAngariadorPassword } from '@/services/apiResources';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Button, Input } from '@/components';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-const CardItem = ({ item, isExpanded, onToggle }: any) => {
+const CardItem = ({ item, isExpanded, onToggle, onToggleActive, onOpenPassword }: any) => {
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
   const handlePress = () => {
@@ -69,6 +70,22 @@ const CardItem = ({ item, isExpanded, onToggle }: any) => {
                   <Text style={styles.angariadorContact}>{ang.email}</Text>
                 </View>
               </View>
+              <View style={styles.activeControl}>
+                <Text style={[styles.activeLabel, ang.is_active ? styles.activeLabelOn : styles.activeLabelOff]}>
+                  {ang.is_active ? 'Ativo' : 'Inativo'}
+                </Text>
+                <View style={styles.rowActions}>
+                  <TouchableOpacity style={styles.passwordAction} onPress={() => onOpenPassword(ang)} activeOpacity={0.75}>
+                    <Ionicons name="key-outline" size={16} color={Theme.colors.primary} />
+                  </TouchableOpacity>
+                  <Switch
+                    value={!!ang.is_active}
+                    onValueChange={(value) => onToggleActive(ang.id, value)}
+                    trackColor={{ false: '#d1d5db', true: `${Theme.colors.primary}55` }}
+                    thumbColor={ang.is_active ? Theme.colors.primary : '#f4f4f5'}
+                  />
+                </View>
+              </View>
             </View>
           ))}
           {item.angariadores.length === 0 && (
@@ -87,6 +104,12 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSections, setActiveSections] = useState<number[]>([]);
+  const [selectedAngariador, setSelectedAngariador] = useState<any | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -103,6 +126,59 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
     setActiveSections(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
+  };
+
+  const handleToggleActive = async (angariadorId: number, isActive: boolean) => {
+    setData(prev => prev.map(group => ({
+      ...group,
+      angariadores: group.angariadores.map((ang: any) =>
+        ang.id === angariadorId ? { ...ang, is_active: isActive } : ang
+      ),
+    })));
+
+    try {
+      await toggleAngariadorActive(angariadorId, isActive);
+    } catch (e) {
+      setData(prev => prev.map(group => ({
+        ...group,
+        angariadores: group.angariadores.map((ang: any) =>
+          ang.id === angariadorId ? { ...ang, is_active: !isActive } : ang
+        ),
+      })));
+    }
+  };
+
+  const closePasswordModal = () => {
+    setSelectedAngariador(null);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!selectedAngariador) return;
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('As palavras-passe não coincidem.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await updateAngariadorPassword(selectedAngariador.id, {
+        email: selectedAngariador.email,
+        new_password: newPassword,
+      });
+      setPasswordSuccess('Password atualizada com sucesso.');
+      setTimeout(closePasswordModal, 900);
+    } catch (e: any) {
+      setPasswordError(e?.response?.data?.msg || 'Não foi possível atualizar a password.');
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   if (loading) {
@@ -149,6 +225,8 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
             item={item}
             isExpanded={activeSections.includes(item.tvr_id)}
             onToggle={toggleSection}
+            onToggleActive={handleToggleActive}
+            onOpenPassword={setSelectedAngariador}
           />
         ))}
 
@@ -162,6 +240,33 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
           </View>
         )}
       </ScrollView>
+
+      <Modal visible={!!selectedAngariador} transparent animationType="fade" onRequestClose={closePasswordModal}>
+        <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Alterar password</Text>
+            <Text style={styles.modalSubtitle}>{selectedAngariador?.nome}</Text>
+
+            <Input label="Email" value={selectedAngariador?.email || ''} editable={false} />
+            <Input label="Nova password" secureTextEntry value={newPassword} onChangeText={setNewPassword} required />
+            <Input label="Confirmar nova password" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} required />
+
+            {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+            {!!passwordSuccess && <Text style={styles.successText}>{passwordSuccess}</Text>}
+
+            <View style={styles.modalActions}>
+              <Button title="Cancelar" variant="outline" style={styles.modalActionBtn} onPress={closePasswordModal} />
+              <Button
+                title="Guardar"
+                style={styles.modalActionBtn}
+                loading={passwordLoading}
+                disabled={!newPassword || newPassword !== confirmPassword}
+                onPress={handleUpdatePassword}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
@@ -351,6 +456,35 @@ const styles = StyleSheet.create({
     marginTop: 4,
     flexWrap: 'wrap',
   },
+  activeControl: {
+    alignItems: 'center',
+    marginLeft: 8,
+    minWidth: 98,
+  },
+  activeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  activeLabelOn: {
+    color: Theme.colors.primary,
+  },
+  activeLabelOff: {
+    color: Theme.colors.textSecondary,
+  },
+  rowActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  passwordAction: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: `${Theme.colors.primary}15`,
+  },
   angariadorContact: {
     fontSize: 12,
     color: Theme.colors.textSecondary,
@@ -401,5 +535,45 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 240,
     lineHeight: 20,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 22,
+    padding: Theme.spacing.lg,
+  },
+  modalTitle: {
+    ...Theme.typography.h3,
+    color: Theme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    ...Theme.typography.body2,
+    color: Theme.colors.textSecondary,
+    marginBottom: Theme.spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: Theme.spacing.sm,
+  },
+  modalActionBtn: {
+    flex: 1,
+  },
+  errorText: {
+    color: Theme.colors.error,
+    textAlign: 'center',
+    marginBottom: Theme.spacing.md,
+  },
+  successText: {
+    color: Theme.colors.primary,
+    textAlign: 'center',
+    marginBottom: Theme.spacing.md,
+    fontWeight: '600',
   },
 });

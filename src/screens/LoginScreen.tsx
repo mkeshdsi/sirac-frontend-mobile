@@ -35,6 +35,15 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     setLoading(true);
     try {
       const res = await login(username.trim(), password);
+      if (res.forcePasswordChange) {
+        navigation.navigate('FirstLoginPasswordChange', {
+          email: res.forcePasswordChange.email,
+          oldPassword: password,
+          angariadorId: res.forcePasswordChange.angariador_id,
+        });
+        return;
+      }
+
       if (!res.success || !res.token) {
         setError(res.message || 'Falha ao iniciar sessão.');
         return;
@@ -130,7 +139,9 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             )}
 
-            
+            <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate('ForgotPassword')}>
+              <Text style={styles.forgotPasswordText}>Esqueci a palavra-passe</Text>
+            </TouchableOpacity>
 
             <View style={styles.buttonContainer}>
               <Button 

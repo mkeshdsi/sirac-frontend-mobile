@@ -1,12 +1,20 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'react-native';
+import { Button, Input } from '@/components';
+import { changeMyTvrPassword, updateMyAngariadorPassword } from '@/services/apiResources';
 
 export const ProfileScreen = () => {
-  const { userData, signOut } = useAuth();
+  const { userRole, userData, signOut } = useAuth();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   const userContact = userData?.msisdn || userData?.phone_number || userData?.contacto || '';
   const userName = userData?.nome || userData?.name || 'Utilizador';
@@ -16,6 +24,50 @@ export const ProfileScreen = () => {
     .slice(0, 2)
     .join('')
     .toUpperCase();
+
+  const canChangePassword = userRole === 'angariador' || userRole === 'tvr';
+  const resetPasswordForm = () => {
+    setOldPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
+
+  const onChangePassword = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('As palavras-passe não coincidem.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      if (userRole === 'angariador') {
+        await updateMyAngariadorPassword({
+          email: userData?.email,
+          old_password: oldPassword,
+          new_password: newPassword,
+        });
+      } else if (userRole === 'tvr') {
+        await changeMyTvrPassword({
+          old_password: oldPassword,
+          new_password: newPassword,
+        });
+      }
+      setPasswordSuccess('Password atualizada com sucesso.');
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        resetPasswordForm();
+      }, 900);
+    } catch (e: any) {
+      setPasswordError(e?.response?.data?.msg || 'Não foi possível atualizar a password.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -65,6 +117,16 @@ export const ProfileScreen = () => {
 
       {/* Actions */}
       <View style={styles.actions}>
+        {canChangePassword && (
+          <TouchableOpacity style={styles.passwordBtn} onPress={() => setShowPasswordModal(true)} activeOpacity={0.75}>
+            <View style={styles.passwordIcon}>
+              <Ionicons name="key-outline" size={20} color={Theme.colors.primary} />
+            </View>
+            <Text style={styles.passwordText}>Alterar Password</Text>
+            <Ionicons name="chevron-forward" size={16} color={Theme.colors.primary} style={{ marginLeft: 'auto' }} />
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={styles.logoutBtn} onPress={signOut} activeOpacity={0.75}>
           <View style={styles.logoutIcon}>
             <Ionicons name="log-out-outline" size={20} color={Theme.colors.error} />
@@ -73,6 +135,49 @@ export const ProfileScreen = () => {
           <Ionicons name="chevron-forward" size={16} color={Theme.colors.error} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={showPasswordModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowPasswordModal(false);
+          resetPasswordForm();
+        }}
+      >
+        <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Alterar Password</Text>
+            <Text style={styles.modalSubtitle}>Informe a password atual e defina uma nova.</Text>
+
+            <Input label="Password atual" secureTextEntry value={oldPassword} onChangeText={setOldPassword} required />
+            <Input label="Nova password" secureTextEntry value={newPassword} onChangeText={setNewPassword} required />
+            <Input label="Confirmar nova password" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} required />
+
+            {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+            {!!passwordSuccess && <Text style={styles.successText}>{passwordSuccess}</Text>}
+
+            <View style={styles.modalActions}>
+              <Button
+                title="Cancelar"
+                variant="outline"
+                style={styles.modalActionBtn}
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  resetPasswordForm();
+                }}
+              />
+              <Button
+                title="Guardar"
+                style={styles.modalActionBtn}
+                loading={passwordLoading}
+                disabled={!oldPassword || !newPassword || newPassword !== confirmPassword}
+                onPress={onChangePassword}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
@@ -177,6 +282,31 @@ const styles = StyleSheet.create({
   actions: {
     marginTop: 24,
     marginHorizontal: Theme.spacing.lg,
+    gap: 12,
+  },
+  passwordBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: Theme.spacing.md,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Theme.colors.primary,
+    gap: 12,
+  },
+  passwordIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  passwordText: {
+    ...Theme.typography.body,
+    color: Theme.colors.primary,
+    fontWeight: '600',
   },
   logoutBtn: {
     flexDirection: 'row',
@@ -200,6 +330,46 @@ const styles = StyleSheet.create({
   logoutText: {
     ...Theme.typography.body,
     color: Theme.colors.error,
+    fontWeight: '600',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 22,
+    padding: Theme.spacing.lg,
+  },
+  modalTitle: {
+    ...Theme.typography.h3,
+    color: Theme.colors.textPrimary,
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    ...Theme.typography.body2,
+    color: Theme.colors.textSecondary,
+    marginBottom: Theme.spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: Theme.spacing.sm,
+  },
+  modalActionBtn: {
+    flex: 1,
+  },
+  errorText: {
+    color: Theme.colors.error,
+    textAlign: 'center',
+    marginBottom: Theme.spacing.md,
+  },
+  successText: {
+    color: Theme.colors.primary,
+    textAlign: 'center',
+    marginBottom: Theme.spacing.md,
     fontWeight: '600',
   },
 });

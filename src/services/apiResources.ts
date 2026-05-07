@@ -93,7 +93,37 @@ export async function getAngariadoresGrouped() {
 
 export async function cadastrarAngariador(payload: any) {
   const api = await getAuthApi();
-  const res = await api.post('/api/v1/angariadores/', payload);
+  const { password, ...payloadWithoutPassword } = payload || {};
+  const res = await api.post('/api/v1/angariadores/', payloadWithoutPassword);
   return res.data;
 }
 
+export async function updateAngariadorPassword(angariadorId: number, payload: { email: string; new_password: string }) {
+  const api = await getAuthApi();
+  const res = await api.put(`/api/v1/angariadores/${angariadorId}/update-password`, payload);
+  return res.data;
+}
+
+export async function updateMyAngariadorPassword(payload: { email: string; old_password: string; new_password: string }) {
+  const api = await getAuthApi();
+  const res = await api.put('/api/v1/angariadores/me/update-password', payload);
+  return res.data;
+}
+
+export async function changeMyTvrPassword(payload: { old_password: string; new_password: string }) {
+  const api = await getAuthApi();
+  const res = await api.put('/api/v1/tvr/me/change-password', payload);
+  return res.data;
+}
+
+export async function toggleAngariadorActive(angariadorId: number, isActive: boolean) {
+  const api = await getAuthApi();
+  const res = await api.patch(`/api/v1/angariadores/${angariadorId}/active`, { is_active: isActive });
+  return res.data;
+}
+
+export async function toggleTvrActive(tvrId: number, isActive: boolean) {
+  const api = await getAuthApi();
+  const res = await api.patch(`/api/v1/tvr/${tvrId}/active`, { is_active: isActive });
+  return res.data;
+}

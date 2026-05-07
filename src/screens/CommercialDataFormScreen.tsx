@@ -23,6 +23,7 @@ import * as FileSystem from 'expo-file-system';
 import { LinearGradient } from 'expo-linear-gradient';
 
 type Nav = StackNavigationProp<RootStackParamList, 'CommercialDataForm'>;
+type Route = RouteProp<RootStackParamList, 'CommercialDataForm'>;
 
 const COLORS = {
   primary: '#01836b',
@@ -84,7 +85,7 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   fotografia: yup.string().optional(),
 }) as any;
 
-interface Props { navigation: Nav }
+interface Props { navigation: Nav; route: Route }
 
 // ── Shared section card ──────────────────────────────────
 const SectionCard = ({ emoji, title, children, accent = false }: any) => (

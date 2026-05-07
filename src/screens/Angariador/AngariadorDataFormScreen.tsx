@@ -40,7 +40,6 @@ const schema = yup.object({
     .test('len', 'O BI deve ter exatamente 13 caracteres', val => val ? val.length === 13 : false)
     .test('numbers', 'Os primeiros 12 caracteres devem ser números', val => val ? /^\d{12}/.test(val) : false)
     .test('letter', 'O 13º caracter deve ser uma letra', val => val ? /[a-zA-Z]$/.test(val) : false),
-  password: yup.string().min(6, 'Mínimo de 6 caracteres').required('Palavra-passe é obrigatória'),
   nuit: yup.string()
     .optional()
     .test('is-nine-digits', 'O NUIT deve ter exatamente 9 dígitos', value => !value || /^\d{9}$/.test(value)),
@@ -111,7 +110,6 @@ const DocButton = ({ attached, onPress, label, error }: any) => {
 // ── Main screen ─────────────────────────────────────────
 export const AngariadorDataFormScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState({ visible: false, title: '', message: '' });
 
@@ -121,7 +119,7 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
 
   const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm<AngariadorForm>({
     resolver: yupResolver(schema),
-    defaultValues: { nome: '', email: '', msisdn: '', bi: '', password: '', nuit: '', bi_frente: '', bi_verso: '' },
+    defaultValues: { nome: '', email: '', msisdn: '', bi: '', nuit: '', bi_frente: '', bi_verso: '' },
   });
 
   const pickImage = async (field: 'bi_frente' | 'bi_verso') => {
@@ -145,7 +143,7 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
     setLoading(true);
     try {
       const result = await cadastrarAngariador(data);
-      if (result && (result.id || result.message)) {
+      if (result && (result.id || result.data?.id || result.msg || result.message)) {
         setShowSuccessModal(true);
       } else {
         setShowErrorModal({ visible: true, title: 'Falha no Registo', message: 'Falha ao cadastrar. Verifique os dados e tente novamente.' });
@@ -186,7 +184,7 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
           </View>
           {/* Step indicator */}
           <View style={styles.stepPill}>
-            <Text style={styles.stepPillText}>3 secções</Text>
+            <Text style={styles.stepPillText}>3 seccoes</Text>
           </View>
         </View>
 
@@ -210,7 +208,7 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
                 leftIcon={<Ionicons name="mail-outline" size={18} color={COLORS.textSecondary} />} />
             )} />
             <Controller control={control} name="msisdn" render={({ field: { onChange, value } }) => (
-              <Input label="Contacto (MSISDN) *" placeholder="Ex: 840000000" keyboardType="phone-pad" maxLength={9}
+              <Input label="Contacto (MSISDN) *" placeholder="Ex: 820000000" keyboardType="phone-pad" maxLength={9}
                 value={value} onChangeText={onChange} error={errors.msisdn?.message}
                 leftIcon={<Ionicons name="call-outline" size={18} color={COLORS.textSecondary} />} />
             )} />
@@ -228,16 +226,10 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
                 value={value} onChangeText={onChange} error={errors.nuit?.message}
                 leftIcon={<Ionicons name="document-text-outline" size={18} color={COLORS.textSecondary} />} />
             )} />
-            <Controller control={control} name="password" render={({ field: { onChange, value } }) => (
-              <Input label="Palavra-passe *" placeholder="Mínimo 6 caracteres" secureTextEntry={!showPassword}
-                value={value} onChangeText={onChange} error={errors.password?.message}
-                leftIcon={<Ionicons name="lock-closed-outline" size={18} color={COLORS.textSecondary} />}
-                rightIcon={
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
-                    <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color={COLORS.textSecondary} />
-                  </TouchableOpacity>
-                } />
-            )} />
+            <View style={styles.infoBox}>
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.infoBoxText}>A palavra-passe será gerada automaticamente e enviada por SMS.</Text>
+            </View>
           </SectionCard>
 
           {/* 3 — Documentos */}
@@ -289,7 +281,7 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
               <Ionicons name="checkmark" size={36} color="white" />
             </LinearGradient>
             <Text style={styles.modalTitle}>Cadastrado!</Text>
-            <Text style={styles.modalMessage}>Angariador registado com sucesso.</Text>
+            <Text style={styles.modalMessage}>Angariador registado com sucesso. A palavra-passe inicial foi enviada por SMS.</Text>
             <TouchableOpacity
               style={styles.modalBtn}
               onPress={() => { setShowSuccessModal(false); navigation.goBack(); }}
@@ -425,6 +417,21 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: 14,
     lineHeight: 19,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 12,
+    padding: 12,
+  },
+  infoBoxText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 
   // ── Doc buttons ────────────────────────────────────────

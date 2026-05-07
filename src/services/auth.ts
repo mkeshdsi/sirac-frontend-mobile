@@ -1,9 +1,16 @@
 import { getApi, getBaseUrl, setAuthToken, setItem } from '@/config/api';
 
+export type ForcePasswordChange = {
+  angariador_id: number;
+  email: string;
+  force_password_change: true;
+  msg?: string;
+};
+
 export async function login(
   email: string,
   password: string
-): Promise<{ success: boolean; token?: string; user?: any; type?: string; message?: string; status?: number }> {
+): Promise<{ success: boolean; token?: string; user?: any; type?: string; message?: string; status?: number; forcePasswordChange?: ForcePasswordChange }> {
   try {
     const base = await getBaseUrl();
 
@@ -17,6 +24,15 @@ export async function login(
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+      if ((data as any)?.force_password_change) {
+        return {
+          success: false,
+          message: (data as any)?.msg || 'Primeiro login requer alteração de password',
+          status: response.status,
+          forcePasswordChange: data as ForcePasswordChange,
+        };
+      }
+
       const msg = (data as any)?.msg || (data as any)?.message || `Erro ${response.status}`;
       return { success: false, message: msg, status: response.status };
     }
@@ -38,5 +54,46 @@ export async function login(
   } catch (e: any) {
     const msg = e?.message || 'Falha ao iniciar sessão. Verifique a sua ligação.';
     return { success: false, message: msg };
+  }
+}
+
+export async function updateAngariadorFirstLoginPassword(payload: {
+  email: string;
+  old_password: string;
+  new_password: string;
+}) {
+  const api = await getApi();
+  const res = await api.post('/api/v1/angariadores/first-login/update-password', payload);
+  return res.data;
+}
+
+export async function requestPasswordResetPin(type: 'angariador' | 'tvr', email: string) {
+  const api = await getApi();
+  const path = type === 'tvr' ? '/api/v1/tvr/password/request-pin' : '/api/v1/angariadores/password/request-pin';
+  const res = await api.post(path, { email });
+  return res.data;
+}
+
+export async function resetPasswordWithPin(type: 'angariador' | 'tvr', payload: {
+  email: string;
+  pin: string;
+  new_password: string;
+}) {
+  const api = await getApi();
+  const path = type === 'tvr' ? '/api/v1/tvr/password/reset' : '/api/v1/angariadores/password/reset';
+  const res = await api.post(path, payload);
+  return res.data;
+}
+
+export async function verifyToken(username: string, token: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const api = await getApi();
+    await api.post('/api/v1/auth/verify-token', { username, token });
+    return { success: true };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e?.response?.data?.msg || e?.response?.data?.message || 'Token inválido.',
+    };
   }
 }
