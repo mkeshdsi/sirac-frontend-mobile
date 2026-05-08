@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -12,6 +13,7 @@ const Tab = createBottomTabNavigator();
 
 export const DashboardTabs = () => {
   const { userRole, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
@@ -34,8 +36,8 @@ export const DashboardTabs = () => {
             borderTopColor: Theme.colors.border,
             borderTopWidth: 1,
             elevation: 0,
-            height: 60,
-            paddingBottom: 8,
+            height: 60 + Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 0),
+            paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8),
             paddingTop: 8,
           },
         })}

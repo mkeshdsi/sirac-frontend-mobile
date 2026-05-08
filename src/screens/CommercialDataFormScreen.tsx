@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform, Modal, Image, TextInput, ActivityIndicator } from 'react-native';
 import ReactNative from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Input, Card, Select } from '@/components';
 import SignaturePadModal from '@/components/SignaturePadModal';
@@ -295,6 +296,7 @@ const EstabelecimentosFieldArray: React.FC<{ control: any }> = ({ control }) => 
 
 // ── Main screen ──────────────────────────────────────────
 export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route }) => {
+  const insets = useSafeAreaInsets();
   const { personalData, password } = route.params || {};
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -353,8 +355,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     try {
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
       if (permissionResult.granted === false) { Alert.alert('Permissão negada', 'É necessário conceder permissão para usar a câmera.'); return; }
-      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.1 });
-      if (!result.canceled && result.assets && result.assets[0]?.uri) { setValue('fotografia', result.assets[0].uri); }
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 0.5 });
+      if (!result.canceled && result.assets && result.assets[0]?.uri) { setValue('fotografia', result.assets[0].uri, { shouldDirty: true }); }
     } catch (error) { Alert.alert('Erro', 'Falha ao tirar foto. Tente novamente.'); }
   };
 
@@ -946,7 +948,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
       </Modal>
 
       {/* ── Footer ── */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 18 : 16) }]}>
         <TouchableOpacity
           onPress={handleSubmit(onSubmit, (errs) => {
             try {

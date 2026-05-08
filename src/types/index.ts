@@ -71,6 +71,8 @@ export type RootStackParamList = {
   Success: { registrationId: string };
   AngariadorDataForm: undefined;
   AngariadoresList: undefined;
+  ParceirosList: undefined;
+  TvrsList: undefined;
 };
 export type DashboardTabParamList = {
   Home: undefined;

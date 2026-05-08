@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useLayoutEffect } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, Animated, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef, useLayoutEffect, useCallback } from 'react';
+import { SafeAreaView, View, Text, StyleSheet, Animated, ScrollView, TouchableOpacity, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { CommonActions, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 
 type Nav = StackNavigationProp<RootStackParamList, 'Success'>;
@@ -35,12 +35,32 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
+  const goToDashboard = useCallback(() => {
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Dashboard' }],
+      })
+    );
+  }, [navigation]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => null,
       gestureEnabled: false,
     });
   }, [navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        goToDashboard();
+        return true;
+      });
+
+      return () => subscription.remove();
+    }, [goToDashboard])
+  );
 
   useEffect(() => {
     // Animação de entrada
@@ -168,13 +188,9 @@ export const SuccessScreen: React.FC<Props> = ({ navigation, route }) => {
         { paddingBottom: Math.max(20, insets.bottom + 12) }
       ]}>
         <TouchableOpacity
-          onPress={() => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'CommercialDataForm' }],
-            });
-          }}
+          onPress={goToDashboard}
           style={styles.homeButton}
+          activeOpacity={0.85}
         >
           <Text style={styles.homeButtonText}>Voltar ao Início</Text>
         </TouchableOpacity>
@@ -425,6 +441,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    zIndex: 20,
     padding: 20,
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
@@ -433,7 +450,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 20,
   },
   homeButton: {
     backgroundColor: COLORS.primary,

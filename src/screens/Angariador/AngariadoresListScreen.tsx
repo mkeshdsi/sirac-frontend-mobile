@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Animated, Switch, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Animated, Switch, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import Collapsible from 'react-native-collapsible';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/theme';
-import { getAngariadoresGrouped, toggleAngariadorActive, updateAngariadorPassword } from '@/services/apiResources';
+import { useAuth } from '@/context/AuthContext';
+import { getAngariadoresGrouped, listMyAngariadores, toggleAngariadorActive, updateAngariadorPassword } from '@/services/apiResources';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Input } from '@/components';
 
@@ -101,6 +102,7 @@ const CardItem = ({ item, isExpanded, onToggle, onToggleActive, onOpenPassword }
 };
 
 export const AngariadoresListScreen = ({ navigation }: any) => {
+  const { userRole, userData } = useAuth();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSections, setActiveSections] = useState<number[]>([]);
@@ -117,8 +119,18 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
 
   const fetchData = async () => {
     setLoading(true);
-    const res = await getAngariadoresGrouped();
-    if (res && res.data) setData(res.data);
+    if (userRole === 'tvr') {
+      const meusAngariadores = await listMyAngariadores();
+      setData([{
+        tvr_id: userData?.id || 0,
+        tvr_nome: userData?.nome || userData?.name || 'Meus Angariadores',
+        total_angariadores: meusAngariadores.length,
+        angariadores: meusAngariadores,
+      }]);
+    } else {
+      const res = await getAngariadoresGrouped();
+      if (res && res.data) setData(res.data);
+    }
     setLoading(false);
   };
 
@@ -129,22 +141,25 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
   };
 
   const handleToggleActive = async (angariadorId: number, isActive: boolean) => {
-    setData(prev => prev.map(group => ({
-      ...group,
-      angariadores: group.angariadores.map((ang: any) =>
-        ang.id === angariadorId ? { ...ang, is_active: isActive } : ang
-      ),
-    })));
+    const angariador = data.flatMap(group => group.angariadores || []).find((ang: any) => ang.id === angariadorId);
 
     try {
-      await toggleAngariadorActive(angariadorId, isActive);
-    } catch (e) {
+      const result = await toggleAngariadorActive(angariadorId, isActive);
+      const serverStatus = !!(result?.data?.is_active ?? isActive);
       setData(prev => prev.map(group => ({
         ...group,
         angariadores: group.angariadores.map((ang: any) =>
-          ang.id === angariadorId ? { ...ang, is_active: !isActive } : ang
+          ang.id === angariadorId ? { ...ang, is_active: serverStatus } : ang
         ),
       })));
+      Alert.alert(
+        'Status atualizado',
+        `${angariador?.nome || 'Angariador'} foi marcado como ${serverStatus ? 'Ativo' : 'Inativo'}.`
+      );
+      fetchData();
+    } catch (e) {
+      Alert.alert('Erro', 'Não foi possível alterar o status. A alteração foi revertida.');
+      fetchData();
     }
   };
 

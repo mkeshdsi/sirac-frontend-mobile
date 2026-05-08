@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View, TouchableOpacity, ScrollView, Image, ActivityIndicator, Linking, Modal, Dimensions, Animated } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -126,6 +126,7 @@ const UploadCard = ({ item, isUploaded, uri, onAttach, onRemove, converting }: a
 };
 
 export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => {
+  const insets = useSafeAreaInsets();
   const { commercialData } = route.params;
   const [docs, setDocs] = useState<DocumentsPayload>({});
   const [converting, setConverting] = useState(false);
@@ -179,7 +180,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
   };
 
   const pickImage = async (key: keyof DocumentsPayload) => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: true, aspect: [3, 4] });
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: false });
     if (!res.canceled && res.assets?.[0]?.uri) await processAndSetDoc(key, res.assets[0].uri);
   };
 
@@ -190,7 +191,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
 
   const takePhoto = async (key: keyof DocumentsPayload) => {
     try {
-      const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: true, aspect: [3, 4] });
+      const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: false });
       if (!res.canceled && res.assets?.[0]?.uri) await processAndSetDoc(key, res.assets[0].uri);
     } catch { Alert.alert('Erro', 'Não foi possível abrir a câmera.'); }
   };
@@ -298,7 +299,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
       </ScrollView>
 
       {/* ── Footer ── */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} disabled={converting} activeOpacity={0.8}>
           <Ionicons name="arrow-back-outline" size={18} color={COLORS.primary} />
           <Text style={styles.backBtnText}>Voltar</Text>
@@ -326,7 +327,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
       {/* ── Bottom Sheet Modal ── */}
       <Modal animationType="slide" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setModalVisible(false)}>
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 24) }]}>
             <TouchableOpacity activeOpacity={1}>
               <View style={styles.sheetHandle} />
               <Text style={styles.sheetTitle}>Anexar Documento</Text>

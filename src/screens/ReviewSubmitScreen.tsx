@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
 import { Button, Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -30,6 +31,7 @@ const COLORS = {
 };
 
 export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
+  const insets = useSafeAreaInsets();
   const { commercialData, documents } = route.params;
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -196,7 +198,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: 110 + Math.max(insets.bottom, 16) }]}>
         <View style={styles.summaryCard}>
           <View style={styles.summaryIconContainer}>
             <Ionicons name="document-text" size={32} color={COLORS.primary} />
@@ -269,7 +271,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 18 : 16) }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.btnSecondary}

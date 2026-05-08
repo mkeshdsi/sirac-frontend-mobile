@@ -3,7 +3,7 @@ import {
   View, StyleSheet, ScrollView, Text, KeyboardAvoidingView,
   Platform, TouchableOpacity, Modal, Animated
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input, Card } from '@/components';
 import { Theme } from '@/constants/theme';
@@ -109,6 +109,7 @@ const DocButton = ({ attached, onPress, label, error }: any) => {
 
 // ── Main screen ─────────────────────────────────────────
 export const AngariadorDataFormScreen = ({ navigation }: any) => {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState({ visible: false, title: '', message: '' });
@@ -130,7 +131,7 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 0.5,
       base64: true,
     });
@@ -247,7 +248,7 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
         </ScrollView>
 
         {/* ── Footer ── */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 18 : 16) }]}>
           <TouchableOpacity
             onPress={handleSubmit(onSubmit, onError)}
             disabled={loading}

@@ -15,6 +15,11 @@ async function listResource(api: AxiosInstance, path: string, params?: ListParam
   }
 }
 
+async function listResourceStrict(api: AxiosInstance, path: string, params?: ListParams) {
+  const res = await api.get(path, { params });
+  return Array.isArray(res.data) ? res.data : [];
+}
+
 export async function listEnderecos(params?: ListParams) {
   const api = await getAuthApi();
   return listResource(api, '/api/v1/enderecos/', params);
@@ -40,7 +45,18 @@ export async function listAngariadores(params?: ListParams) {
 
 export async function listParceiros(params?: ListParams) {
   const api = await getAuthApi();
-  return listResource(api, '/api/v1/parceiros/', params);
+  return listResourceStrict(api, '/api/v1/parceiros/', params);
+}
+
+export async function getParceirosGroupedDetailed() {
+  const api = await getAuthApi();
+  const res = await api.get('/api/v1/parceiros/grouped-detailed');
+  return res.data || { users: [], tvrs: [], angariadores: [] };
+}
+
+export async function listTvrs(params?: ListParams) {
+  const api = await getAuthApi();
+  return listResource(api, '/api/v1/tvr/', params);
 }
 
 export async function listValidadores(params?: ListParams) {
@@ -89,6 +105,11 @@ export async function getAngariadoresGrouped() {
     console.error('Error fetching grouped angariadores:', e);
     return { data: [], total_geral: 0 };
   }
+}
+
+export async function listMyAngariadores() {
+  const api = await getAuthApi();
+  return listResource(api, '/api/v1/angariadores/meus');
 }
 
 export async function cadastrarAngariador(payload: any) {

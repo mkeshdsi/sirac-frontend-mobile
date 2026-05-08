@@ -125,6 +125,15 @@ export const DashboardScreen = ({ navigation }: any) => {
             onPress={() => navigation.navigate('CommercialDataForm')}
           />
 
+          {(userRole === 'user' || userRole === 'tvr' || userRole === 'angariador') && (
+            <ActionCard
+              colors={['#0EA5E9', '#0284C7']}
+              icon="list-outline"
+              title={`Lista de\nParceiros`}
+              onPress={() => navigation.navigate('ParceirosList')}
+            />
+          )}
+
           {/* ADMIN + TVR: Cadastrar Angariador */}
           {(userRole === 'user' || userRole === 'tvr') && (
             <ActionCard
@@ -135,13 +144,23 @@ export const DashboardScreen = ({ navigation }: any) => {
             />
           )}
 
-          {/* ADMIN: Lista de Angariadores */}
-          {userRole === 'user' && (
+          {/* ADMIN + TVR: Lista de Angariadores */}
+          {(userRole === 'user' || userRole === 'tvr') && (
             <ActionCard
               colors={['#F59E0B', '#D97706']}
               icon="people-outline"
               title={`Lista de\nAngariadores`}
               onPress={() => navigation.navigate('AngariadoresList')}
+            />
+          )}
+
+          {/* ADMIN: Lista de TVRs */}
+          {userRole === 'user' && (
+            <ActionCard
+              colors={['#6366F1', '#4F46E5']}
+              icon="briefcase-outline"
+              title={`Lista de\nTVRs`}
+              onPress={() => navigation.navigate('TvrsList')}
             />
           )}
 
