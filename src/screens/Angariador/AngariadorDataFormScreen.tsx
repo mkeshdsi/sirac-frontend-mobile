@@ -48,6 +48,7 @@ const schema = yup.object({
 });
 
 type AngariadorForm = yup.InferType<typeof schema>;
+type BiImageField = 'bi_frente' | 'bi_verso';
 
 // ── Section card wrapper ────────────────────────────────
 const SectionCard = ({ icon, iconBg, iconColor, title, children }: any) => (
@@ -113,6 +114,8 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState({ visible: false, title: '', message: '' });
+  const [attachmentModalVisible, setAttachmentModalVisible] = useState(false);
+  const [activeBiField, setActiveBiField] = useState<BiImageField | null>(null);
 
   React.useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -123,7 +126,12 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
     defaultValues: { nome: '', email: '', msisdn: '', bi: '', nuit: '', bi_frente: '', bi_verso: '' },
   });
 
-  const pickImage = async (field: 'bi_frente' | 'bi_verso') => {
+  const setBiImageFromAsset = (field: BiImageField, asset?: ImagePicker.ImagePickerAsset) => {
+    if (!asset?.base64) return;
+    setValue(field, `data:image/jpeg;base64,${asset.base64}`, { shouldValidate: true });
+  };
+
+  const pickImageFromGallery = async (field: BiImageField) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       setShowErrorModal({ visible: true, title: 'Permissão Negada', message: 'Precisamos de permissão para aceder à galeria.' });
@@ -135,9 +143,46 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
       quality: 0.5,
       base64: true,
     });
-    if (!result.canceled && result.assets[0].base64) {
-      setValue(field, `data:image/jpeg;base64,${result.assets[0].base64}`, { shouldValidate: true });
+    if (!result.canceled) {
+      setBiImageFromAsset(field, result.assets[0]);
     }
+  };
+
+  const takePhoto = async (field: BiImageField) => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      setShowErrorModal({ visible: true, title: 'Permissão Negada', message: 'Precisamos de permissão para usar a câmera.' });
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.5,
+        base64: true,
+      });
+      if (!result.canceled) {
+        setBiImageFromAsset(field, result.assets[0]);
+      }
+    } catch {
+      setShowErrorModal({ visible: true, title: 'Erro', message: 'Não foi possível abrir a câmera.' });
+    }
+  };
+
+  const handleAttachmentPress = (field: BiImageField) => {
+    setActiveBiField(field);
+    setAttachmentModalVisible(true);
+  };
+
+  const handleAttachmentAction = async (action: 'camera' | 'gallery') => {
+    setAttachmentModalVisible(false);
+    if (!activeBiField) return;
+    const selectedField = activeBiField;
+    setTimeout(async () => {
+      if (action === 'camera') await takePhoto(selectedField);
+      else await pickImageFromGallery(selectedField);
+    }, 350);
   };
 
   const onSubmit = async (data: AngariadorForm) => {
@@ -238,9 +283,9 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
             <Text style={styles.sectionDescription}>
               Anexe imagens claras da frente e do verso do BI do angariador.
             </Text>
-            <DocButton attached={!!biFrente} onPress={() => pickImage('bi_frente')}
+            <DocButton attached={!!biFrente} onPress={() => handleAttachmentPress('bi_frente')}
               label="Anexar BI Frente *" error={errors.bi_frente?.message} />
-            <DocButton attached={!!biVerso} onPress={() => pickImage('bi_verso')}
+            <DocButton attached={!!biVerso} onPress={() => handleAttachmentPress('bi_verso')}
               label="Anexar BI Verso *" error={errors.bi_verso?.message} />
           </SectionCard>
 
@@ -311,6 +356,43 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* ── Attachment Bottom Sheet ── */}
+      <Modal animationType="slide" transparent visible={attachmentModalVisible} onRequestClose={() => setAttachmentModalVisible(false)}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setAttachmentModalVisible(false)}>
+          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+            <TouchableOpacity activeOpacity={1}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>Anexar Documento</Text>
+              <Text style={styles.sheetSubtitle}>
+                {activeBiField === 'bi_frente' ? 'BI Frente' : 'BI Verso'}
+              </Text>
+
+              <View style={styles.sheetOptions}>
+                <TouchableOpacity style={styles.sheetOption} onPress={() => handleAttachmentAction('camera')} activeOpacity={0.85}>
+                  <LinearGradient colors={[COLORS.primary, '#02a882']} style={styles.sheetOptionIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    <Ionicons name="camera" size={22} color="white" />
+                  </LinearGradient>
+                  <Text style={styles.sheetOptionLabel}>Câmera</Text>
+                  <Text style={styles.sheetOptionHint}>Tirar foto</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.sheetOption} onPress={() => handleAttachmentAction('gallery')} activeOpacity={0.85}>
+                  <View style={[styles.sheetOptionIcon, styles.sheetOptionIconSecondary]}>
+                    <Ionicons name="images" size={22} color="#c49b00" />
+                  </View>
+                  <Text style={styles.sheetOptionLabel}>Galeria</Text>
+                  <Text style={styles.sheetOptionHint}>Da galeria</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={styles.sheetCancel} onPress={() => setAttachmentModalVisible(false)}>
+                <Text style={styles.sheetCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
 
     </SafeAreaView>
@@ -573,4 +655,19 @@ const styles = StyleSheet.create({
     color: 'white',
     letterSpacing: -0.1,
   },
+
+  // ── Bottom sheet ───────────────────────────────────────
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: COLORS.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
+  sheetHandle: { width: 40, height: 4, backgroundColor: COLORS.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  sheetTitle: { fontSize: 20, fontWeight: '800', color: COLORS.text, letterSpacing: -0.4, textAlign: 'center', marginBottom: 4 },
+  sheetSubtitle: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 24 },
+  sheetOptions: { flexDirection: 'row', gap: 14, marginBottom: 24 },
+  sheetOption: { flex: 1, backgroundColor: COLORS.background, borderRadius: 18, paddingVertical: 20, alignItems: 'center', gap: 10, borderWidth: 1, borderColor: COLORS.border },
+  sheetOptionIcon: { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  sheetOptionIconSecondary: { backgroundColor: COLORS.secondaryLight },
+  sheetOptionLabel: { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  sheetOptionHint: { fontSize: 11, color: COLORS.textSecondary, marginTop: -6 },
+  sheetCancel: { paddingVertical: 15, alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.border },
+  sheetCancelText: { fontSize: 15, fontWeight: '700', color: COLORS.error },
 });
