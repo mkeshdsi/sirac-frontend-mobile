@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { changeMyTvrPassword, updateMyAngariadorPassword } from '@/services/apiR
 export const ProfileScreen = () => {
   const { userRole, userData, signOut } = useAuth();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -18,6 +19,7 @@ export const ProfileScreen = () => {
 
   const userContact = userData?.msisdn || userData?.phone_number || userData?.contacto || '';
   const userName = userData?.nome || userData?.name || 'Utilizador';
+  const roleLabel = userRole === 'tvr' ? 'Técnico de Vendas' : userRole === 'angariador' ? 'Angariador' : 'Utilizador';
   const initials = userName
     .split(' ')
     .map((n: string) => n[0])
@@ -26,6 +28,16 @@ export const ProfileScreen = () => {
     .toUpperCase();
 
   const canChangePassword = userRole === 'angariador' || userRole === 'tvr';
+  const profileFields = [
+    { label: 'Nome completo', value: userName, icon: 'person-outline' },
+    { label: 'Perfil', value: roleLabel, icon: 'shield-checkmark-outline' },
+    { label: 'Email', value: userData?.email, icon: 'mail-outline' },
+    { label: 'Contacto', value: userContact, icon: 'call-outline' },
+    { label: 'BI', value: userData?.bi || userData?.documento || userData?.numero_documento, icon: 'id-card-outline' },
+    { label: 'NUIT', value: userData?.nuit, icon: 'document-text-outline' },
+    { label: 'Estado', value: userData?.is_active === false ? 'Inativo' : 'Ativo', icon: 'checkmark-circle-outline' },
+  ].filter((item) => item.value !== undefined && item.value !== null && String(item.value).trim() !== '');
+
   const resetPasswordForm = () => {
     setOldPassword('');
     setNewPassword('');
@@ -109,10 +121,11 @@ export const ProfileScreen = () => {
           <Ionicons name="shield-checkmark-outline" size={20} color={Theme.colors.primary} />
           <Text style={styles.cardLabel}>Conta ativa</Text>
         </View>
-        <View style={styles.card}>
+        <TouchableOpacity style={[styles.card, styles.cardTouchable]} onPress={() => setShowProfileModal(true)} activeOpacity={0.75}>
           <Ionicons name="person-circle-outline" size={20} color={Theme.colors.primary} />
           <Text style={styles.cardLabel}>Perfil completo</Text>
-        </View>
+          <Ionicons name="chevron-forward" size={14} color={Theme.colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Actions */}
@@ -177,6 +190,48 @@ export const ProfileScreen = () => {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={showProfileModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.profileModalCard}>
+            <View style={styles.profileModalHeader}>
+              <View style={styles.profileModalAvatar}>
+                <Text style={styles.profileModalInitials}>{initials}</Text>
+              </View>
+              <View style={styles.profileModalTitleWrap}>
+                <Text style={styles.profileModalTitle}>{userName}</Text>
+                <Text style={styles.profileModalSubtitle}>{roleLabel}</Text>
+              </View>
+              <TouchableOpacity style={styles.closeBtn} onPress={() => setShowProfileModal(false)} activeOpacity={0.75}>
+                <Ionicons name="close" size={20} color={Theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.profileDetails} showsVerticalScrollIndicator={false}>
+              {profileFields.map((item) => (
+                <View key={item.label} style={styles.detailRow}>
+                  <View style={styles.detailIcon}>
+                    <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={18} color={Theme.colors.primary} />
+                  </View>
+                  <View style={styles.detailTextWrap}>
+                    <Text style={styles.detailLabel}>{item.label}</Text>
+                    <Text style={styles.detailValue}>{String(item.value)}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.profileModalButton} onPress={() => setShowProfileModal(false)} activeOpacity={0.8}>
+              <Text style={styles.profileModalButtonText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -277,6 +332,9 @@ const styles = StyleSheet.create({
     color: Theme.colors.textSecondary,
     textAlign: 'center',
   },
+  cardTouchable: {
+    position: 'relative',
+  },
 
   /* Actions */
   actions: {
@@ -371,5 +429,93 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Theme.spacing.md,
     fontWeight: '600',
+  },
+  profileModalCard: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 22,
+    padding: Theme.spacing.lg,
+    maxHeight: '82%',
+  },
+  profileModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.lg,
+    gap: 12,
+  },
+  profileModalAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileModalInitials: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  profileModalTitleWrap: {
+    flex: 1,
+  },
+  profileModalTitle: {
+    ...Theme.typography.h4,
+    color: Theme.colors.textPrimary,
+  },
+  profileModalSubtitle: {
+    ...Theme.typography.body2,
+    color: Theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileDetails: {
+    marginBottom: Theme.spacing.md,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Theme.colors.border,
+    gap: 12,
+  },
+  detailIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailTextWrap: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: Theme.colors.textSecondary,
+    marginBottom: 2,
+  },
+  detailValue: {
+    ...Theme.typography.body,
+    color: Theme.colors.textPrimary,
+    fontWeight: '600',
+  },
+  profileModalButton: {
+    backgroundColor: Theme.colors.primary,
+    borderRadius: Theme.borderRadius.md,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  profileModalButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });
