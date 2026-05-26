@@ -19,9 +19,9 @@ import { listAngariadores, listAprovadores, listValidadores, createAdesao } from
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
-import * as WebBrowser from 'expo-web-browser';
 import * as FileSystem from 'expo-file-system';
 import { LinearGradient } from 'expo-linear-gradient';
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
 type Nav = StackNavigationProp<RootStackParamList, 'CommercialDataForm'>;
 type Route = RouteProp<RootStackParamList, 'CommercialDataForm'>;
@@ -87,6 +87,39 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
 }) as any;
 
 interface Props { navigation: Nav; route: Route }
+
+type SelectedMapPoint = {
+  latitude: number;
+  longitude: number;
+  address?: Location.LocationGeocodedAddress;
+};
+
+type LocationSearchResult = {
+  latitude: number;
+  longitude: number;
+  address?: Location.LocationGeocodedAddress;
+  title: string;
+  subtitle: string;
+};
+
+const DEFAULT_MAP_REGION: Region = {
+  latitude: -25.9667,
+  longitude: 32.5833,
+  latitudeDelta: 0.01,
+  longitudeDelta: 0.01,
+};
+
+const formatAddress = (address?: Location.LocationGeocodedAddress) => {
+  if (!address) return '';
+  return [
+    address.name,
+    address.street,
+    address.district,
+    address.city,
+    address.region,
+    address.country,
+  ].filter(Boolean).join(', ');
+};
 
 // ── Shared section card ──────────────────────────────────
 const SectionCard = ({ emoji, title, children, accent = false }: any) => (
@@ -317,21 +350,79 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   const tipoParceiro = useWatch({ control, name: 'tipoParceiro' });
   const tipoDocumento = useWatch({ control, name: 'tipoDocumento' });
   const fotografiaValue = useWatch({ control, name: 'fotografia' });
+  const latitudeValue = useWatch({ control, name: 'latitude' });
+  const longitudeValue = useWatch({ control, name: 'longitude' });
   const [bankMode, setBankMode] = useState<'lista' | 'outro'>('lista');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Location.LocationGeocodedAddress[]>([]);
+  const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
   const [showSearch, setShowSearch] = useState(false);
-  const [showLocationMethodModal, setShowLocationMethodModal] = useState(false);
-  const [showCoordinateInputModal, setShowCoordinateInputModal] = useState(false);
   const [showCurrentLocationModal, setShowCurrentLocationModal] = useState(false);
   const [showLoadingLocationModal, setShowLoadingLocationModal] = useState(false);
-  const [coordinateInput, setCoordinateInput] = useState('');
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [mapRegion, setMapRegion] = useState<Region>(DEFAULT_MAP_REGION);
+  const [selectedMapPoint, setSelectedMapPoint] = useState<SelectedMapPoint | null>(null);
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState('');
   const [showPermissionDeniedModal, setShowPermissionDeniedModal] = useState(false);
   const [showSuccessLocationModal, setShowSuccessLocationModal] = useState(false);
   const [successLocationMessage, setSuccessLocationMessage] = useState('');
 
   const getCurrentLocation = async () => { setShowCurrentLocationModal(true); };
+
+  const applyAddressToForm = (address?: Location.LocationGeocodedAddress) => {
+    if (!address) return;
+
+    const city = address.city || address.subregion || address.region;
+    const locality = address.district || address.subregion;
+    const street = address.street || address.name;
+    const number = address.streetNumber;
+    const reference = [address.district, address.name].filter(Boolean).join(', ');
+
+    if (city) setValue('enderecoCidade', city, { shouldValidate: true, shouldDirty: true });
+    if (locality) setValue('enderecoLocalidade', locality, { shouldDirty: true });
+    if (street) setValue('enderecoAvenidaRua', street, { shouldDirty: true });
+    if (number) setValue('enderecoNumero', number, { shouldDirty: true });
+    if (reference) setValue('enderecoBairroRef', reference, { shouldDirty: true });
+  };
+
+  const resolveAddress = async (latitude: number, longitude: number) => {
+    try {
+      const [address] = await Location.reverseGeocodeAsync({ latitude, longitude });
+      return address;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const updateSelectedMapPoint = async (latitude: number, longitude: number, shouldMoveMap = false) => {
+    setIsResolvingAddress(true);
+    const address = await resolveAddress(latitude, longitude);
+    setSelectedMapPoint({ latitude, longitude, address });
+    if (shouldMoveMap) {
+      setMapRegion({ latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 });
+    }
+    setIsResolvingAddress(false);
+  };
+
+  const confirmSelectedMapPoint = () => {
+    if (!selectedMapPoint) {
+      setShowErrorModal('Selecione uma localização no mapa antes de confirmar.');
+      return;
+    }
+
+    const { latitude, longitude, address } = selectedMapPoint;
+    setValue('latitude', latitude, { shouldValidate: true, shouldDirty: true });
+    setValue('longitude', longitude, { shouldValidate: true, shouldDirty: true });
+    applyAddressToForm(address);
+    setShowMapPicker(false);
+    setSuccessLocationMessage([
+      'Localização selecionada:',
+      `Lat: ${latitude.toFixed(6)}`,
+      `Lng: ${longitude.toFixed(6)}`,
+      formatAddress(address),
+    ].filter(Boolean).join('\n'));
+    setShowSuccessLocationModal(true);
+  };
 
   const handleGetCurrentLocation = async () => {
     setShowCurrentLocationModal(false);
@@ -340,10 +431,17 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setShowLoadingLocationModal(false); setShowPermissionDeniedModal(true); return; }
       let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setValue('latitude', location.coords.latitude);
-      setValue('longitude', location.coords.longitude);
+      const address = await resolveAddress(location.coords.latitude, location.coords.longitude);
+      setValue('latitude', location.coords.latitude, { shouldValidate: true, shouldDirty: true });
+      setValue('longitude', location.coords.longitude, { shouldValidate: true, shouldDirty: true });
+      applyAddressToForm(address);
       setShowLoadingLocationModal(false);
-      setSuccessLocationMessage(`Localização obtida:\nLat: ${location.coords.latitude.toFixed(6)}\nLng: ${location.coords.longitude.toFixed(6)}`);
+      setSuccessLocationMessage([
+        'Localização obtida:',
+        `Lat: ${location.coords.latitude.toFixed(6)}`,
+        `Lng: ${location.coords.longitude.toFixed(6)}`,
+        formatAddress(address),
+      ].filter(Boolean).join('\n'));
       setShowSuccessLocationModal(true);
     } catch (error) {
       setShowLoadingLocationModal(false);
@@ -364,58 +462,59 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     if (!query.trim()) { setSearchResults([]); return; }
     try {
       const results = await Location.geocodeAsync(query);
-      if (results.length > 0) { const addressResults = await Location.reverseGeocodeAsync(results[0]); setSearchResults(addressResults); }
+      if (results.length > 0) {
+        const mapped = await Promise.all(results.slice(0, 6).map(async (coords) => {
+          const address = await resolveAddress(coords.latitude, coords.longitude);
+          const formatted = formatAddress(address);
+          return {
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            address,
+            title: address?.name || address?.street || query,
+            subtitle: formatted || `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`,
+          };
+        }));
+        setSearchResults(mapped);
+      }
       else { setSearchResults([]); Alert.alert('🔍 Nenhum resultado', 'Nenhuma localização encontrada.'); }
     } catch (error) { Alert.alert('❌ Erro', 'Falha ao pesquisar localizações.'); }
   };
 
-  const selectLocation = (location: Location.LocationGeocodedAddress) => {
-    Location.geocodeAsync(`${location.street}, ${location.city}, ${location.region}`)
-      .then(coords => {
-        if (coords.length > 0) {
-          const { latitude, longitude } = coords[0];
-          setValue('latitude', latitude); setValue('longitude', longitude);
-          setSearchResults([]); setShowSearch(false); setSearchQuery('');
-          setSuccessLocationMessage(`Localização selecionada:\nLat: ${latitude.toFixed(6)}\nLng: ${longitude.toFixed(6)}`);
-          setShowSuccessLocationModal(true);
-        }
-      }).catch(() => Alert.alert('❌ Erro', 'Falha ao obter coordenadas.'));
+  const selectLocation = (location: LocationSearchResult) => {
+    setSearchResults([]);
+    setShowSearch(false);
+    setSearchQuery('');
+    setSelectedMapPoint({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      address: location.address,
+    });
+    setMapRegion({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+    setShowMapPicker(true);
   };
 
   const openMapsForLocation = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setShowPermissionDeniedModal(true); return; }
-      await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setShowLocationMethodModal(true);
-    } catch (error) { setShowErrorModal('Falha ao abrir o Google Maps. Tente novamente.'); }
-  };
-
-  const handleLocationMethod = async (method: 'search' | 'maps') => {
-    setShowLocationMethodModal(false);
-    if (method === 'search') { setShowSearch(true); }
-    else {
-      let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const url = `https://www.google.com/maps/search/?api=1&query=${location.coords.latitude},${location.coords.longitude}&center=${location.coords.latitude},${location.coords.longitude}&zoom=15`;
-      await WebBrowser.openBrowserAsync(url);
-      setTimeout(() => { setShowCoordinateInputModal(true); }, 1000);
-    }
-  };
-
-  const handleCoordinateSubmit = () => {
-    if (coordinateInput) {
-      const cleanedCoords = coordinateInput.replace(/\s/g, '');
-      const [latStr, lngStr] = cleanedCoords.split(',');
-      if (latStr && lngStr) {
-        const lat = parseFloat(latStr); const lng = parseFloat(lngStr);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          setValue('latitude', lat); setValue('longitude', lng);
-          setShowCoordinateInputModal(false); setCoordinateInput('');
-          setSuccessLocationMessage(`Coordenadas definidas:\nLat: ${lat.toFixed(6)}\nLng: ${lng.toFixed(6)}`);
-          setShowSuccessLocationModal(true);
-        } else { setShowErrorModal('Formato de coordenadas inválido. Use: latitude,longitude'); }
-      } else { setShowErrorModal('Formato inválido. Use: latitude,longitude'); }
-    }
+      const savedLat = getValues('latitude');
+      const savedLng = getValues('longitude');
+      if (savedLat && savedLng) {
+        setSelectedMapPoint({ latitude: savedLat, longitude: savedLng });
+        setMapRegion({ latitude: savedLat, longitude: savedLng, latitudeDelta: 0.01, longitudeDelta: 0.01 });
+        setShowMapPicker(true);
+        updateSelectedMapPoint(savedLat, savedLng);
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setShowMapPicker(true);
+      updateSelectedMapPoint(location.coords.latitude, location.coords.longitude, true);
+    } catch (error) { setShowErrorModal('Falha ao abrir o mapa. Tente novamente.'); }
   };
 
   const formatDate = (d: Date) => { const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}/${mm}/${yyyy}`; };
@@ -633,7 +732,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
 
         {/* ── Localização da Banca ── */}
         <SectionCard emoji="🗺️" title="Localização da Banca">
-          {(getValues('latitude') && getValues('longitude')) ? (
+          {(latitudeValue && longitudeValue) ? (
             <View style={styles.coordsCard}>
               <View style={styles.coordsHeader}>
                 <View style={styles.coordsIconWrap}>
@@ -645,12 +744,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
               <View style={styles.coordsBody}>
                 <View style={styles.coordItem}>
                   <Text style={styles.coordLabel}>LATITUDE</Text>
-                  <Text style={styles.coordValue}>{getValues('latitude')?.toFixed(6)}</Text>
+                  <Text style={styles.coordValue}>{latitudeValue?.toFixed(6)}</Text>
                 </View>
                 <View style={styles.coordDivider} />
                 <View style={styles.coordItem}>
                   <Text style={styles.coordLabel}>LONGITUDE</Text>
-                  <Text style={styles.coordValue}>{getValues('longitude')?.toFixed(6)}</Text>
+                  <Text style={styles.coordValue}>{longitudeValue?.toFixed(6)}</Text>
                 </View>
               </View>
             </View>
@@ -672,8 +771,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             <TouchableOpacity onPress={openMapsForLocation} style={styles.locBtn} activeOpacity={0.85}>
               <LinearGradient colors={[COLORS.primary, '#02a882']} style={styles.locBtnInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                 <Ionicons name="map-outline" size={16} color="white" />
-                <Text style={styles.locBtnText}>Abrir Google Maps</Text>
+                <Text style={styles.locBtnText}>Abrir Mapa</Text>
               </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowSearch(true)} style={[styles.locBtn, styles.locBtnOutline]} activeOpacity={0.85}>
+              <Ionicons name="search-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.locBtnTextOutline}>Pesquisar Endereço</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={getCurrentLocation} style={[styles.locBtn, styles.locBtnOutline]} activeOpacity={0.85}>
               <Ionicons name="locate-outline" size={16} color={COLORS.primary} />
@@ -804,8 +907,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
                 {searchResults.map((result, index) => (
                   <TouchableOpacity key={index} style={styles.searchResultItem} onPress={() => selectLocation(result)}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.searchResultTitle}>{result.name || result.street || 'Localização'}</Text>
-                      <Text style={styles.searchResultSub}>{[result.street, result.city, result.region, result.country].filter(Boolean).join(', ')}</Text>
+                      <Text style={styles.searchResultTitle}>{result.title}</Text>
+                      <Text style={styles.searchResultSub}>{result.subtitle}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
                   </TouchableOpacity>
@@ -821,48 +924,71 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
         </View>
       </Modal>
 
-      {/* ── Location Method Modal ── */}
-      <Modal visible={showLocationMethodModal} transparent animationType="fade" onRequestClose={() => setShowLocationMethodModal(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalCardHeader}>
-              <Text style={styles.modalTitle}>📍 Selecionar Localização</Text>
-              <TouchableOpacity onPress={() => setShowLocationMethodModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={[styles.helperText, { marginBottom: 16 }]}>Escolha como deseja selecionar a localização da banca:</Text>
-            <TouchableOpacity onPress={() => handleLocationMethod('search')} style={[styles.btnPrimary, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }]}>
-              <Ionicons name="search-outline" size={18} color="white" />
-              <Text style={styles.btnWhiteText}>Pesquisar Endereço</Text>
+      {/* ── Map Picker Modal ── */}
+      <Modal visible={showMapPicker} animationType="slide" onRequestClose={() => setShowMapPicker(false)}>
+        <SafeAreaView style={styles.mapModalRoot}>
+          <View style={styles.mapModalHeader}>
+            <TouchableOpacity onPress={() => setShowMapPicker(false)} style={styles.mapHeaderBtn}>
+              <Ionicons name="close" size={22} color={COLORS.text} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleLocationMethod('maps')} style={[styles.btnOutline, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }]}>
-              <Ionicons name="map-outline" size={18} color={COLORS.primary} />
-              <Text style={styles.btnPrimaryText}>Usar Google Maps</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.mapModalTitle}>Selecionar Localização</Text>
+              <Text style={styles.mapModalSubtitle}>Toque no mapa ou arraste o marcador</Text>
+            </View>
+            <TouchableOpacity onPress={() => { setShowMapPicker(false); setTimeout(() => setShowSearch(true), 250); }} style={styles.mapHeaderBtn}>
+              <Ionicons name="search-outline" size={22} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
 
-      {/* ── Coordinate Input Modal ── */}
-      <Modal visible={showCoordinateInputModal} transparent animationType="slide" onRequestClose={() => setShowCoordinateInputModal(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalCardHeader}>
-              <Text style={styles.modalTitle}>📍 Inserir Coordenadas</Text>
-              <TouchableOpacity onPress={() => setShowCoordinateInputModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color={COLORS.textSecondary} />
-              </TouchableOpacity>
+          <MapView
+            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            style={styles.mapView}
+            region={mapRegion}
+            showsUserLocation
+            showsMyLocationButton
+            onRegionChangeComplete={setMapRegion}
+            onPress={(event) => {
+              const { latitude, longitude } = event.nativeEvent.coordinate;
+              updateSelectedMapPoint(latitude, longitude);
+            }}
+          >
+            {selectedMapPoint && (
+              <Marker
+                coordinate={{ latitude: selectedMapPoint.latitude, longitude: selectedMapPoint.longitude }}
+                draggable
+                title="Localização da banca"
+                description={formatAddress(selectedMapPoint.address) || 'Ponto selecionado'}
+                onDragEnd={(event) => {
+                  const { latitude, longitude } = event.nativeEvent.coordinate;
+                  updateSelectedMapPoint(latitude, longitude);
+                }}
+              />
+            )}
+          </MapView>
+
+          <View style={styles.mapBottomSheet}>
+            <View style={styles.mapAddressRow}>
+              <Ionicons name="location" size={20} color={COLORS.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.mapAddressTitle}>
+                  {isResolvingAddress ? 'A obter endereço...' : formatAddress(selectedMapPoint?.address) || 'Ponto selecionado'}
+                </Text>
+                <Text style={styles.mapAddressSub}>
+                  {selectedMapPoint ? `${selectedMapPoint.latitude.toFixed(6)}, ${selectedMapPoint.longitude.toFixed(6)}` : 'Selecione um ponto no mapa'}
+                </Text>
+              </View>
             </View>
-            <Text style={[styles.helperText, { marginBottom: 12 }]}>Cole as coordenadas copiadas do Google Maps:</Text>
-            <TextInput style={styles.coordInput} placeholder="Ex: -25.9667,32.5833" value={coordinateInput}
-              onChangeText={setCoordinateInput} keyboardType="numbers-and-punctuation" autoFocus />
-            <View style={[styles.modalActions, { marginTop: 16 }]}>
-              <TouchableOpacity onPress={() => setShowCoordinateInputModal(false)} style={styles.btnOutline}><Text style={styles.btnPrimaryText}>Cancelar</Text></TouchableOpacity>
-              <TouchableOpacity onPress={handleCoordinateSubmit} style={styles.btnPrimary}><Text style={styles.btnWhiteText}>Confirmar</Text></TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={confirmSelectedMapPoint}
+              disabled={!selectedMapPoint}
+              style={[styles.mapConfirmBtn, !selectedMapPoint && styles.mapConfirmBtnDisabled]}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark" size={18} color="white" />
+              <Text style={styles.mapConfirmText}>Confirmar localização</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       {/* ── Error Modal ── */}
@@ -1114,6 +1240,21 @@ const styles = StyleSheet.create({
   loadingCard: { backgroundColor: COLORS.white, borderRadius: 20, padding: 32, minWidth: 260, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
   loadingText: { fontSize: 15, fontWeight: '600', color: COLORS.text, marginTop: 14, textAlign: 'center' },
   loadingSubtext: { fontSize: 13, color: COLORS.textSecondary, marginTop: 6, textAlign: 'center' },
+
+  // ── Map picker ──────────────────────────────────────────
+  mapModalRoot: { flex: 1, backgroundColor: COLORS.white },
+  mapModalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  mapHeaderBtn: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
+  mapModalTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  mapModalSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  mapView: { flex: 1 },
+  mapBottomSheet: { padding: 16, paddingBottom: Platform.OS === 'ios' ? 24 : 16, backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: COLORS.border },
+  mapAddressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
+  mapAddressTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 3 },
+  mapAddressSub: { fontSize: 12, color: COLORS.textSecondary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  mapConfirmBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12, backgroundColor: COLORS.primary },
+  mapConfirmBtnDisabled: { opacity: 0.5 },
+  mapConfirmText: { fontSize: 15, fontWeight: '700', color: COLORS.white },
 
   // ── Footer ──────────────────────────────────────────────
   footer: { padding: 16, paddingBottom: Platform.OS === 'ios' ? 24 : 16, backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: COLORS.border },

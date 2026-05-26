@@ -1,4 +1,6 @@
 // Ensure Expo CLI reads this config and sets web.output to 'static'
+const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
 module.exports = {
   expo: {
     name: 'SIRAC',
@@ -18,6 +20,9 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: 'com.sirac.app',
       buildNumber: '1.0.0',
+      config: {
+        googleMapsApiKey,
+      },
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           'This app needs access to location to get the position of the banca.',
@@ -40,6 +45,11 @@ module.exports = {
         foregroundImage: './logo_png.png',
         backgroundColor: '#FFFFFF',
       },
+      config: {
+        googleMaps: {
+          apiKey: googleMapsApiKey,
+        },
+      },
     },
     web: {
       output: 'single',
@@ -53,6 +63,7 @@ module.exports = {
         projectId: '1d5f13c3-18c6-418b-ad75-9a41e922dc29',
       },
       apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || '',
+      googleMapsApiKey,
     },
   },
 };
