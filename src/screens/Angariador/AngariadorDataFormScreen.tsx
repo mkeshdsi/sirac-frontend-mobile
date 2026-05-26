@@ -140,7 +140,7 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
-      quality: 0.5,
+      quality: 0.2,
       base64: true,
     });
     if (!result.canceled) {
@@ -159,7 +159,7 @@ export const AngariadorDataFormScreen = ({ navigation }: any) => {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
-        quality: 0.5,
+        quality: 0.2,
         base64: true,
       });
       if (!result.canceled) {

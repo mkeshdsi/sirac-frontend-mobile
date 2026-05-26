@@ -49,9 +49,6 @@ export const TvrsListScreen = ({ navigation }: any) => {
             <Text style={styles.headerTitle}>TVRs</Text>
             <Text style={styles.headerSubtitle}>{items.length} técnico(s) de venda registado(s)</Text>
           </View>
-          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('TvrDataForm')} activeOpacity={0.8}>
-            <Ionicons name="add" size={22} color={Theme.colors.primary} />
-          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -103,7 +100,6 @@ const styles = StyleSheet.create({
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerTitle: { fontSize: 28, color: 'white', fontWeight: '800' },
   headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.78)', marginTop: 4 },
-  addBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1, marginTop: -14 },
   content: { padding: 16, paddingTop: 24, paddingBottom: 48 },
   card: { flexDirection: 'row', backgroundColor: 'white', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: Theme.colors.border, elevation: 2 },
