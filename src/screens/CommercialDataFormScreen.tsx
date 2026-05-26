@@ -362,6 +362,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   const [mapRegion, setMapRegion] = useState<Region>(DEFAULT_MAP_REGION);
   const [selectedMapPoint, setSelectedMapPoint] = useState<SelectedMapPoint | null>(null);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  const [canShowUserLocation, setCanShowUserLocation] = useState(false);
+  const [mapStatusMessage, setMapStatusMessage] = useState('');
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [searchMessage, setSearchMessage] = useState('');
   const [showErrorModal, setShowErrorModal] = useState('');
   const [showPermissionDeniedModal, setShowPermissionDeniedModal] = useState(false);
   const [showSuccessLocationModal, setShowSuccessLocationModal] = useState(false);
@@ -402,6 +406,22 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
       setMapRegion({ latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 });
     }
     setIsResolvingAddress(false);
+  };
+
+  const ensureLocationServices = async () => {
+    let enabled = await Location.hasServicesEnabledAsync();
+
+    if (!enabled && Platform.OS === 'android') {
+      try {
+        await Location.enableNetworkProviderAsync();
+        enabled = await Location.hasServicesEnabledAsync();
+      } catch {
+        enabled = false;
+      }
+    }
+
+    setCanShowUserLocation(enabled);
+    return enabled;
   };
 
   const confirmSelectedMapPoint = () => {
@@ -459,9 +479,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   };
 
   const searchLocations = async (query: string) => {
-    if (!query.trim()) { setSearchResults([]); return; }
+    const cleanedQuery = query.trim();
+    if (!cleanedQuery) { setSearchResults([]); setSearchMessage(''); return; }
+    setIsSearchingLocation(true);
+    setSearchMessage('');
     try {
-      const results = await Location.geocodeAsync(query);
+      const results = await Location.geocodeAsync(cleanedQuery);
       if (results.length > 0) {
         const mapped = await Promise.all(results.slice(0, 6).map(async (coords) => {
           const address = await resolveAddress(coords.latitude, coords.longitude);
@@ -470,14 +493,23 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             latitude: coords.latitude,
             longitude: coords.longitude,
             address,
-            title: address?.name || address?.street || query,
+            title: address?.name || address?.street || cleanedQuery,
             subtitle: formatted || `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`,
           };
         }));
         setSearchResults(mapped);
+        setSearchMessage('');
       }
-      else { setSearchResults([]); Alert.alert('🔍 Nenhum resultado', 'Nenhuma localização encontrada.'); }
-    } catch (error) { Alert.alert('❌ Erro', 'Falha ao pesquisar localizações.'); }
+      else {
+        setSearchResults([]);
+        setSearchMessage('Nenhum resultado encontrado.');
+      }
+    } catch (error) {
+      setSearchResults([]);
+      setSearchMessage('Não foi possível pesquisar agora. Continue digitando ou tente outro endereço.');
+    } finally {
+      setIsSearchingLocation(false);
+    }
   };
 
   const selectLocation = (location: LocationSearchResult) => {
@@ -502,19 +534,34 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setShowPermissionDeniedModal(true); return; }
+
+      setMapStatusMessage('');
+      setShowMapPicker(true);
+
       const savedLat = getValues('latitude');
       const savedLng = getValues('longitude');
       if (savedLat && savedLng) {
         setSelectedMapPoint({ latitude: savedLat, longitude: savedLng });
         setMapRegion({ latitude: savedLat, longitude: savedLng, latitudeDelta: 0.01, longitudeDelta: 0.01 });
-        setShowMapPicker(true);
         updateSelectedMapPoint(savedLat, savedLng);
         return;
       }
+
+      setMapRegion(DEFAULT_MAP_REGION);
+      setSelectedMapPoint(null);
+      const servicesEnabled = await ensureLocationServices();
+      if (!servicesEnabled) {
+        setMapStatusMessage('Localização do telefone desligada. O mapa abriu em Maputo; ative o GPS ou pesquise o endereço.');
+        return;
+      }
+
       const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setShowMapPicker(true);
       updateSelectedMapPoint(location.coords.latitude, location.coords.longitude, true);
-    } catch (error) { setShowErrorModal('Falha ao abrir o mapa. Tente novamente.'); }
+    } catch (error) {
+      setCanShowUserLocation(false);
+      setMapStatusMessage('Não foi possível obter a localização atual. Pode selecionar no mapa ou pesquisar o endereço.');
+      setShowMapPicker(true);
+    }
   };
 
   const formatDate = (d: Date) => { const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}/${mm}/${yyyy}`; };
@@ -528,6 +575,23 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     if (tipoParceiro === 'MERCHANT') { const current = getValues('tipoEmpresa'); if (!current) setValue('tipoEmpresa', 'SOCIEDADE', { shouldValidate: true }); }
     else setValue('tipoEmpresa', undefined as any, { shouldValidate: false });
   }, [tipoParceiro]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 3) {
+      setSearchResults([]);
+      setSearchMessage(query.length > 0 ? 'Digite pelo menos 3 caracteres.' : '');
+      setIsSearchingLocation(false);
+      return;
+    }
+
+    setIsSearchingLocation(true);
+    const timeout = setTimeout(() => {
+      searchLocations(query);
+    }, 700);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   const onSubmit = async (data: CommercialData) => {
     try { setIsLoading(true); navigation.navigate('DocumentUpload', { ...route.params, commercialData: data }); }
@@ -900,8 +964,14 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             <View style={styles.searchInputWrap}>
               <Ionicons name="search-outline" size={18} color={COLORS.textSecondary} style={{ marginRight: 8 }} />
               <TextInput style={styles.searchInput} placeholder="Digite o endereço ou nome do local"
-                value={searchQuery} onChangeText={(text: string) => { setSearchQuery(text); if (text.length > 2) searchLocations(text); else setSearchResults([]); }} />
+                value={searchQuery} onChangeText={setSearchQuery} />
             </View>
+            {isSearchingLocation && (
+              <View style={styles.searchStateRow}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.searchStateText}>A pesquisar...</Text>
+              </View>
+            )}
             {searchResults.length > 0 && (
               <ScrollView style={{ maxHeight: 280 }}>
                 {searchResults.map((result, index) => (
@@ -915,9 +985,9 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
                 ))}
               </ScrollView>
             )}
-            {searchQuery.length > 0 && searchResults.length === 0 && (
+            {!!searchMessage && !isSearchingLocation && searchResults.length === 0 && (
               <View style={{ padding: 20, alignItems: 'center' }}>
-                <Text style={styles.helperText}>Nenhum resultado encontrado</Text>
+                <Text style={styles.helperText}>{searchMessage}</Text>
               </View>
             )}
           </View>
@@ -943,9 +1013,13 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
           <MapView
             provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
             style={styles.mapView}
+            initialRegion={DEFAULT_MAP_REGION}
             region={mapRegion}
-            showsUserLocation
-            showsMyLocationButton
+            loadingEnabled
+            loadingIndicatorColor={COLORS.primary}
+            loadingBackgroundColor={COLORS.background}
+            showsUserLocation={canShowUserLocation}
+            showsMyLocationButton={canShowUserLocation}
             onRegionChangeComplete={setMapRegion}
             onPress={(event) => {
               const { latitude, longitude } = event.nativeEvent.coordinate;
@@ -967,6 +1041,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
           </MapView>
 
           <View style={styles.mapBottomSheet}>
+            {!!mapStatusMessage && (
+              <View style={styles.mapNotice}>
+                <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
+                <Text style={styles.mapNoticeText}>{mapStatusMessage}</Text>
+              </View>
+            )}
             <View style={styles.mapAddressRow}>
               <Ionicons name="location" size={20} color={COLORS.primary} />
               <View style={{ flex: 1 }}>
@@ -1228,6 +1308,8 @@ const styles = StyleSheet.create({
   // ── Search ───────────────────────────────────────────────
   searchInputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.background, borderRadius: 11, paddingHorizontal: 12, marginBottom: 14, borderWidth: 1, borderColor: COLORS.border },
   searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: COLORS.text },
+  searchStateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
+  searchStateText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
   searchResultItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   searchResultTitle: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: 3 },
   searchResultSub: { fontSize: 12, color: COLORS.textSecondary },
@@ -1249,6 +1331,8 @@ const styles = StyleSheet.create({
   mapModalSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   mapView: { flex: 1 },
   mapBottomSheet: { padding: 16, paddingBottom: Platform.OS === 'ios' ? 24 : 16, backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: COLORS.border },
+  mapNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10, borderRadius: 11, backgroundColor: COLORS.primaryLight, marginBottom: 10 },
+  mapNoticeText: { flex: 1, fontSize: 12, lineHeight: 17, color: COLORS.primary, fontWeight: '600' },
   mapAddressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
   mapAddressTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 3 },
   mapAddressSub: { fontSize: 12, color: COLORS.textSecondary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
