@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,9 +17,11 @@ export const TvrsListScreen = ({ navigation }: any) => {
     setItems(data);
   };
 
-  useEffect(() => {
-    fetchData().finally(() => setLoading(false));
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchData().finally(() => setLoading(false));
+    }, [])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -41,8 +44,15 @@ export const TvrsListScreen = ({ navigation }: any) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.75}>
           <Ionicons name="arrow-back" size={22} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>TVRs</Text>
-        <Text style={styles.headerSubtitle}>{items.length} técnico(s) de venda registado(s)</Text>
+        <View style={styles.headerTitleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>TVRs</Text>
+            <Text style={styles.headerSubtitle}>{items.length} técnico(s) de venda registado(s)</Text>
+          </View>
+          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('TvrDataForm')} activeOpacity={0.8}>
+            <Ionicons name="add" size={22} color={Theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
       <ScrollView
@@ -90,8 +100,10 @@ const styles = StyleSheet.create({
   loadingText: { color: Theme.colors.textSecondary, fontSize: 14 },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerTitle: { fontSize: 28, color: 'white', fontWeight: '800' },
   headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.78)', marginTop: 4 },
+  addBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1, marginTop: -14 },
   content: { padding: 16, paddingTop: 24, paddingBottom: 48 },
   card: { flexDirection: 'row', backgroundColor: 'white', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: Theme.colors.border, elevation: 2 },

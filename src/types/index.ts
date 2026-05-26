@@ -72,6 +72,7 @@ export type RootStackParamList = {
   AngariadorDataForm: undefined;
   AngariadoresList: undefined;
   ParceirosList: undefined;
+  TvrDataForm: undefined;
   TvrsList: undefined;
 };
 export type DashboardTabParamList = {

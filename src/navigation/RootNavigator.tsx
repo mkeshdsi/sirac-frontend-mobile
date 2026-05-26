@@ -23,6 +23,7 @@ import { PasswordCreationScreen } from '@/screens/PasswordCreationScreen';
 import { AngariadorDataFormScreen } from '@/screens/Angariador/AngariadorDataFormScreen';
 import { AngariadoresListScreen } from '@/screens/Angariador/AngariadoresListScreen';
 import { ParceirosListScreen } from '@/screens/ParceirosListScreen';
+import { TvrDataFormScreen } from '@/screens/TvrDataFormScreen';
 import { TvrsListScreen } from '@/screens/TvrsListScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -66,6 +67,7 @@ export const RootNavigator = () => {
           <Stack.Screen name="AngariadorDataForm" component={AngariadorDataFormScreen} options={{ title: 'Novo Angariador' }} />
           <Stack.Screen name="AngariadoresList" component={AngariadoresListScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ParceirosList" component={ParceirosListScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="TvrDataForm" component={TvrDataFormScreen} options={{ headerShown: false }} />
           <Stack.Screen name="TvrsList" component={TvrsListScreen} options={{ headerShown: false }} />
         </>
       )}

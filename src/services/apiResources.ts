@@ -59,6 +59,12 @@ export async function listTvrs(params?: ListParams) {
   return listResource(api, '/api/v1/tvr/', params);
 }
 
+export async function cadastrarTvr(payload: any) {
+  const api = await getAuthApi();
+  const res = await api.post('/api/v1/tvr/', payload);
+  return res.data;
+}
+
 export async function listValidadores(params?: ListParams) {
   return listUsersByType('Validador', params);
 }

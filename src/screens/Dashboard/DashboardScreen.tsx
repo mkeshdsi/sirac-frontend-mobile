@@ -157,6 +157,15 @@ export const DashboardScreen = ({ navigation }: any) => {
           {/* ADMIN: Lista de TVRs */}
           {userRole === 'user' && (
             <ActionCard
+              colors={['#8B5CF6', '#6D28D9']}
+              icon="briefcase-outline"
+              title={`Cadastrar\nTVR`}
+              onPress={() => navigation.navigate('TvrDataForm')}
+            />
+          )}
+
+          {userRole === 'user' && (
+            <ActionCard
               colors={['#6366F1', '#4F46E5']}
               icon="briefcase-outline"
               title={`Lista de\nTVRs`}
