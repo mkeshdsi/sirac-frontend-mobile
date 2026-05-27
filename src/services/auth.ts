@@ -3,12 +3,13 @@ import { getApi, getBaseUrl, setAuthToken, setItem } from '@/config/api';
 export type ForcePasswordChange = {
   angariador_id: number;
   email: string;
+  msisdn?: string;
   force_password_change: true;
   msg?: string;
 };
 
 export async function login(
-  email: string,
+  msisdn: string,
   password: string
 ): Promise<{ success: boolean; token?: string; user?: any; type?: string; message?: string; status?: number; forcePasswordChange?: ForcePasswordChange }> {
   try {
@@ -18,7 +19,7 @@ export async function login(
     const response = await fetch(`${base}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, device_name: 'sirac-mobile' }),
+      body: JSON.stringify({ msisdn, contacto: msisdn, password, device_name: 'sirac-mobile' }),
     });
 
     const data = await response.json().catch(() => ({}));

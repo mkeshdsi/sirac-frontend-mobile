@@ -23,23 +23,32 @@ type Nav = StackNavigationProp<RootStackParamList, 'Login'>;
 interface Props { navigation: Nav }
 
 export const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [username, setUsername] = useState('');
+  const [contact, setContact] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
+  const normalizedContact = contact.replace(/\D/g, '');
+  const isTmcelContact = /^(82|83)\d{7}$/.test(normalizedContact);
 
   const onSubmit = async () => {
     setError('');
+
+    if (!isTmcelContact) {
+      setError('Informe um contacto Tmcel válido: 82/83 + 7 dígitos.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await login(username.trim(), password);
+      const res = await login(normalizedContact, password);
       if (res.forcePasswordChange) {
         navigation.navigate('FirstLoginPasswordChange', {
           email: res.forcePasswordChange.email,
           oldPassword: password,
           angariadorId: res.forcePasswordChange.angariador_id,
+          msisdn: res.forcePasswordChange.msisdn,
         });
         return;
       }
@@ -60,7 +69,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const isFormValid = username.trim().length > 0 && password.length > 0;
+  const isFormValid = isTmcelContact && password.length > 0;
 
   return (
     <>
@@ -96,15 +105,16 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             
             <View style={styles.inputContainer}>
               <Input
-                label="Email"
-                placeholder="exemplo@email.com"
+                label="Contacto Tmcel"
+                placeholder="82xxxxxxx ou 83xxxxxxx"
                 autoCapitalize="none"
                 autoCorrect={false}
-                keyboardType="email-address"
-                value={username}
-                onChangeText={setUsername}
+                keyboardType="phone-pad"
+                maxLength={9}
+                value={contact}
+                onChangeText={(text) => setContact(text.replace(/\D/g, '').slice(0, 9))}
                 required
-                leftIcon={<Ionicons name="person-outline" size={20} color={Theme.colors.textSecondary} />}
+                leftIcon={<Ionicons name="call-outline" size={20} color={Theme.colors.textSecondary} />}
               />
             </View>
 

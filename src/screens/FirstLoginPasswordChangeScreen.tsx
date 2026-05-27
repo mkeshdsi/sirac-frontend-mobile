@@ -28,7 +28,7 @@ interface Props {
 }
 
 export const FirstLoginPasswordChangeScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { email, oldPassword } = route.params;
+  const { email, oldPassword, msisdn } = route.params;
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -87,7 +87,7 @@ export const FirstLoginPasswordChangeScreen: React.FC<Props> = ({ navigation, ro
 
           <Text style={styles.title}>Primeiro Login</Text>
 
-          <Input label="Email" value={email} editable={false} leftIcon={<Ionicons name="mail-outline" size={20} color={Theme.colors.textSecondary} />} />
+          <Input label="Contacto Tmcel" value={msisdn?.replace(/^258/, '') || ''} editable={false} leftIcon={<Ionicons name="call-outline" size={20} color={Theme.colors.textSecondary} />} />
           <Input
             label="Nova palavra-passe"
             placeholder="Digite a nova palavra-passe"

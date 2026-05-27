@@ -3,7 +3,7 @@ const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 module.exports = {
   expo: {
-    name: 'SIRAC',
+    name: 'Agente mkesh',
     slug: 'sirac',
     version: '1.0.0',
     orientation: 'portrait',
@@ -42,7 +42,7 @@ module.exports = {
         'android.permission.READ_EXTERNAL_STORAGE',
       ],
       adaptiveIcon: {
-        foregroundImage: './logo_png.png',
+        foregroundImage: './assets/logomkesh-adaptive-icon.png',
         backgroundColor: '#FFFFFF',
       },
       config: {
@@ -54,7 +54,7 @@ module.exports = {
     web: {
       output: 'single',
     },
-    icon: './logo_png.png',
+    icon: './assets/logomkesh-icon.png',
     plugins: [
       './plugins/withNetworkSecurityConfig',
     ],

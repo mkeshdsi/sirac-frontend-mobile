@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "SIRAC",
+    "name": "Agente mkesh",
     "slug": "sirac",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -26,7 +26,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./logo_png.png",
+        "foregroundImage": "./assets/logomkesh-adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
       "usesCleartextTraffic": true,
@@ -40,7 +40,7 @@
         "android.permission.READ_EXTERNAL_STORAGE"
       ]
     },
-    "icon": "./logo_png.png",
+    "icon": "./assets/logomkesh-icon.png",
     "web": {
       "output": "single"
     }
