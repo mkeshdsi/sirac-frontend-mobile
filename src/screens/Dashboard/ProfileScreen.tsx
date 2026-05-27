@@ -124,7 +124,6 @@ export const ProfileScreen = () => {
         <TouchableOpacity style={[styles.card, styles.cardTouchable]} onPress={() => setShowProfileModal(true)} activeOpacity={0.75}>
           <Ionicons name="person-circle-outline" size={20} color={Theme.colors.primary} />
           <Text style={styles.cardLabel}>Perfil completo</Text>
-          <Ionicons name="chevron-forward" size={14} color={Theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
