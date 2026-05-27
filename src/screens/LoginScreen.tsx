@@ -40,7 +40,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     setError('');
 
     if (!isIdentifierValid) {
-      setError('Informe um email válido ou contacto Tmcel: 82/83 + 7 dígitos.');
+      setError('Colaborador deve usar email. Angariador ou TVR deve usar contacto Tmcel: 82/83 + 7 dígitos.');
       return;
     }
 
@@ -110,7 +110,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.inputContainer}>
               <Input
                 label="Email ou contacto"
-                placeholder="email@dominio.com ou 82xxxxxxx"
+                placeholder="Colaborador: email | TVR/Angariador: 82xxxxxxx"
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
