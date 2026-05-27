@@ -43,7 +43,7 @@ module.exports = {
       ],
       adaptiveIcon: {
         foregroundImage: './assets/logomkesh-adaptive-icon.png',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#F8D500',
       },
       config: {
         googleMaps: {

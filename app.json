@@ -27,7 +27,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/logomkesh-adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#F8D500"
       },
       "usesCleartextTraffic": true,
       "package": "com.sirac.app",
