@@ -18,13 +18,19 @@ Este guia explica como gerar o AAB, preencher o Google Play Console e publicar a
 
 Build AAB atualizado para upload na Google Play:
 
-https://expo.dev/artifacts/eas/iLbEd6zJLsThXSTeWuT2SA.aab
+https://expo.dev/artifacts/eas/eeEgUjvQuZfn3RCsLVERgD.aab
 
 Pagina do build no EAS:
 
-https://expo.dev/accounts/emabecuane/projects/sirac/builds/8fd6a6dc-4e5b-478a-9a0e-d6a5685814d2
+https://expo.dev/accounts/emabecuane/projects/sirac/builds/6b2f0f13-3c6c-472f-b372-3559b7918aaf
 
 Data do build: 2026-05-27
+
+APK atualizado para instalacao direta fora da Play Store:
+
+https://expo.dev/accounts/emabecuane/projects/sirac/builds/03ab7d44-9257-4c5d-a721-a33724302406
+
+Observacao: o AAB atual foi gerado com `versionCode 2`, incrementado automaticamente pelo EAS.
 
 ## Antes de publicar
 
@@ -58,6 +64,8 @@ npx eas-cli build --profile production --platform android --non-interactive
 ```
 
 O perfil `production` em `eas.json` ja gera `app-bundle`, que e o formato `.aab` exigido pela Google Play.
+
+O perfil `production` tambem usa `autoIncrement: true`. Isto e importante porque a Google Play so aceita uma atualizacao quando o novo AAB tem `versionCode` maior que o AAB anterior.
 
 Se quiser gerar APK para instalacao direta fora da Play Store:
 
@@ -300,7 +308,7 @@ No Play Console:
 4. Faca upload do `.aab`:
 
 ```text
-https://expo.dev/artifacts/eas/iLbEd6zJLsThXSTeWuT2SA.aab
+https://expo.dev/artifacts/eas/eeEgUjvQuZfn3RCsLVERgD.aab
 ```
 
 5. Preencha release notes.
@@ -339,6 +347,15 @@ Depois dos testes:
 A revisao da Google pode demorar de horas a dias, especialmente na primeira publicacao.
 
 ## Atualizacoes futuras
+
+A Google Play so mostra uma nova atualizacao para os utilizadores quando:
+
+- um novo AAB e enviado no Play Console;
+- o novo AAB tem `versionCode` maior;
+- a release e aprovada pela Google;
+- a release e publicada em producao ou promovida para a faixa usada pelos utilizadores.
+
+Se publicar apenas uma OTA pelo EAS Update, a Play Store nao mostra o botao `Atualizar`. Nesse caso, a app instalada baixa a atualizacao internamente ao abrir, desde que esteja no mesmo canal/runtime.
 
 Para alteracoes nativas, como:
 
