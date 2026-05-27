@@ -2,8 +2,6 @@
   "extends": "expo/tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
-    "ignoreDeprecations": "5.0",
-    "baseUrl": ".",
     "skipLibCheck": true,
     "types": [
       "react",
