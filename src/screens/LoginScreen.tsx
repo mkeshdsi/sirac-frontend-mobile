@@ -23,26 +23,31 @@ type Nav = StackNavigationProp<RootStackParamList, 'Login'>;
 interface Props { navigation: Nav }
 
 export const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [contact, setContact] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
-  const normalizedContact = contact.replace(/\D/g, '');
+  const normalizedIdentifier = identifier.trim();
+  const normalizedContact = normalizedIdentifier.replace(/\D/g, '');
+  const isEmailIdentifier = normalizedIdentifier.includes('@');
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedIdentifier.toLowerCase());
   const isTmcelContact = /^(82|83)\d{7}$/.test(normalizedContact);
+  const isIdentifierValid = isEmailIdentifier ? isEmailValid : isTmcelContact;
 
   const onSubmit = async () => {
     setError('');
 
-    if (!isTmcelContact) {
-      setError('Informe um contacto Tmcel válido: 82/83 + 7 dígitos.');
+    if (!isIdentifierValid) {
+      setError('Informe um email válido ou contacto Tmcel: 82/83 + 7 dígitos.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await login(normalizedContact, password);
+      const loginIdentifier = isEmailIdentifier ? normalizedIdentifier.toLowerCase() : normalizedContact;
+      const res = await login(loginIdentifier, password);
       if (res.forcePasswordChange) {
         navigation.navigate('FirstLoginPasswordChange', {
           oldPassword: password,
@@ -68,7 +73,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const isFormValid = isTmcelContact && password.length > 0;
+  const isFormValid = isIdentifierValid && password.length > 0;
 
   return (
     <>
@@ -104,16 +109,15 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             
             <View style={styles.inputContainer}>
               <Input
-                label="Contacto Tmcel"
-                placeholder="82xxxxxxx ou 83xxxxxxx"
+                label="Email ou contacto"
+                placeholder="email@dominio.com ou 82xxxxxxx"
                 autoCapitalize="none"
                 autoCorrect={false}
-                keyboardType="phone-pad"
-                maxLength={9}
-                value={contact}
-                onChangeText={(text) => setContact(text.replace(/\D/g, '').slice(0, 9))}
+                keyboardType="email-address"
+                value={identifier}
+                onChangeText={setIdentifier}
                 required
-                leftIcon={<Ionicons name="call-outline" size={20} color={Theme.colors.textSecondary} />}
+                leftIcon={<Ionicons name={isEmailIdentifier ? 'mail-outline' : 'person-outline'} size={20} color={Theme.colors.textSecondary} />}
               />
             </View>
 

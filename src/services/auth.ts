@@ -8,17 +8,23 @@ export type ForcePasswordChange = {
 };
 
 export async function login(
-  msisdn: string,
+  identifier: string,
   password: string
 ): Promise<{ success: boolean; token?: string; user?: any; type?: string; message?: string; status?: number; forcePasswordChange?: ForcePasswordChange }> {
   try {
     const base = await getBaseUrl();
+    const normalizedIdentifier = identifier.trim();
+    const isEmail = normalizedIdentifier.includes('@');
+    const credentials =
+      isEmail
+        ? { email: normalizedIdentifier.toLowerCase() }
+        : { msisdn: normalizedIdentifier.replace(/\D/g, ''), contacto: normalizedIdentifier.replace(/\D/g, '') };
 
     // Direct fetch call - more reliable than axios in some Android builds
     const response = await fetch(`${base}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ msisdn, contacto: msisdn, password, device_name: 'sirac-mobile' }),
+      body: JSON.stringify({ ...credentials, password, device_name: 'sirac-mobile' }),
     });
 
     const data = await response.json().catch(() => ({}));
