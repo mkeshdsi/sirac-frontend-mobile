@@ -51,7 +51,7 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
               <View style={styles.welcomeIconContainer}>
                 <Text style={styles.welcomeIcon}>👋</Text>
               </View>
-              <Text style={styles.cardTitle}>Bem-vindo ao SIRAC</Text>
+              <Text style={styles.cardTitle}>Bem-vindo ao Agente mkesh</Text>
             </View>
             
             <Text style={styles.cardDescription}>
@@ -88,7 +88,7 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Versão 1.0 • © 2025 SIRAC
+              Versão 1.0 • © 2025 Agente mkesh
             </Text>
           </View>
         </ScrollView>

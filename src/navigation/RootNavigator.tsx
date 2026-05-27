@@ -55,7 +55,7 @@ export const RootNavigator = () => {
       ) : (
         // Private Flow
         <>
-          <Stack.Screen name="Dashboard" component={DashboardTabs} options={{ headerShown: false, title: 'SIRAC' }} />
+          <Stack.Screen name="Dashboard" component={DashboardTabs} options={{ headerShown: false, title: 'Agente mkesh' }} />
           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="PasswordCreation" component={PasswordCreationScreen} options={{ headerShown: false }} />
           <Stack.Screen name="PersonalDataForm" component={PersonalDataFormScreen} options={{ headerShown: false }} />
