@@ -45,7 +45,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       const res = await login(normalizedContact, password);
       if (res.forcePasswordChange) {
         navigation.navigate('FirstLoginPasswordChange', {
-          email: res.forcePasswordChange.email,
           oldPassword: password,
           angariadorId: res.forcePasswordChange.angariador_id,
           msisdn: res.forcePasswordChange.msisdn,

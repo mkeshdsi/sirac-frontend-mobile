@@ -55,9 +55,9 @@ export interface DocumentsPayload {
 
 export type RootStackParamList = {
   Login: undefined;
-  FirstLoginPasswordChange: { email: string; oldPassword: string; angariadorId: number; msisdn?: string };
+  FirstLoginPasswordChange: { oldPassword: string; angariadorId: number; msisdn: string };
   ForgotPassword: undefined;
-  ResetPassword: { email: string; accountType: 'angariador' | 'tvr' };
+  ResetPassword: { msisdn: string; accountType: 'angariador' | 'tvr' };
   TokenVerification: { username: string; maskedDestination: string };
   Dashboard: undefined; // The nested tab navigator
   ApiConfig: undefined;

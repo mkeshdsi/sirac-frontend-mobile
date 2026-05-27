@@ -2,8 +2,7 @@ import { getApi, getBaseUrl, setAuthToken, setItem } from '@/config/api';
 
 export type ForcePasswordChange = {
   angariador_id: number;
-  email: string;
-  msisdn?: string;
+  msisdn: string;
   force_password_change: true;
   msg?: string;
 };
@@ -59,7 +58,7 @@ export async function login(
 }
 
 export async function updateAngariadorFirstLoginPassword(payload: {
-  email: string;
+  msisdn: string;
   old_password: string;
   new_password: string;
 }) {
@@ -68,15 +67,15 @@ export async function updateAngariadorFirstLoginPassword(payload: {
   return res.data;
 }
 
-export async function requestPasswordResetPin(type: 'angariador' | 'tvr', email: string) {
+export async function requestPasswordResetPin(type: 'angariador' | 'tvr', msisdn: string) {
   const api = await getApi();
   const path = type === 'tvr' ? '/api/v1/tvr/password/request-pin' : '/api/v1/angariadores/password/request-pin';
-  const res = await api.post(path, { email });
+  const res = await api.post(path, { msisdn, contacto: msisdn });
   return res.data;
 }
 
 export async function resetPasswordWithPin(type: 'angariador' | 'tvr', payload: {
-  email: string;
+  msisdn: string;
   pin: string;
   new_password: string;
 }) {

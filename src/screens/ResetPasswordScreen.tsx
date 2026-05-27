@@ -28,7 +28,7 @@ interface Props {
 }
 
 export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { email, accountType } = route.params;
+  const { msisdn, accountType } = route.params;
   const [pin, setPin] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,7 +50,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     setLoading(true);
     try {
       await resetPasswordWithPin(accountType, {
-        email,
+        msisdn,
         pin: pin.trim(),
         new_password: newPassword,
       });
@@ -83,7 +83,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
         <ScrollView style={styles.formContainer} contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
           <View style={styles.notice}>
             <Ionicons name="shield-checkmark-outline" size={18} color={Theme.colors.primary} />
-            <Text style={styles.noticeText}>{accountType === 'tvr' ? 'TVR' : 'Angariador'}: {email}</Text>
+            <Text style={styles.noticeText}>{accountType === 'tvr' ? 'TVR' : 'Angariador'}: {msisdn}</Text>
           </View>
 
           <Input

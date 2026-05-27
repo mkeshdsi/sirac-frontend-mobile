@@ -26,17 +26,24 @@ interface Props {
 }
 
 export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+  const [contact, setContact] = useState('');
   const [accountType, setAccountType] = useState<AccountType>('angariador');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const normalizedContact = contact.replace(/\D/g, '');
+  const isTmcelContact = /^(82|83)\d{7}$/.test(normalizedContact);
 
   const onSubmit = async () => {
     setError('');
+    if (!isTmcelContact) {
+      setError('Informe um contacto Tmcel válido: 82/83 + 7 dígitos.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await requestPasswordResetPin(accountType, email.trim());
-      navigation.navigate('ResetPassword', { email: email.trim(), accountType });
+      await requestPasswordResetPin(accountType, normalizedContact);
+      navigation.navigate('ResetPassword', { msisdn: normalizedContact, accountType });
     } catch (e: any) {
       setError(e?.response?.data?.msg || 'Não foi possível enviar o PIN.');
     } finally {
@@ -83,17 +90,18 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={styles.notice}>
             <Ionicons name="chatbubble-ellipses-outline" size={18} color={Theme.colors.primary} />
-            <Text style={styles.noticeText}>O PIN será enviado para o número associado ao email informado.</Text>
+            <Text style={styles.noticeText}>O PIN será enviado para o contacto Tmcel informado.</Text>
           </View>
 
           <Input
-            label="Email"
-            placeholder="exemplo@email.com"
-            keyboardType="email-address"
+            label="Contacto Tmcel"
+            placeholder="82xxxxxxx ou 83xxxxxxx"
+            keyboardType="phone-pad"
             autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-            leftIcon={<Ionicons name="mail-outline" size={20} color={Theme.colors.textSecondary} />}
+            maxLength={9}
+            value={contact}
+            onChangeText={(text) => setContact(text.replace(/\D/g, '').slice(0, 9))}
+            leftIcon={<Ionicons name="call-outline" size={20} color={Theme.colors.textSecondary} />}
             required
           />
 
@@ -104,7 +112,7 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           )}
 
-          <Button title="Enviar PIN" onPress={onSubmit} loading={loading} disabled={!email.trim()} iconName="send-outline" iconPosition="right" style={styles.primaryButton} />
+          <Button title="Enviar PIN" onPress={onSubmit} loading={loading} disabled={!isTmcelContact} iconName="send-outline" iconPosition="right" style={styles.primaryButton} />
         </ScrollView>
       </KeyboardAvoidingView>
     </>

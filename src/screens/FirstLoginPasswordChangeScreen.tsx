@@ -28,7 +28,7 @@ interface Props {
 }
 
 export const FirstLoginPasswordChangeScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { email, oldPassword, msisdn } = route.params;
+  const { oldPassword, msisdn } = route.params;
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -49,7 +49,7 @@ export const FirstLoginPasswordChangeScreen: React.FC<Props> = ({ navigation, ro
     setLoading(true);
     try {
       await updateAngariadorFirstLoginPassword({
-        email,
+        msisdn,
         old_password: oldPassword,
         new_password: newPassword,
       });
