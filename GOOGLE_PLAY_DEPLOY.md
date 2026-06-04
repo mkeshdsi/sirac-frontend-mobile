@@ -6,7 +6,7 @@ Este guia explica como gerar o AAB, preencher o Google Play Console e publicar a
 
 - App: `Mkesh agente`
 - Package name Android: `com.sirac.app`
-- Versao: `1.0.0`
+- Versao: `1.0.1`
 - EAS account atual: `emabecuane`
 - EAS project: `@emabecuane/sirac`
 - EAS project ID: `5359f0b9-c61f-4c70-9f90-d28bcdd89e45`
@@ -18,19 +18,19 @@ Este guia explica como gerar o AAB, preencher o Google Play Console e publicar a
 
 Build AAB atualizado para upload na Google Play:
 
-https://expo.dev/artifacts/eas/4cYaePVCMueU1YhjZLHE4W.aab
+https://expo.dev/artifacts/eas/xjK2JTzTFmAxPwRAXC439T.aab
 
 Pagina do build no EAS:
 
-https://expo.dev/accounts/emabecuane/projects/sirac/builds/19f734f3-4d4c-4c8d-83fa-7c1434a0fc84
+https://expo.dev/accounts/emabecuane/projects/sirac/builds/fda93459-b405-4902-845d-c9a4fe95ed63
 
 Data do build: 2026-06-04
 
 APK atualizado para instalacao direta fora da Play Store:
 
-https://expo.dev/accounts/emabecuane/projects/sirac/builds/f6b2f33d-540a-41e2-b8e3-8eefa48ca482
+https://expo.dev/accounts/emabecuane/projects/sirac/builds/d3f090ae-41a8-4044-8e8a-5593a1e34a46
 
-Observacao: o AAB atual foi gerado com `versionCode 3`, incrementado automaticamente pelo EAS.
+Observacao: o AAB atual foi gerado com `versionCode 4`, incrementado automaticamente pelo EAS.
 
 ## Antes de publicar
 
@@ -308,7 +308,7 @@ No Play Console:
 4. Faca upload do `.aab`:
 
 ```text
-https://expo.dev/artifacts/eas/4cYaePVCMueU1YhjZLHE4W.aab
+https://expo.dev/artifacts/eas/xjK2JTzTFmAxPwRAXC439T.aab
 ```
 
 5. Preencha release notes.

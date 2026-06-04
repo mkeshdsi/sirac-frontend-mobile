@@ -5,7 +5,7 @@ module.exports = {
   expo: {
     name: 'Mkesh agente',
     slug: 'sirac',
-    version: '1.0.0',
+    version: '1.0.1',
     orientation: 'portrait',
     scheme: 'sirac',
     userInterfaceStyle: 'automatic',
@@ -19,7 +19,7 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.sirac.app',
-      buildNumber: '1.0.0',
+      buildNumber: '1.0.1',
       config: {
         googleMapsApiKey,
       },
