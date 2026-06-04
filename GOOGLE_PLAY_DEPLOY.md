@@ -1,10 +1,10 @@
-# Deploy na Google Play Store - Agente mkesh
+# Deploy na Google Play Store - Mkesh agente
 
-Este guia explica como gerar o AAB, preencher o Google Play Console e publicar a app **Agente mkesh**.
+Este guia explica como gerar o AAB, preencher o Google Play Console e publicar a app **Mkesh agente**.
 
 ## Estado atual
 
-- App: `Agente mkesh`
+- App: `Mkesh agente`
 - Package name Android: `com.sirac.app`
 - Versao: `1.0.0`
 - EAS account atual: `emabecuane`
@@ -18,19 +18,19 @@ Este guia explica como gerar o AAB, preencher o Google Play Console e publicar a
 
 Build AAB atualizado para upload na Google Play:
 
-https://expo.dev/artifacts/eas/eeEgUjvQuZfn3RCsLVERgD.aab
+https://expo.dev/artifacts/eas/4cYaePVCMueU1YhjZLHE4W.aab
 
 Pagina do build no EAS:
 
-https://expo.dev/accounts/emabecuane/projects/sirac/builds/6b2f0f13-3c6c-472f-b372-3559b7918aaf
+https://expo.dev/accounts/emabecuane/projects/sirac/builds/19f734f3-4d4c-4c8d-83fa-7c1434a0fc84
 
-Data do build: 2026-05-27
+Data do build: 2026-06-04
 
 APK atualizado para instalacao direta fora da Play Store:
 
-https://expo.dev/accounts/emabecuane/projects/sirac/builds/03ab7d44-9257-4c5d-a721-a33724302406
+https://expo.dev/accounts/emabecuane/projects/sirac/builds/f6b2f33d-540a-41e2-b8e3-8eefa48ca482
 
-Observacao: o AAB atual foi gerado com `versionCode 2`, incrementado automaticamente pelo EAS.
+Observacao: o AAB atual foi gerado com `versionCode 3`, incrementado automaticamente pelo EAS.
 
 ## Antes de publicar
 
@@ -108,7 +108,7 @@ Depois:
 
 1. Clique em `Create app`.
 2. Preencha:
-   - App name: `Agente mkesh`
+   - App name: `Mkesh agente`
    - Default language: `Portuguese`
    - App or game: `App`
    - Free or paid: `Free` se nao houver cobranca.
@@ -123,7 +123,7 @@ Sugestao de preenchimento:
 ### App name
 
 ```text
-Agente mkesh
+Mkesh agente
 ```
 
 ### Short description
@@ -135,7 +135,7 @@ App para registo e gestao de agentes mkesh em campo.
 ### Full description
 
 ```text
-Agente mkesh e uma aplicacao para apoiar equipas de campo no registo, validacao e acompanhamento de agentes, parceiros e dados comerciais.
+Mkesh agente e uma aplicacao para apoiar equipas de campo no registo, validacao e acompanhamento de agentes, parceiros e dados comerciais.
 
 A app permite iniciar sessao por contacto Tmcel, preencher formularios operacionais, anexar documentos, capturar localizacao quando necessario e submeter informacao para processamento interno.
 
@@ -272,7 +272,7 @@ Partilha com terceiros:
 - Google Maps pode ser usado para mapas/localizacao.
 - Backend/API interna recebe os dados submetidos.
 
-### Permissions declaration
+### Permissions declaratione 
 
 A app usa permissoes Android:
 
@@ -302,13 +302,13 @@ Para primeira publicacao, use primeiro teste interno ou fechado.
 
 No Play Console:
 
-1. Abra a app `Agente mkesh`.
+1. Abra a app `Mkesh agente`.
 2. Va para `Testing > Internal testing`.
 3. Clique em `Create new release`.
 4. Faca upload do `.aab`:
 
 ```text
-https://expo.dev/artifacts/eas/eeEgUjvQuZfn3RCsLVERgD.aab
+https://expo.dev/artifacts/eas/4cYaePVCMueU1YhjZLHE4W.aab
 ```
 
 5. Preencha release notes.
@@ -319,7 +319,7 @@ https://expo.dev/artifacts/eas/eeEgUjvQuZfn3RCsLVERgD.aab
 Sugestao de release notes:
 
 ```text
-Primeira versao Android do Agente mkesh para testes internos.
+Primeira versao Android do Mkesh agente para testes internos.
 Inclui login por contacto Tmcel, registo operacional, anexos de documentos e suporte a localizacao.
 ```
 

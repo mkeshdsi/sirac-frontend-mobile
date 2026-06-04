@@ -3,7 +3,7 @@ const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 module.exports = {
   expo: {
-    name: 'Agente mkesh',
+    name: 'Mkesh agente',
     slug: 'sirac',
     version: '1.0.0',
     orientation: 'portrait',
