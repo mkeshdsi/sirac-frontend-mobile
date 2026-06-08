@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, ActivityIndicator, Platform, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/constants/theme';
-import { Button, Card } from '@/components';
+import { Card } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
@@ -34,7 +34,6 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const { commercialData, documents } = route.params;
   const [submitting, setSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const toISODate = (dateStr?: string) => {
@@ -139,10 +138,6 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
 
       const response = await api.post("/api/v1/parceiros/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-          setUploadProgress(percentCompleted);
-        },
       });
 
       if (response.status === 201 || response.status === 200) {
@@ -170,7 +165,6 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
       Alert.alert("Erro na Submissão", backendMsg);
     } finally {
       setSubmitting(false);
-      setUploadProgress(0);
     }
   };
 
@@ -271,6 +265,39 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
       </ScrollView>
 
+      <Modal visible={submitting} transparent animationType="fade">
+        <View style={styles.submitOverlay}>
+          <View style={styles.submitSheet}>
+            <View style={styles.submitAccent} />
+            <View style={styles.submitIconWrap}>
+              <Ionicons name="cloud-upload-outline" size={30} color={COLORS.primary} />
+            </View>
+            <Text style={styles.submitTitle}>A submeter dados</Text>
+            <Text style={styles.submitMessage}>
+              Estamos a enviar os dados e documentos do parceiro. Isto pode levar alguns instantes.
+            </Text>
+            <View style={styles.submitStatus}>
+              <ActivityIndicator color={COLORS.primary} size="small" />
+              <Text style={styles.submitStatusText}>Ligação segura ao servidor</Text>
+            </View>
+            <View style={styles.submitSteps}>
+              <View style={styles.submitStep}>
+                <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+                <Text style={styles.submitStepText}>Dados validados</Text>
+              </View>
+              <View style={styles.submitStep}>
+                <ActivityIndicator color={COLORS.primary} size="small" />
+                <Text style={styles.submitStepText}>Documentos em envio</Text>
+              </View>
+              <View style={styles.submitStep}>
+                <Ionicons name="ellipse-outline" size={18} color={COLORS.textSecondary} />
+                <Text style={styles.submitStepText}>A preparar confirmação</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 18 : 16) }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -285,19 +312,8 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           style={[styles.btnPrimary, submitting && styles.btnDisabled]}
           disabled={submitting}
         >
-          {submitting ? (
-            <View style={{ alignItems: 'center' }}>
-              <ActivityIndicator color={COLORS.white} size="small" />
-              {uploadProgress > 0 && (
-                <Text style={{ color: COLORS.white, fontSize: 10, marginTop: 2 }}>{uploadProgress}%</Text>
-              )}
-            </View>
-          ) : (
-            <>
-              <Text style={styles.btnPrimaryText}>Submeter Adesão</Text>
-              <Ionicons name="send" size={18} color={COLORS.white} style={{ marginLeft: 8 }} />
-            </>
-          )}
+          <Text style={styles.btnPrimaryText}>Submeter Adesão</Text>
+          <Ionicons name="send" size={18} color={COLORS.white} style={{ marginLeft: 8 }} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -400,6 +416,93 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   errorAlertText: { color: COLORS.white, fontSize: 14, fontWeight: '600', flex: 1 },
+  submitOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: 'rgba(10, 22, 20, 0.55)',
+  },
+  submitSheet: {
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    paddingTop: 34,
+    paddingBottom: 24,
+    paddingHorizontal: 22,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  submitAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+    backgroundColor: COLORS.secondary,
+  },
+  submitIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primaryLight,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#d7eee9',
+  },
+  submitTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  submitMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  submitStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.primaryLight,
+    marginBottom: 16,
+  },
+  submitStatusText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  submitSteps: {
+    alignSelf: 'stretch',
+    gap: 10,
+  },
+  submitStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  submitStepText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
   footer: {
     position: 'absolute',
     bottom: 0,
