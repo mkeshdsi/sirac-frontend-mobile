@@ -22,6 +22,17 @@
       "environment": "production",
       "distribution": "internal"
     },
+    "pilot": {
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "pilot",
+      "environment": "production",
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "pilot"
+      }
+    },
     "preview": {
       "android": {
         "buildType": "app-bundle"

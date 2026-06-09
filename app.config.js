@@ -1,13 +1,14 @@
 // Ensure Expo CLI reads this config and sets web.output to 'static'
 const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const isPilot = process.env.APP_VARIANT === 'pilot';
 
 module.exports = {
   expo: {
-    name: 'Mkesh agente',
+    name: isPilot ? 'Mkesh agente Pilot' : 'Mkesh agente',
     slug: 'sirac',
     version: '1.0.1',
     orientation: 'portrait',
-    scheme: 'sirac',
+    scheme: isPilot ? 'sirac-pilot' : 'sirac',
     userInterfaceStyle: 'automatic',
     platforms: ['android', 'ios', 'web'],
     runtimeVersion: { policy: 'sdkVersion' },
@@ -18,7 +19,7 @@ module.exports = {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.sirac.app',
+      bundleIdentifier: isPilot ? 'com.sirac.app.pilot' : 'com.sirac.app',
       buildNumber: '1.0.1',
       config: {
         googleMapsApiKey,
@@ -31,7 +32,7 @@ module.exports = {
       },
     },
     android: {
-      package: 'com.sirac.app',
+      package: isPilot ? 'com.sirac.app.pilot' : 'com.sirac.app',
       versionCode: 1,
       usesCleartextTraffic: true,
       permissions: [

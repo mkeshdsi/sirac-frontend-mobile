@@ -63,6 +63,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         if (commercialData.numeroConta) formData.append("numero_conta", commercialData.numeroConta);
         if (commercialData.nuit) formData.append("nuit", commercialData.nuit);
         if (commercialData.contactoAgente) formData.append("contacto_agente", commercialData.contactoAgente);
+        if (commercialData.localizacaoId) formData.append("localizacao_id", String(commercialData.localizacaoId));
         formData.append("bairro_ref", commercialData.enderecoBairroRef || "");
         formData.append("profissao", commercialData.profissao || "");
         formData.append("assinatura_adesao", commercialData.assinatura || "");
@@ -77,6 +78,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           quarteirao: commercialData.enderecoQuart || "",
           telefone: commercialData.telefone || "",
           celular: commercialData.celular || "",
+          localizacao_id: commercialData.localizacaoId || null,
         }));
 
         if (commercialData.latitude !== null && commercialData.longitude !== null) {
@@ -118,6 +120,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
             nome: e.nome,
             provincia_localidade: e.provinciaLocalidade,
             endereco_bairro: e.enderecoBairro,
+            localizacao_id: e.localizacaoId || null,
           }));
           formData.append("estabelecimentos", JSON.stringify(estabelecimentosPayload));
         }

@@ -4,6 +4,7 @@ import { getAuthApi } from '@/config/api';
 export type ListParams = {
   page?: number;
   q?: string;
+  limit?: number;
 };
 
 async function listResource(api: AxiosInstance, path: string, params?: ListParams) {
@@ -23,6 +24,27 @@ async function listResourceStrict(api: AxiosInstance, path: string, params?: Lis
 export async function listEnderecos(params?: ListParams) {
   const api = await getAuthApi();
   return listResource(api, '/api/v1/enderecos/', params);
+}
+
+export type LocalizacaoOption = {
+  id: number;
+  nivel: string;
+  nome_display: string;
+  provincia_id?: number;
+  provincia?: string;
+  distrito_id?: number;
+  distrito?: string;
+  posto_administrativo_id?: number;
+  posto_administrativo?: string;
+  localidade_id?: number;
+  localidade?: string;
+  bairro_id?: number;
+  bairro?: string;
+};
+
+export async function searchLocalizacoes(q: string, limit = 25): Promise<LocalizacaoOption[]> {
+  const api = await getAuthApi();
+  return listResource(api, '/api/v1/localizacoes/search', { q, limit });
 }
 
 // Usando endpoint de users com filtro usertype (ajustado conforme backend)

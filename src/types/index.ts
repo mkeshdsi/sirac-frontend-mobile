@@ -30,6 +30,9 @@ export interface CommercialData {
   enderecoNumero?: string;
   enderecoQuart?: string;
   enderecoBairroRef?: string;
+  localizacaoId?: number;
+  localizacaoDisplay?: string;
+  localizacaoNivel?: string;
   telefone?: string;
   celular?: string;
   proprietarioNomeCompleto?: string;
@@ -37,7 +40,7 @@ export interface CommercialData {
   proprietarioContacto?: string;
   proprietarios?: Array<{ nome?: string; email?: string; contacto?: string }>;
   assistentes?: Array<{ nomeCompleto?: string; contacto?: string }>;
-  estabelecimentos?: Array<{ nome?: string; provinciaLocalidade?: string; enderecoBairro?: string }>;
+  estabelecimentos?: Array<{ nome?: string; provinciaLocalidade?: string; enderecoBairro?: string; localizacaoId?: number }>;
   substituicaoNomeAgente?: string;
   substituicaoProvinciaLocalidade?: string;
   substituicaoEnderecoBairro?: string;

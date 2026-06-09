@@ -15,7 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { listAngariadores, listAprovadores, listValidadores, createAdesao } from '@/services/apiResources';
+import { LocalizacaoOption, listAngariadores, listAprovadores, listValidadores, createAdesao, searchLocalizacoes } from '@/services/apiResources';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -75,6 +75,9 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   enderecoNumero: yup.string().optional(),
   enderecoQuart: yup.string().optional(),
   enderecoBairroRef: yup.string().optional(),
+  localizacaoId: yup.number().optional(),
+  localizacaoDisplay: yup.string().optional(),
+  localizacaoNivel: yup.string().optional(),
   assinatura: yup.string().required('Assinatura é obrigatória'),
   proprietarioNomeCompleto: yup.string().optional(),
   substituicaoNomeAgente: yup.string().optional(),
@@ -100,6 +103,93 @@ type LocationSearchResult = {
   address?: Location.LocationGeocodedAddress;
   title: string;
   subtitle: string;
+};
+
+type LocalizacaoSearchProps = {
+  selectedLabel?: string;
+  onSelect: (item: LocalizacaoOption) => void;
+};
+
+const getLocalizacaoTitle = (item: LocalizacaoOption) => (
+  item.bairro || item.localidade || item.posto_administrativo || item.distrito || item.provincia || item.nome_display
+);
+
+const getLocalizacaoSubtitle = (item: LocalizacaoOption) => (
+  [item.nivel, item.localidade, item.posto_administrativo, item.distrito, item.provincia]
+    .filter(Boolean)
+    .join(' · ')
+);
+
+const LocalizacaoSearch: React.FC<LocalizacaoSearchProps> = ({ selectedLabel, onSelect }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<LocalizacaoOption[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const clean = query.trim();
+    if (clean.length < 2) {
+      setResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const data = await searchLocalizacoes(clean);
+        if (!cancelled) setResults(data);
+      } catch {
+        if (!cancelled) setResults([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  const handleSelect = (item: LocalizacaoOption) => {
+    onSelect(item);
+    setQuery(item.nome_display);
+    setResults([]);
+  };
+
+  return (
+    <View style={styles.locationSearchWrap}>
+      <Input
+        label="Pesquisar localização"
+        placeholder="Bairro, distrito ou província"
+        value={query}
+        onChangeText={setQuery}
+        autoCorrect={false}
+        rightIcon={loading ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Ionicons name="search" size={18} color={COLORS.textSecondary} />}
+      />
+      {!!selectedLabel && (
+        <View style={styles.selectedLocationCard}>
+          <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+          <Text style={styles.selectedLocationText}>{selectedLabel}</Text>
+        </View>
+      )}
+      {results.length > 0 && (
+        <View style={styles.locationResults}>
+          {results.map((item) => (
+            <TouchableOpacity key={item.id} style={styles.locationResultItem} onPress={() => handleSelect(item)} activeOpacity={0.75}>
+              <View style={styles.locationResultIcon}>
+                <Ionicons name={item.nivel === 'bairro' ? 'home-outline' : 'location-outline'} size={17} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.locationResultTitle}>{getLocalizacaoTitle(item)}</Text>
+                <Text style={styles.locationResultSubtitle}>{getLocalizacaoSubtitle(item)}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 };
 
 const DEFAULT_MAP_REGION: Region = {
@@ -352,6 +442,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   const fotografiaValue = useWatch({ control, name: 'fotografia' });
   const latitudeValue = useWatch({ control, name: 'latitude' });
   const longitudeValue = useWatch({ control, name: 'longitude' });
+  const selectedLocalizacaoLabel = useWatch({ control, name: 'localizacaoDisplay' });
   const [bankMode, setBankMode] = useState<'lista' | 'outro'>('lista');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
@@ -387,6 +478,22 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     if (street) setValue('enderecoAvenidaRua', street, { shouldDirty: true });
     if (number) setValue('enderecoNumero', number, { shouldDirty: true });
     if (reference) setValue('enderecoBairroRef', reference, { shouldDirty: true });
+  };
+
+  const applyLocalizacaoToForm = (item: LocalizacaoOption) => {
+    setValue('localizacaoId', item.id, { shouldDirty: true });
+    setValue('localizacaoDisplay', item.nome_display, { shouldDirty: true });
+    setValue('localizacaoNivel', item.nivel, { shouldDirty: true });
+
+    if (item.provincia) {
+      setValue('enderecoCidade', item.provincia, { shouldValidate: true, shouldDirty: true });
+    }
+    if (item.distrito) {
+      setValue('enderecoLocalidade', item.distrito, { shouldDirty: true });
+    }
+    if (item.bairro || item.localidade || item.posto_administrativo) {
+      setValue('enderecoBairroRef', item.bairro || item.localidade || item.posto_administrativo || '', { shouldDirty: true });
+    }
   };
 
   const resolveAddress = async (latitude: number, longitude: number) => {
@@ -752,13 +859,14 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
 
         {/* ── Endereço ── */}
         <SectionCard emoji="📍" title="Endereço">
+          <LocalizacaoSearch selectedLabel={selectedLocalizacaoLabel} onSelect={applyLocalizacaoToForm} />
           <View onLayout={onLayoutField('enderecoCidade')}>
             <Controller control={control} name="enderecoCidade" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Cidade" placeholder="Ex: Maputo" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.enderecoCidade?.message} required />
+              <Input label="Província" placeholder="Ex: Cidade de Maputo" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.enderecoCidade?.message} required />
             )} />
           </View>
           <Controller control={control} name="enderecoLocalidade" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Localidade" placeholder="Localidade" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input label="Distrito" placeholder="Distrito" value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />
           <Controller control={control} name="enderecoAvenidaRua" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Avenida/Rua" placeholder="Avenida/Rua" value={value} onChangeText={onChange} onBlur={onBlur} />
@@ -1264,6 +1372,49 @@ const styles = StyleSheet.create({
   locBtnText: { fontSize: 14, fontWeight: '700', color: 'white' },
   locBtnOutline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.primary, backgroundColor: COLORS.white, shadowColor: 'transparent', elevation: 0 },
   locBtnTextOutline: { fontSize: 14, fontWeight: '700', color: COLORS.primary, marginLeft: 6 },
+  locationSearchWrap: { marginBottom: 6 },
+  selectedLocationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '25',
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  selectedLocationText: { flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.primary },
+  locationResults: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    marginTop: -8,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  locationResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  locationResultIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primaryLight,
+  },
+  locationResultTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 2 },
+  locationResultSubtitle: { fontSize: 12, color: COLORS.textSecondary },
 
   // ── Photo ────────────────────────────────────────────────
   photoPreviewWrap: { alignItems: 'center', marginVertical: 10 },
