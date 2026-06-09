@@ -52,7 +52,9 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         navigation.navigate('FirstLoginPasswordChange', {
           oldPassword: password,
           angariadorId: res.forcePasswordChange.angariador_id,
+          tvrId: res.forcePasswordChange.tvr_id,
           msisdn: res.forcePasswordChange.msisdn,
+          accountType: res.forcePasswordChange.tvr_id ? 'tvr' : 'angariador',
         });
         return;
       }

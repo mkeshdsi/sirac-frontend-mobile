@@ -1,7 +1,8 @@
 import { getApi, getBaseUrl, setAuthToken, setItem } from '@/config/api';
 
 export type ForcePasswordChange = {
-  angariador_id: number;
+  angariador_id?: number;
+  tvr_id?: number;
   msisdn: string;
   force_password_change: true;
   msg?: string;
@@ -70,6 +71,16 @@ export async function updateAngariadorFirstLoginPassword(payload: {
 }) {
   const api = await getApi();
   const res = await api.post('/api/v1/angariadores/first-login/update-password', payload);
+  return res.data;
+}
+
+export async function updateTvrFirstLoginPassword(payload: {
+  msisdn: string;
+  old_password: string;
+  new_password: string;
+}) {
+  const api = await getApi();
+  const res = await api.post('/api/v1/tvr/first-login/update-password', payload);
   return res.data;
 }
 

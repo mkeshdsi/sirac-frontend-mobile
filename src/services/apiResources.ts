@@ -65,6 +65,12 @@ export async function cadastrarTvr(payload: any) {
   return res.data;
 }
 
+export async function updateTvrPassword(tvrId: number, payload: { password: string }) {
+  const api = await getAuthApi();
+  const res = await api.put(`/api/v1/tvr/${tvrId}`, payload);
+  return res.data;
+}
+
 export async function listValidadores(params?: ListParams) {
   return listUsersByType('Validador', params);
 }

@@ -17,7 +17,7 @@ import { RouteProp } from '@react-navigation/native';
 import { Theme } from '@/constants/theme';
 import { Button, Input } from '@/components';
 import { RootStackParamList } from '@/types';
-import { updateAngariadorFirstLoginPassword } from '@/services/auth';
+import { updateAngariadorFirstLoginPassword, updateTvrFirstLoginPassword } from '@/services/auth';
 
 type Nav = StackNavigationProp<RootStackParamList, 'FirstLoginPasswordChange'>;
 type Route = RouteProp<RootStackParamList, 'FirstLoginPasswordChange'>;
@@ -28,7 +28,7 @@ interface Props {
 }
 
 export const FirstLoginPasswordChangeScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { oldPassword, msisdn } = route.params;
+  const { oldPassword, msisdn, accountType } = route.params;
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,7 +48,8 @@ export const FirstLoginPasswordChangeScreen: React.FC<Props> = ({ navigation, ro
 
     setLoading(true);
     try {
-      await updateAngariadorFirstLoginPassword({
+      const updatePassword = accountType === 'tvr' ? updateTvrFirstLoginPassword : updateAngariadorFirstLoginPassword;
+      await updatePassword({
         msisdn,
         old_password: oldPassword,
         new_password: newPassword,
