@@ -26,6 +26,37 @@ export async function listEnderecos(params?: ListParams) {
   return listResource(api, '/api/v1/enderecos/', params);
 }
 
+export type DashboardOverview = {
+  scope: 'user' | 'tvr' | 'angariador';
+  actor: { id: number; type: string; nome: string };
+  totals: {
+    parceiros: number;
+    angariadores: number;
+    tvrs: number;
+    parceiros_mes: number;
+  };
+  progress: {
+    month_total: number;
+    previous_month_total: number;
+    growth_percent: number;
+  };
+  series: Array<{ label: string; value: number }>;
+  breakdown: {
+    diretos_tvr: number;
+    por_angariadores: number;
+    por_users: number;
+  };
+  top_angariadores: Array<{ id: number; nome: string; total: number }>;
+  top_tvrs: Array<{ id: number; nome: string; total: number }>;
+  recent_parceiros: Array<{ id: number; designacao: string; tipo_parceiro: string; data_adesao?: string; origem?: string }>;
+};
+
+export async function getDashboardOverview(): Promise<DashboardOverview> {
+  const api = await getAuthApi();
+  const res = await api.get('/api/v1/dashboard/overview');
+  return res.data;
+}
+
 export type LocalizacaoOption = {
   id: number;
   nivel: string;

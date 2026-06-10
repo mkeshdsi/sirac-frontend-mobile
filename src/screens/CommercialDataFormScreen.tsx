@@ -108,6 +108,7 @@ type LocationSearchResult = {
 type LocalizacaoSearchProps = {
   selectedLabel?: string;
   onSelect: (item: LocalizacaoOption) => void;
+  onClear: () => void;
 };
 
 const getLocalizacaoTitle = (item: LocalizacaoOption) => (
@@ -120,10 +121,17 @@ const getLocalizacaoSubtitle = (item: LocalizacaoOption) => (
     .join(' · ')
 );
 
-const LocalizacaoSearch: React.FC<LocalizacaoSearchProps> = ({ selectedLabel, onSelect }) => {
+const LocalizacaoSearch: React.FC<LocalizacaoSearchProps> = ({ selectedLabel, onSelect, onClear }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<LocalizacaoOption[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const handleQueryChange = (text: string) => {
+    setQuery(text);
+    if (selectedLabel && text !== selectedLabel) {
+      onClear();
+    }
+  };
 
   useEffect(() => {
     const clean = query.trim();
@@ -163,9 +171,9 @@ const LocalizacaoSearch: React.FC<LocalizacaoSearchProps> = ({ selectedLabel, on
         label="Pesquisar localização"
         placeholder="Bairro, distrito ou província"
         value={query}
-        onChangeText={setQuery}
+        onChangeText={handleQueryChange}
         autoCorrect={false}
-        rightIcon={loading ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Ionicons name="search" size={18} color={COLORS.textSecondary} />}
+        rightIcon={loading ? <ActivityIndicator size="small" color={COLORS.primary} /> : selectedLabel ? <Ionicons name="close-circle" size={18} color={COLORS.textSecondary} /> : <Ionicons name="search" size={18} color={COLORS.textSecondary} />}
       />
       {!!selectedLabel && (
         <View style={styles.selectedLocationCard}>
@@ -494,6 +502,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     if (item.bairro || item.localidade || item.posto_administrativo) {
       setValue('enderecoBairroRef', item.bairro || item.localidade || item.posto_administrativo || '', { shouldDirty: true });
     }
+  };
+
+  const clearLocalizacaoFromForm = () => {
+    setValue('localizacaoId', undefined, { shouldDirty: true });
+    setValue('localizacaoDisplay', '', { shouldDirty: true });
+    setValue('localizacaoNivel', '', { shouldDirty: true });
   };
 
   const resolveAddress = async (latitude: number, longitude: number) => {
@@ -859,7 +873,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
 
         {/* ── Endereço ── */}
         <SectionCard emoji="📍" title="Endereço">
-          <LocalizacaoSearch selectedLabel={selectedLocalizacaoLabel} onSelect={applyLocalizacaoToForm} />
+          <LocalizacaoSearch selectedLabel={selectedLocalizacaoLabel} onSelect={applyLocalizacaoToForm} onClear={clearLocalizacaoFromForm} />
           <View onLayout={onLayoutField('enderecoCidade')}>
             <Controller control={control} name="enderecoCidade" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="Província" placeholder="Ex: Cidade de Maputo" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.enderecoCidade?.message} required />

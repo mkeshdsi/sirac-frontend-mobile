@@ -7,6 +7,7 @@ import { Theme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 
 import { DashboardScreen } from '@/screens/Dashboard/DashboardScreen';
+import { OverviewScreen } from '@/screens/Dashboard/OverviewScreen';
 import { ProfileScreen } from '@/screens/Dashboard/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -24,6 +25,7 @@ export const DashboardTabs = () => {
           tabBarIcon: ({ focused, color, size }) => {
             let iconName: keyof typeof Ionicons.glyphMap = 'home';
             if (route.name === 'Início') iconName = focused ? 'apps' : 'apps-outline';
+            else if (route.name === 'Visão') iconName = focused ? 'bar-chart' : 'bar-chart-outline';
             else if (route.name === 'Perfil') iconName = focused ? 'person' : 'person-outline';
             else if (route.name === 'Sair') iconName = focused ? 'log-out' : 'log-out-outline';
 
@@ -43,6 +45,7 @@ export const DashboardTabs = () => {
         })}
       >
         <Tab.Screen name="Início" component={DashboardScreen} />
+        <Tab.Screen name="Visão" component={OverviewScreen} />
         <Tab.Screen name="Perfil" component={ProfileScreen} />
         <Tab.Screen 
           name="Sair" 
