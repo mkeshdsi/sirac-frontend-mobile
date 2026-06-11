@@ -84,8 +84,8 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   substituicaoProvinciaLocalidade: yup.string().optional(),
   substituicaoEnderecoBairro: yup.string().optional(),
   profissao: yup.string().optional(),
-  latitude: yup.number().nullable(),
-  longitude: yup.number().nullable(),
+  latitude: yup.number().typeError('Latitude é obrigatória').required('Latitude é obrigatória'),
+  longitude: yup.number().typeError('Longitude é obrigatória').required('Longitude é obrigatória'),
   fotografia: yup.string().optional(),
 }) as any;
 
@@ -950,6 +950,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
         </SectionCard>
 
         {/* ── Localização da Banca ── */}
+        <View onLayout={onLayoutField('latitude')}>
         <SectionCard emoji="🗺️" title="Localização da Banca">
           {(latitudeValue && longitudeValue) ? (
             <View style={styles.coordsCard}>
@@ -976,14 +977,20 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             <View style={styles.rowFields}>
               <View style={{ flex: 1 }}>
                 <Controller control={control} name="latitude" render={({ field: { value } }) => (
-                  <Input label="Latitude" placeholder="Pendente..." editable={false} value={value !== undefined && value !== null ? String(value) : ''} />
+                  <Input label="Latitude" placeholder="Pendente..." editable={false} value={value !== undefined && value !== null ? String(value) : ''} error={errors.latitude?.message} required />
                 )} />
               </View>
               <View style={{ flex: 1 }}>
                 <Controller control={control} name="longitude" render={({ field: { value } }) => (
-                  <Input label="Longitude" placeholder="Pendente..." editable={false} value={value !== undefined && value !== null ? String(value) : ''} />
+                  <Input label="Longitude" placeholder="Pendente..." editable={false} value={value !== undefined && value !== null ? String(value) : ''} error={errors.longitude?.message} required />
                 )} />
               </View>
+            </View>
+          )}
+          {(errors.latitude?.message || errors.longitude?.message) && (
+            <View style={styles.geoErrorBox}>
+              <Ionicons name="alert-circle-outline" size={16} color={COLORS.error} />
+              <Text style={styles.geoErrorText}>Capture ou selecione a localização da banca antes de avançar.</Text>
             </View>
           )}
           <View style={styles.locationBtns}>
@@ -1023,6 +1030,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             )}
           </View>
         </SectionCard>
+        </View>
 
         {/* ── Estabelecimentos ── */}
         <SectionCard emoji="🏪" title="Estabelecimentos">
@@ -1413,6 +1421,8 @@ const styles = StyleSheet.create({
   coordLabel: { fontSize: 10, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 2, letterSpacing: 0.5 },
   coordValue: { fontSize: 14, fontWeight: '600', color: COLORS.primary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   coordDivider: { width: 1, height: 22, backgroundColor: COLORS.border, marginHorizontal: 8 },
+  geoErrorBox: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#ffebee', borderWidth: 1, borderColor: COLORS.error + '25', borderRadius: 10, paddingVertical: 9, paddingHorizontal: 10, marginTop: 2, marginBottom: 10 },
+  geoErrorText: { flex: 1, fontSize: 12, color: COLORS.error, fontWeight: '600', lineHeight: 17 },
   locationBtns: { gap: 10, marginTop: 12 },
   locBtn: { borderRadius: 12, overflow: 'hidden', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 3 },
   locBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 13, gap: 8 },

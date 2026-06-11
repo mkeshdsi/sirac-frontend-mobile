@@ -7,6 +7,30 @@ import { Theme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros } from '@/services/apiResources';
 
+const creatorTypeLabel = (type?: string) => {
+  const normalized = String(type || '').toLowerCase();
+  if (normalized === 'tvr') return 'TVR';
+  if (normalized === 'angariador') return 'Angariador';
+  if (normalized === 'user') return 'Colaborador';
+  return 'Origem';
+};
+
+const validationLabel = (state?: string) => {
+  const normalized = String(state || '').toUpperCase();
+  if (normalized === 'PENDENTE') return 'Pendente';
+  if (normalized === 'APROVADO') return 'Aprovado';
+  if (normalized === 'REJEITADO') return 'Rejeitado';
+  if (normalized === 'VALIDADO') return 'Validado';
+  return state || 'Sem estado';
+};
+
+const validationTone = (state?: string) => {
+  const normalized = String(state || '').toUpperCase();
+  if (normalized === 'APROVADO' || normalized === 'VALIDADO') return 'success';
+  if (normalized === 'REJEITADO') return 'danger';
+  return 'warning';
+};
+
 export const ParceirosListScreen = ({ navigation }: any) => {
   const { userRole, userData } = useAuth();
   const [items, setItems] = useState<any[]>([]);
@@ -125,9 +149,32 @@ export const ParceirosListScreen = ({ navigation }: any) => {
             </View>
             <View style={styles.cardBody}>
               <Text style={styles.title}>{item.designacao || item.nomeComercial || `Parceiro #${item.id}`}</Text>
+              <View style={styles.badgeRow}>
+                <View style={[styles.statusBadge, styles[`status_${validationTone(item.estado_validacao)}`]]}>
+                  <Text style={[styles.statusText, styles[`statusText_${validationTone(item.estado_validacao)}`]]}>
+                    {validationLabel(item.estado_validacao)}
+                  </Text>
+                </View>
+                <View style={[styles.statusBadge, item.criado_ewp ? styles.status_success : styles.status_muted]}>
+                  <Text style={[styles.statusText, item.criado_ewp ? styles.statusText_success : styles.statusText_muted]}>
+                    {item.criado_ewp ? 'EWP criado' : 'EWP pendente'}
+                  </Text>
+                </View>
+              </View>
               <Text style={styles.meta}>{item.tipo_parceiro || 'Parceiro'}{item.tipo_empresa ? ` · ${item.tipo_empresa}` : ''}</Text>
               {!!item.nuit && <Text style={styles.detail}>NUIT: {item.nuit}</Text>}
               {!!item.contacto_agente && <Text style={styles.detail}>Contacto: {item.contacto_agente}</Text>}
+              {!!item.angariador_nome && (
+                <View style={styles.creatorBox}>
+                  <Ionicons name="person-circle-outline" size={15} color={Theme.colors.primary} />
+                  <Text style={styles.creatorText}>
+                    Cadastrado por {creatorTypeLabel(item.angariador_type)}: {item.angariador_nome}
+                  </Text>
+                </View>
+              )}
+              {!!item.angariador_msisdn && (
+                <Text style={styles.creatorContact}>Contacto do cadastrador: {item.angariador_msisdn}</Text>
+              )}
             </View>
           </View>
         ))}
@@ -170,8 +217,22 @@ const styles = StyleSheet.create({
   iconWrap: { width: 44, height: 44, borderRadius: 13, backgroundColor: `${Theme.colors.primary}15`, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   cardBody: { flex: 1 },
   title: { fontSize: 15, fontWeight: '700', color: Theme.colors.textPrimary },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  statusBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  statusText: { fontSize: 11, fontWeight: '800' },
+  status_success: { backgroundColor: `${Theme.colors.success}14` },
+  status_warning: { backgroundColor: '#fff7d6' },
+  status_danger: { backgroundColor: '#ffebee' },
+  status_muted: { backgroundColor: Theme.colors.gray100 },
+  statusText_success: { color: Theme.colors.success },
+  statusText_warning: { color: '#a46a00' },
+  statusText_danger: { color: Theme.colors.error },
+  statusText_muted: { color: Theme.colors.textSecondary },
   meta: { fontSize: 12, color: Theme.colors.primary, fontWeight: '700', marginTop: 3 },
   detail: { fontSize: 12, color: Theme.colors.textSecondary, marginTop: 3 },
+  creatorBox: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
+  creatorText: { flex: 1, fontSize: 12, color: Theme.colors.textPrimary, fontWeight: '600', lineHeight: 17 },
+  creatorContact: { fontSize: 12, color: Theme.colors.textSecondary, marginTop: 3 },
   emptyState: { alignItems: 'center', marginTop: 80 },
   emptyTitle: { fontSize: 17, color: Theme.colors.textPrimary, fontWeight: '700', marginTop: 12 },
   emptySubtitle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 6 },
