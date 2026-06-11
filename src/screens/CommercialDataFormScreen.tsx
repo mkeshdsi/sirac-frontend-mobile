@@ -48,7 +48,7 @@ const normalizePhone = (s?: string) => (s ? s.replace(/[^0-9]/g, '') : '');
 
 const schema: yup.ObjectSchema<CommercialData> = yup.object({
   tipoParceiro: yup.string().oneOf(['AGENTE', 'MERCHANT'], 'Tipo de parceiro inválido').required('Tipo de parceiro é obrigatório'),
-  nomeComercial: yup.string().when('tipoParceiro', { is: (v: string) => v === 'MERCHANT', then: (s) => s.required('Nome comercial é obrigatório').min(2, 'Mínimo 2 caracteres'), otherwise: (s) => s.optional() }),
+  nomeComercial: yup.string().required('Nome comercial é obrigatório').min(2, 'Mínimo 2 caracteres'),
   nuit: yup.string().when('tipoParceiro', { is: 'MERCHANT', then: (s) => s.required('NUIT é obrigatório').matches(/^[0-9]{9}$/, 'NUIT deve ter 9 dígitos'), otherwise: (s) => s.optional() }),
   contactoAgente: yup.string().optional().test('tel', 'O contacto do agente deve ser 82 ou 83 (ex: 821234567)', (v) => !v || agentPhoneRegex.test(v)),
   tipoDocumento: yup.string().oneOf(['BI', 'PASSAPORTE', 'CARTAO_ELEITOR', 'CARTA_CONDUCAO'], 'Tipo de documento inválido').optional(),
@@ -58,7 +58,7 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   dataValidacao: yup.string().optional().test('date-opt2', 'Data inválida (dd/mm/aaaa)', (v) => !v || dateRegex.test(v)),
   dataAprovacao: yup.string().optional().test('date-opt3', 'Data inválida (dd/mm/aaaa)', (v) => !v || dateRegex.test(v)),
   tipoEmpresa: yup.string().oneOf(['SOCIEDADE', 'INDIVIDUAL'], 'Tipo de empresa inválido').when('tipoParceiro', { is: 'MERCHANT', then: (s) => s.required('Tipo de empresa é obrigatório'), otherwise: (s) => s.optional() }),
-  designacao: yup.string().optional(),
+  designacao: yup.string().required('Designação é obrigatória').min(2, 'Mínimo 2 caracteres'),
   naturezaObjecto: yup.string().optional(),
   banco: yup.string().optional(),
   numeroConta: yup.string().optional().test('accnum', 'Nº da conta deve conter apenas dígitos', (v) => !v || /^\d+$/.test(v)),
@@ -838,9 +838,11 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             )} />
           </View>
           {!!errors.tipoEmpresa?.message && <Text style={styles.errorText}>{errors.tipoEmpresa.message}</Text>}
-          <Controller control={control} name="designacao" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Designação" placeholder="Designação da empresa" value={value} onChangeText={onChange} onBlur={onBlur} />
-          )} />
+          <View onLayout={onLayoutField('designacao')}>
+            <Controller control={control} name="designacao" render={({ field: { onChange, onBlur, value } }) => (
+              <Input label="Designação" placeholder="Designação da empresa" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.designacao?.message} required />
+            )} />
+          </View>
           <Controller control={control} name="naturezaObjecto" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Natureza e objecto da actividade" placeholder="Ex: Comércio de ..." value={value} onChangeText={onChange} onBlur={onBlur} />
           )} />

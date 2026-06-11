@@ -56,7 +56,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
 
       if (commercialData) {
         formData.append("tipo_parceiro", commercialData.tipoParceiro || "");
-        formData.append("designacao", commercialData.nomeComercial || "");
+        formData.append("designacao", commercialData.designacao || commercialData.nomeComercial || "");
         formData.append("tipo_empresa", commercialData.tipoEmpresa || "");
         formData.append("natureza_actividade", commercialData.naturezaObjecto || "");
         if (commercialData.banco) formData.append("banco", commercialData.banco);
