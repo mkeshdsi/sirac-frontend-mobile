@@ -840,7 +840,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
           {!!errors.tipoEmpresa?.message && <Text style={styles.errorText}>{errors.tipoEmpresa.message}</Text>}
           <View onLayout={onLayoutField('designacao')}>
             <Controller control={control} name="designacao" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Designação" placeholder="Designação da empresa" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.designacao?.message} required />
+              <Input label="Designação *" placeholder="Designação da empresa" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.designacao?.message} />
             )} />
           </View>
           <Controller control={control} name="naturezaObjecto" render={({ field: { onChange, onBlur, value } }) => (
