@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, DimensionValue, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,12 +7,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/theme';
 import { DashboardOverview, getDashboardOverview } from '@/services/apiResources';
 
-const StatCard = ({ label, value, icon, tone = 'primary', width }: {
+const StatTile = ({ label, value, icon, tone = 'primary' }: {
   label: string;
   value: number | string;
   icon: keyof typeof Ionicons.glyphMap;
   tone?: 'primary' | 'blue' | 'amber' | 'green';
-  width: DimensionValue;
 }) => {
   const colors = {
     primary: { bg: '#01836b12', icon: Theme.colors.primary },
@@ -22,12 +21,14 @@ const StatCard = ({ label, value, icon, tone = 'primary', width }: {
   }[tone];
 
   return (
-    <View style={[styles.statCard, { width }]}>
+    <View style={styles.statTile}>
       <View style={[styles.statIcon, { backgroundColor: colors.bg }]}>
-        <Ionicons name={icon} size={18} color={colors.icon} />
+        <Ionicons name={icon} size={17} color={colors.icon} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <View style={styles.statCopy}>
+        <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
+        <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
+      </View>
     </View>
   );
 };
@@ -75,7 +76,6 @@ const RankingList = ({ title, items, emptyText }: {
 };
 
 export const OverviewScreen = () => {
-  const { width } = useWindowDimensions();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -106,11 +106,6 @@ export const OverviewScreen = () => {
     : overview?.scope === 'tvr'
       ? 'Equipa TVR'
       : 'Individual';
-  const horizontalPadding = 32;
-  const cardGap = 10;
-  const availableWidth = Math.max(width - horizontalPadding, 280);
-  const useSingleColumnStats = availableWidth < 360;
-  const statCardWidth = useSingleColumnStats ? '100%' : Math.floor((availableWidth - cardGap) / 2);
   const stats = overview ? [
     { label: 'Parceiros', value: overview.totals.parceiros, icon: 'business-outline' as const, tone: 'primary' as const, visible: true },
     { label: 'Este mês', value: overview.totals.parceiros_mes, icon: 'calendar-outline' as const, tone: 'green' as const, visible: true },
@@ -156,13 +151,12 @@ export const OverviewScreen = () => {
           <>
             <View style={styles.statsGrid}>
               {stats.map((item) => (
-                <StatCard
+                <StatTile
                   key={item.label}
                   label={item.label}
                   value={item.value}
                   icon={item.icon}
                   tone={item.tone}
-                  width={statCardWidth}
                 />
               ))}
             </View>
@@ -238,11 +232,12 @@ const styles = StyleSheet.create({
   refreshBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Theme.colors.border },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Theme.colors.errorLight, borderRadius: 12, padding: 12, marginBottom: 12 },
   errorText: { flex: 1, color: Theme.colors.error, fontSize: 13, fontWeight: '600' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10, marginBottom: 12 },
-  statCard: { minHeight: 132, backgroundColor: 'white', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: Theme.colors.border },
-  statIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  statValue: { fontSize: 24, fontWeight: '800', color: Theme.colors.textPrimary },
-  statLabel: { fontSize: 12, color: Theme.colors.textSecondary, fontWeight: '600', marginTop: 2 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: Theme.colors.border, marginBottom: 12, overflow: 'hidden' },
+  statTile: { width: '50%', minHeight: 92, padding: 12, flexDirection: 'row', alignItems: 'center', borderRightWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#eef2f4' },
+  statIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  statCopy: { flex: 1, minWidth: 0 },
+  statValue: { fontSize: 22, fontWeight: '800', color: Theme.colors.textPrimary },
+  statLabel: { fontSize: 11, color: Theme.colors.textSecondary, fontWeight: '700', marginTop: 2 },
   progressBand: { backgroundColor: Theme.colors.primary, borderRadius: 12, padding: 16, marginBottom: 12 },
   progressLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
   progressValue: { color: 'white', fontSize: 28, fontWeight: '900', marginTop: 2 },
