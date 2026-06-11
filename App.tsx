@@ -1,12 +1,14 @@
 import 'react-native-gesture-handler';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Updates from 'expo-updates';
 import { Theme } from '@/constants/theme';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { RootNavigator } from '@/navigation/RootNavigator';
+
+const INACTIVITY_TIMEOUT_MS = 60 * 1000;
 
 const OtaUpdateGate = () => {
   const [updating, setUpdating] = useState(false);
@@ -44,21 +46,56 @@ const OtaUpdateGate = () => {
   );
 };
 
+const AutoLogoutGate = () => {
+  const { userRole, signOut } = useAuth();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimer = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  const resetTimer = () => {
+    clearTimer();
+    if (!userRole) return;
+
+    timeoutRef.current = setTimeout(() => {
+      signOut();
+    }, INACTIVITY_TIMEOUT_MS);
+  };
+
+  useEffect(() => {
+    resetTimer();
+    return clearTimer;
+  }, [userRole]);
+
+  return (
+    <View style={styles.appShell} onTouchStart={resetTimer} onTouchMove={resetTimer}>
+      <NavigationContainer>
+        <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
+        <OtaUpdateGate />
+        <RootNavigator />
+      </NavigationContainer>
+    </View>
+  );
+};
+
 export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <NavigationContainer>
-          <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
-          <OtaUpdateGate />
-          <RootNavigator />
-        </NavigationContainer>
+        <AutoLogoutGate />
       </AuthProvider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  appShell: {
+    flex: 1,
+  },
   updateBackdrop: {
     flex: 1,
     alignItems: 'center',

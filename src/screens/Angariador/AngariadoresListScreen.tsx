@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Animated, Switch, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Animated, Switch, Modal, KeyboardAvoidingView, Platform, Alert, RefreshControl } from 'react-native';
 import Collapsible from 'react-native-collapsible';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/theme';
@@ -105,6 +105,7 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
   const { userRole, userData } = useAuth();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeSections, setActiveSections] = useState<number[]>([]);
   const [selectedAngariador, setSelectedAngariador] = useState<any | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -132,6 +133,15 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
       if (res && res.data) setData(res.data);
     }
     setLoading(false);
+  };
+
+  const refreshData = async () => {
+    setRefreshing(true);
+    try {
+      await fetchData();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const toggleSection = (id: number) => {
@@ -221,6 +231,9 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={22} color="white" />
           </TouchableOpacity>
+          <TouchableOpacity onPress={refreshData} style={styles.backBtn} activeOpacity={0.7} disabled={refreshing}>
+            <Ionicons name="refresh" size={21} color="white" />
+          </TouchableOpacity>
           <View style={styles.headerPill}>
             <Text style={styles.headerPillText}>{data.length} Grupos</Text>
           </View>
@@ -232,6 +245,7 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
       <ScrollView
         style={styles.listContainer}
         contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} colors={[Theme.colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
         {data.map((item, index) => (

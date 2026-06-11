@@ -100,9 +100,14 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <LinearGradient colors={[Theme.colors.primary, Theme.colors.secondary]} style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.75}>
-          <Ionicons name="arrow-back" size={22} color="white" />
-        </TouchableOpacity>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn} activeOpacity={0.75}>
+            <Ionicons name="arrow-back" size={22} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onRefresh} style={styles.headerIconBtn} activeOpacity={0.75} disabled={refreshing}>
+            <Ionicons name="refresh" size={21} color="white" />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.headerTitle}>Parceiros</Text>
         <Text style={styles.headerSubtitle}>{items.length} parceiro(s) registado(s)</Text>
       </LinearGradient>
@@ -155,7 +160,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Theme.colors.background, gap: 12 },
   loadingText: { color: Theme.colors.textSecondary, fontSize: 14 },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  headerIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 28, color: 'white', fontWeight: '800' },
   headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.78)', marginTop: 4 },
   scroll: { flex: 1, marginTop: -14 },

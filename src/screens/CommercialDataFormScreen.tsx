@@ -451,6 +451,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   const latitudeValue = useWatch({ control, name: 'latitude' });
   const longitudeValue = useWatch({ control, name: 'longitude' });
   const selectedLocalizacaoLabel = useWatch({ control, name: 'localizacaoDisplay' });
+  const selectedLocalizacaoId = useWatch({ control, name: 'localizacaoId' });
+  const hasSelectedLocalizacao = !!selectedLocalizacaoId;
   const [bankMode, setBankMode] = useState<'lista' | 'outro'>('lista');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
@@ -508,6 +510,9 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     setValue('localizacaoId', undefined, { shouldDirty: true });
     setValue('localizacaoDisplay', '', { shouldDirty: true });
     setValue('localizacaoNivel', '', { shouldDirty: true });
+    setValue('enderecoCidade', '', { shouldValidate: true, shouldDirty: true });
+    setValue('enderecoLocalidade', '', { shouldDirty: true });
+    setValue('enderecoBairroRef', '', { shouldDirty: true });
   };
 
   const resolveAddress = async (latitude: number, longitude: number) => {
@@ -876,11 +881,29 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
           <LocalizacaoSearch selectedLabel={selectedLocalizacaoLabel} onSelect={applyLocalizacaoToForm} onClear={clearLocalizacaoFromForm} />
           <View onLayout={onLayoutField('enderecoCidade')}>
             <Controller control={control} name="enderecoCidade" render={({ field: { onChange, onBlur, value } }) => (
-              <Input label="Província" placeholder="Ex: Cidade de Maputo" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.enderecoCidade?.message} required />
+              <Input
+                label="Província"
+                placeholder="Ex: Cidade de Maputo"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.enderecoCidade?.message}
+                required
+                editable={!hasSelectedLocalizacao}
+                rightIcon={hasSelectedLocalizacao ? <Ionicons name="lock-closed-outline" size={17} color={COLORS.textSecondary} /> : undefined}
+              />
             )} />
           </View>
           <Controller control={control} name="enderecoLocalidade" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Distrito" placeholder="Distrito" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input
+              label="Distrito"
+              placeholder="Distrito"
+              value={value}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              editable={!hasSelectedLocalizacao}
+              rightIcon={hasSelectedLocalizacao ? <Ionicons name="lock-closed-outline" size={17} color={COLORS.textSecondary} /> : undefined}
+            />
           )} />
           <Controller control={control} name="enderecoAvenidaRua" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Avenida/Rua" placeholder="Avenida/Rua" value={value} onChangeText={onChange} onBlur={onBlur} />
@@ -898,7 +921,15 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             </View>
           </View>
           <Controller control={control} name="enderecoBairroRef" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Bairro/Ref." placeholder="Bairro/Referência" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input
+              label="Bairro/Ref."
+              placeholder="Bairro/Referência"
+              value={value}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              editable={!hasSelectedLocalizacao}
+              rightIcon={hasSelectedLocalizacao ? <Ionicons name="lock-closed-outline" size={17} color={COLORS.textSecondary} /> : undefined}
+            />
           )} />
           <View style={styles.rowFields}>
             <View style={{ flex: 1 }}>
