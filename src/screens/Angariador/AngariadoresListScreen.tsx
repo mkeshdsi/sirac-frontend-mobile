@@ -228,12 +228,14 @@ export const AngariadoresListScreen = ({ navigation }: any) => {
         <View style={styles.decorCircle2} />
 
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={22} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={refreshData} style={styles.backBtn} activeOpacity={0.7} disabled={refreshing}>
-            <Ionicons name="refresh" size={21} color="white" />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={22} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={refreshData} style={styles.backBtn} activeOpacity={0.7} disabled={refreshing}>
+              <Ionicons name="refresh" size={21} color="white" />
+            </TouchableOpacity>
+          </View>
           <View style={styles.headerPill}>
             <Text style={styles.headerPillText}>{data.length} Grupos</Text>
           </View>
@@ -342,6 +344,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 20,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   backBtn: {
     width: 40,
