@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, DimensionValue, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,11 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/theme';
 import { DashboardOverview, getDashboardOverview } from '@/services/apiResources';
 
-const StatCard = ({ label, value, icon, tone = 'primary' }: {
+const StatCard = ({ label, value, icon, tone = 'primary', width }: {
   label: string;
   value: number | string;
   icon: keyof typeof Ionicons.glyphMap;
   tone?: 'primary' | 'blue' | 'amber' | 'green';
+  width: DimensionValue;
 }) => {
   const colors = {
     primary: { bg: '#01836b12', icon: Theme.colors.primary },
@@ -21,7 +22,7 @@ const StatCard = ({ label, value, icon, tone = 'primary' }: {
   }[tone];
 
   return (
-    <View style={styles.statCard}>
+    <View style={[styles.statCard, { width }]}>
       <View style={[styles.statIcon, { backgroundColor: colors.bg }]}>
         <Ionicons name={icon} size={18} color={colors.icon} />
       </View>
@@ -56,24 +57,25 @@ const RankingList = ({ title, items, emptyText }: {
   title: string;
   items: Array<{ id: number; nome: string; total: number }>;
   emptyText: string;
-}) => (
-  <View style={styles.section}>
-    <Text style={styles.sectionTitle}>{title}</Text>
-    {items.length === 0 ? (
-      <Text style={styles.emptyText}>{emptyText}</Text>
-    ) : (
-      items.map((item, index) => (
-        <View key={`${item.id}-${index}`} style={styles.rankRow}>
-          <View style={styles.rankIndex}><Text style={styles.rankIndexText}>{index + 1}</Text></View>
-          <Text style={styles.rankName} numberOfLines={1}>{item.nome}</Text>
-          <Text style={styles.rankTotal}>{item.total}</Text>
-        </View>
-      ))
-    )}
-  </View>
-);
+}) => {
+  if (items.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {items.map((item, index) => (
+          <View key={`${item.id}-${index}`} style={styles.rankRow}>
+            <View style={styles.rankIndex}><Text style={styles.rankIndexText}>{index + 1}</Text></View>
+            <Text style={styles.rankName} numberOfLines={1}>{item.nome}</Text>
+            <Text style={styles.rankTotal}>{item.total}</Text>
+          </View>
+        ))}
+    </View>
+  );
+};
 
 export const OverviewScreen = () => {
+  const { width } = useWindowDimensions();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -104,6 +106,17 @@ export const OverviewScreen = () => {
     : overview?.scope === 'tvr'
       ? 'Equipa TVR'
       : 'Individual';
+  const horizontalPadding = 32;
+  const cardGap = 10;
+  const availableWidth = Math.max(width - horizontalPadding, 280);
+  const useSingleColumnStats = availableWidth < 360;
+  const statCardWidth = useSingleColumnStats ? '100%' : Math.floor((availableWidth - cardGap) / 2);
+  const stats = overview ? [
+    { label: 'Parceiros', value: overview.totals.parceiros, icon: 'business-outline' as const, tone: 'primary' as const, visible: true },
+    { label: 'Este mês', value: overview.totals.parceiros_mes, icon: 'calendar-outline' as const, tone: 'green' as const, visible: true },
+    { label: 'Angariadores', value: overview.totals.angariadores, icon: 'people-outline' as const, tone: 'blue' as const, visible: overview.scope !== 'angariador' || overview.totals.angariadores > 0 },
+    { label: 'TVRs', value: overview.totals.tvrs, icon: 'briefcase-outline' as const, tone: 'amber' as const, visible: overview.totals.tvrs > 0 },
+  ].filter((item) => item.visible) : [];
 
   if (loading && !overview) {
     return (
@@ -142,10 +155,16 @@ export const OverviewScreen = () => {
         {overview && (
           <>
             <View style={styles.statsGrid}>
-              <StatCard label="Parceiros" value={overview.totals.parceiros} icon="business-outline" />
-              <StatCard label="Este mês" value={overview.totals.parceiros_mes} icon="calendar-outline" tone="green" />
-              <StatCard label="Angariadores" value={overview.totals.angariadores} icon="people-outline" tone="blue" />
-              <StatCard label="TVRs" value={overview.totals.tvrs} icon="briefcase-outline" tone="amber" />
+              {stats.map((item) => (
+                <StatCard
+                  key={item.label}
+                  label={item.label}
+                  value={item.value}
+                  icon={item.icon}
+                  tone={item.tone}
+                  width={statCardWidth}
+                />
+              ))}
             </View>
 
             <View style={styles.progressBand}>
@@ -184,12 +203,10 @@ export const OverviewScreen = () => {
               <RankingList title="Top TVRs" items={overview.top_tvrs} emptyText="Ainda não há cadastros diretos por TVRs." />
             )}
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Parceiros recentes</Text>
-              {overview.recent_parceiros.length === 0 ? (
-                <Text style={styles.emptyText}>Ainda não há parceiros registados neste âmbito.</Text>
-              ) : (
-                overview.recent_parceiros.map((item) => (
+            {overview.recent_parceiros.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Parceiros recentes</Text>
+                {overview.recent_parceiros.map((item) => (
                   <View key={item.id} style={styles.recentRow}>
                     <View style={styles.recentIcon}>
                       <Ionicons name="business-outline" size={16} color={Theme.colors.primary} />
@@ -199,9 +216,9 @@ export const OverviewScreen = () => {
                       <Text style={styles.recentMeta}>{item.tipo_parceiro} · {item.data_adesao || 'Sem data'}</Text>
                     </View>
                   </View>
-                ))
-              )}
-            </View>
+                ))}
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -221,8 +238,8 @@ const styles = StyleSheet.create({
   refreshBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Theme.colors.border },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Theme.colors.errorLight, borderRadius: 12, padding: 12, marginBottom: 12 },
   errorText: { flex: 1, color: Theme.colors.error, fontSize: 13, fontWeight: '600' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
-  statCard: { width: '48.5%', backgroundColor: 'white', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: Theme.colors.border },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10, marginBottom: 12 },
+  statCard: { minHeight: 132, backgroundColor: 'white', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: Theme.colors.border },
   statIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   statValue: { fontSize: 24, fontWeight: '800', color: Theme.colors.textPrimary },
   statLabel: { fontSize: 12, color: Theme.colors.textSecondary, fontWeight: '600', marginTop: 2 },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -18,6 +18,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/types';
 import { login } from '@/services/auth';
 import { useAuth } from '@/context/AuthContext';
+import { deleteItem, getItem, setItem } from '@/config/api';
 
 type Nav = StackNavigationProp<RootStackParamList, 'Login'>;
 interface Props { navigation: Nav }
@@ -28,6 +29,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberPassword, setRememberPassword] = useState(false);
   const { signIn } = useAuth();
   const normalizedIdentifier = identifier.trim();
   const normalizedContact = normalizedIdentifier.replace(/\D/g, '');
@@ -35,6 +37,24 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedIdentifier.toLowerCase());
   const isTmcelContact = /^(82|83)\d{7}$/.test(normalizedContact);
   const isIdentifierValid = isEmailIdentifier ? isEmailValid : isTmcelContact;
+
+  useEffect(() => {
+    const loadSavedCredentials = async () => {
+      const saved = await getItem('sirac_saved_login');
+      if (!saved) return;
+
+      try {
+        const credentials = JSON.parse(saved);
+        setIdentifier(credentials.identifier || '');
+        setPassword(credentials.password || '');
+        setRememberPassword(true);
+      } catch {
+        await deleteItem('sirac_saved_login');
+      }
+    };
+
+    loadSavedCredentials();
+  }, []);
 
   const onSubmit = async () => {
     setError('');
@@ -66,6 +86,15 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       
       const roleMatch = (res.type || res.user?.type || res.user?.usertype || 'user') as 'user' | 'angariador' | 'tvr';
       await signIn(roleMatch, res.user);
+
+      if (rememberPassword) {
+        await setItem('sirac_saved_login', JSON.stringify({
+          identifier: isEmailIdentifier ? normalizedIdentifier.toLowerCase() : normalizedContact,
+          password,
+        }));
+      } else {
+        await deleteItem('sirac_saved_login');
+      }
       
       // O RootNavigator vai reagir ao signIn e desenhar as BottomTabs (Dashboard)
     } catch (e) {
@@ -154,9 +183,22 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             )}
 
-            <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate('ForgotPassword')}>
-              <Text style={styles.forgotPasswordText}>Esqueci a palavra-passe</Text>
-            </TouchableOpacity>
+            <View style={styles.loginOptions}>
+              <TouchableOpacity
+                style={styles.rememberRow}
+                onPress={() => setRememberPassword((value) => !value)}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.checkbox, rememberPassword && styles.checkboxChecked]}>
+                  {rememberPassword && <Ionicons name="checkmark" size={14} color="white" />}
+                </View>
+                <Text style={styles.rememberText}>Guardar senha</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate('ForgotPassword')}>
+                <Text style={styles.forgotPasswordText}>Esqueci a palavra-passe</Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.buttonContainer}>
               <Button 
@@ -251,9 +293,41 @@ const styles = StyleSheet.create({
     marginLeft: Theme.spacing.sm,
     flex: 1,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
+  loginOptions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
     marginBottom: Theme.spacing.xl,
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    backgroundColor: Theme.colors.surface,
+  },
+  checkboxChecked: {
+    borderColor: Theme.colors.primary,
+    backgroundColor: Theme.colors.primary,
+  },
+  rememberText: {
+    ...Theme.typography.caption,
+    color: Theme.colors.textPrimary,
+    fontWeight: '600',
+  },
+  forgotPassword: {
+    flexShrink: 1,
+    alignItems: 'flex-end',
   },
   forgotPasswordText: {
     ...Theme.typography.caption,

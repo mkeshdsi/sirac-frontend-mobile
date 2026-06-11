@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getItem, setItem, deleteItem } from '@/config/api';
+import { getAuthApi, getItem, setItem, deleteItem } from '@/config/api';
 
 export type AuthRole = 'user' | 'angariador' | 'tvr' | null;
 
@@ -26,15 +26,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const storedRole = await getItem('sirac_user_role');
       const storedData = await getItem('sirac_user_data');
+      const storedToken = await getItem('sirac_auth_token');
       
-      if (storedRole) {
-        setUserRole(storedRole as AuthRole);
+      if (!storedRole || !storedToken) {
+        await signOut();
+        return;
       }
-      if (storedData) {
-        setUserData(JSON.parse(storedData));
-      }
+
+      const api = await getAuthApi();
+      const res = await api.get('/api/v1/auth/me');
+      const serverRole = (res.data?.type || storedRole) as AuthRole;
+      const serverData = res.data?.data || (storedData ? JSON.parse(storedData) : null);
+
+      setUserRole(serverRole);
+      setUserData(serverData);
+      await setItem('sirac_user_role', serverRole || '');
+      if (serverData) await setItem('sirac_user_data', JSON.stringify(serverData));
     } catch (e) {
       console.log('Error loading auth data', e);
+      await signOut();
     } finally {
       setIsLoading(false);
     }
