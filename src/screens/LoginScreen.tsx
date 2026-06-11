@@ -141,7 +141,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.inputContainer}>
               <Input
                 label="Email ou contacto"
-                placeholder="Email ou contacto Tmcel"
+                placeholder="Email ou contacto 82/83"
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
@@ -150,16 +150,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 required
                 leftIcon={<Ionicons name={isEmailIdentifier ? 'mail-outline' : 'person-outline'} size={20} color={Theme.colors.textSecondary} />}
               />
-              <View style={styles.identifierHelp}>
-                <View style={styles.identifierHelpItem}>
-                  <Ionicons name="mail-outline" size={14} color={Theme.colors.textSecondary} />
-                  <Text style={styles.identifierHelpText}>Colaborador: entra com email</Text>
-                </View>
-                <View style={styles.identifierHelpItem}>
-                  <Ionicons name="call-outline" size={14} color={Theme.colors.textSecondary} />
-                  <Text style={styles.identifierHelpText}>TVR ou Angariador: entra com contacto 82/83</Text>
-                </View>
-              </View>
             </View>
 
             <View style={styles.inputContainer}>
@@ -285,22 +275,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: Theme.spacing.lg,
-  },
-  identifierHelp: {
-    gap: 6,
-    marginTop: -Theme.spacing.sm,
-    paddingHorizontal: 2,
-  },
-  identifierHelpItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  identifierHelpText: {
-    ...Theme.typography.caption,
-    color: Theme.colors.textSecondary,
-    flex: 1,
-    lineHeight: 18,
   },
   eyeIcon: {
     padding: Theme.spacing.xs,
