@@ -70,6 +70,12 @@ const CardItem = ({ item, isExpanded, onToggle, onToggleActive, onOpenPassword }
                   <Ionicons name="mail-outline" size={11} color={Theme.colors.textSecondary} style={{ marginRight: 3 }} />
                   <Text style={styles.angariadorContact}>{ang.email}</Text>
                 </View>
+                {ang.created_by?.nome && (
+                  <View style={styles.contactRow}>
+                    <Ionicons name="person-add-outline" size={11} color={Theme.colors.textSecondary} style={{ marginRight: 3 }} />
+                    <Text style={styles.angariadorContact}>Cadastrado por: {ang.created_by.nome}</Text>
+                  </View>
+                )}
               </View>
               <View style={styles.activeControl}>
                 <Text style={[styles.activeLabel, ang.is_active ? styles.activeLabelOn : styles.activeLabelOff]}>
@@ -83,7 +89,7 @@ const CardItem = ({ item, isExpanded, onToggle, onToggleActive, onOpenPassword }
                     value={!!ang.is_active}
                     onValueChange={(value) => onToggleActive(ang.id, value)}
                     trackColor={{ false: '#d1d5db', true: `${Theme.colors.primary}55` }}
-                    thumbColor={ang.is_active ? Theme.colors.primary : '#f4f4f5'}
+                    thumbColor={ang.is_active ? Theme.colors.primary : '#f4f4f4'}
                   />
                 </View>
               </View>
