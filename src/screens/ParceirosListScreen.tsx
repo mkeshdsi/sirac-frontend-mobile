@@ -15,7 +15,17 @@ const creatorTypeLabel = (type?: string) => {
   return 'Origem';
 };
 
-const validationLabel = (state?: string) => {
+const isEwpCreated = (value: unknown) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  const normalized = String(value || '').toLowerCase();
+  return ['1', 'true', 'sim', 'yes'].includes(normalized);
+};
+
+const partnerStatusLabel = (item: any) => {
+  if (isEwpCreated(item?.criado_ewp)) return 'Ativo';
+
+  const state = item?.estado_validacao;
   const normalized = String(state || '').toUpperCase();
   if (normalized === 'PENDENTE') return 'Pendente';
   if (normalized === 'APROVADO') return 'Aprovado';
@@ -24,7 +34,10 @@ const validationLabel = (state?: string) => {
   return state || 'Sem estado';
 };
 
-const validationTone = (state?: string) => {
+const partnerStatusTone = (item: any) => {
+  if (isEwpCreated(item?.criado_ewp)) return 'success';
+
+  const state = item?.estado_validacao;
   const normalized = String(state || '').toUpperCase();
   if (normalized === 'APROVADO' || normalized === 'VALIDADO') return 'success';
   if (normalized === 'REJEITADO') return 'danger';
@@ -142,22 +155,26 @@ export const ParceirosListScreen = ({ navigation }: any) => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Theme.colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        {items.map((item) => (
-          <View key={item.id} style={styles.card}>
+        {items.map((item) => {
+          const statusTone = partnerStatusTone(item);
+          const ewpCreated = isEwpCreated(item.criado_ewp);
+
+          return (
+            <View key={item.id} style={styles.card}>
             <View style={styles.iconWrap}>
               <Ionicons name="business-outline" size={20} color={Theme.colors.primary} />
             </View>
             <View style={styles.cardBody}>
               <Text style={styles.title}>{item.designacao || item.nomeComercial || `Parceiro #${item.id}`}</Text>
               <View style={styles.badgeRow}>
-                <View style={[styles.statusBadge, styles[`status_${validationTone(item.estado_validacao)}`]]}>
-                  <Text style={[styles.statusText, styles[`statusText_${validationTone(item.estado_validacao)}`]]}>
-                    {validationLabel(item.estado_validacao)}
+                <View style={[styles.statusBadge, styles[`status_${statusTone}`]]}>
+                  <Text style={[styles.statusText, styles[`statusText_${statusTone}`]]}>
+                    {partnerStatusLabel(item)}
                   </Text>
                 </View>
-                <View style={[styles.statusBadge, item.criado_ewp ? styles.status_success : styles.status_muted]}>
-                  <Text style={[styles.statusText, item.criado_ewp ? styles.statusText_success : styles.statusText_muted]}>
-                    {item.criado_ewp ? 'EWP criado' : 'EWP pendente'}
+                <View style={[styles.statusBadge, ewpCreated ? styles.status_success : styles.status_muted]}>
+                  <Text style={[styles.statusText, ewpCreated ? styles.statusText_success : styles.statusText_muted]}>
+                    {ewpCreated ? 'EWP criado' : 'EWP pendente'}
                   </Text>
                 </View>
               </View>
@@ -176,8 +193,9 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                 <Text style={styles.creatorContact}>Contacto do cadastrador: {item.angariador_msisdn}</Text>
               )}
             </View>
-          </View>
-        ))}
+            </View>
+          );
+        })}
 
         {!!error && (
           <View style={styles.errorState}>
