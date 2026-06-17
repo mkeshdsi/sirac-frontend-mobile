@@ -24,8 +24,8 @@ export const DashboardTabs = () => {
           headerShown: false,
           tabBarIcon: ({ focused, color, size }) => {
             let iconName: keyof typeof Ionicons.glyphMap = 'home';
-            if (route.name === 'Dashboard') iconName = focused ? 'apps' : 'apps-outline';
-            else if (route.name === 'Visão') iconName = focused ? 'bar-chart' : 'bar-chart-outline';
+            if (route.name === 'Início') iconName = focused ? 'apps' : 'apps-outline';
+            else if (route.name === 'Dashboard') iconName = focused ? 'bar-chart' : 'bar-chart-outline';
             else if (route.name === 'Perfil') iconName = focused ? 'person' : 'person-outline';
             else if (route.name === 'Sair') iconName = focused ? 'log-out' : 'log-out-outline';
 
@@ -44,8 +44,8 @@ export const DashboardTabs = () => {
           },
         })}
       >
-        <Tab.Screen name="Dashboard" component={DashboardScreen} />
-        <Tab.Screen name="Visão" component={OverviewScreen} />
+        <Tab.Screen name="Início" component={DashboardScreen} />
+        <Tab.Screen name="Dashboard" component={OverviewScreen} />
         <Tab.Screen name="Perfil" component={ProfileScreen} />
         <Tab.Screen 
           name="Sair" 
