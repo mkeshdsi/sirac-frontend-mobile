@@ -7,6 +7,7 @@ import * as Updates from 'expo-updates';
 import { Theme } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { RootNavigator } from '@/navigation/RootNavigator';
+import { hasActiveNetworkActivity, useNetworkActivityActive } from '@/utils/networkActivity';
 
 const INACTIVITY_TIMEOUT_MS = 60 * 1000;
 
@@ -48,6 +49,7 @@ const OtaUpdateGate = () => {
 
 const AutoLogoutGate = () => {
   const { userRole, signOut } = useAuth();
+  const hasLoadingRequest = useNetworkActivityActive();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimer = () => {
@@ -59,9 +61,13 @@ const AutoLogoutGate = () => {
 
   const resetTimer = () => {
     clearTimer();
-    if (!userRole) return;
+    if (!userRole || hasLoadingRequest) return;
 
     timeoutRef.current = setTimeout(() => {
+      if (hasActiveNetworkActivity()) {
+        resetTimer();
+        return;
+      }
       signOut();
     }, INACTIVITY_TIMEOUT_MS);
   };
@@ -69,7 +75,7 @@ const AutoLogoutGate = () => {
   useEffect(() => {
     resetTimer();
     return clearTimer;
-  }, [userRole]);
+  }, [userRole, hasLoadingRequest]);
 
   return (
     <View style={styles.appShell} onTouchStart={resetTimer} onTouchMove={resetTimer}>

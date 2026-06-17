@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import Constants from 'expo-constants';
 import { getItem, setItem, deleteItem } from '@/utils/storage';
+import { beginNetworkActivity } from '@/utils/networkActivity';
 export { getItem, setItem, deleteItem };
 
 const KEY_API_BASE_URL = 'sirac_api_base_url';
@@ -8,6 +9,26 @@ const KEY_AUTH_TOKEN = 'sirac_auth_token';
 
 function normalizeBase(url: string): string {
   return url ? url.replace(/\/$/, '') : '';
+}
+
+function trackNetworkActivity(instance: AxiosInstance): AxiosInstance {
+  instance.interceptors.request.use((config) => {
+    (config as any).__endNetworkActivity = beginNetworkActivity();
+    return config;
+  });
+
+  instance.interceptors.response.use(
+    (response) => {
+      (response.config as any).__endNetworkActivity?.();
+      return response;
+    },
+    (error) => {
+      (error?.config as any)?.__endNetworkActivity?.();
+      return Promise.reject(error);
+    }
+  );
+
+  return instance;
 }
 
 export async function getBaseUrl(): Promise<string> {
@@ -37,21 +58,21 @@ export async function setBaseUrl(url: string): Promise<void> {
 
 export async function getApi(): Promise<AxiosInstance> {
   const baseURL = await getBaseUrl();
-  return axios.create({
+  return trackNetworkActivity(axios.create({
     baseURL,
     timeout: 60000,
     headers: { 'Content-Type': 'application/json' },
-  });
+  }));
 }
 
 export async function getAuthApi(): Promise<AxiosInstance> {
   const baseURL = await getBaseUrl();
   const token = await getItem(KEY_AUTH_TOKEN);
-  const instance = axios.create({
+  const instance = trackNetworkActivity(axios.create({
     baseURL,
     timeout: 60000,
     headers: { 'Content-Type': 'application/json' },
-  });
+  }));
   if (token) {
     instance.interceptors.request.use((config) => {
       config.headers = config.headers || {};
