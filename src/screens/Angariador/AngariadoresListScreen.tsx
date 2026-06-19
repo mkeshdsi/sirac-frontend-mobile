@@ -70,10 +70,10 @@ const CardItem = ({ item, isExpanded, onToggle, onToggleActive, onOpenPassword }
                   <Ionicons name="mail-outline" size={11} color={Theme.colors.textSecondary} style={{ marginRight: 3 }} />
                   <Text style={styles.angariadorContact}>{ang.email}</Text>
                 </View>
-                {ang.created_by?.name && (
+                {ang.created_by?.nome && (
                   <View style={styles.contactRow}>
                     <Ionicons name="person-add-outline" size={11} color={Theme.colors.textSecondary} style={{ marginRight: 3 }} />
-                    <Text style={styles.angariadorContact}>Cadastrado por: {ang.created_by.name}</Text>
+                    <Text style={styles.angariadorContact}>Cadastrado por: {ang.created_by.nome}</Text>
                   </View>
                 )}
               </View>
