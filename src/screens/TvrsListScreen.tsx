@@ -137,7 +137,7 @@ export const TvrsListScreen = ({ navigation }: any) => {
               {!!item.msisdn && <Text style={styles.detail}>Contacto: {item.msisdn}</Text>}
               {!!item.email && <Text style={styles.detail}>Email: {item.email}</Text>}
               {!!item.bi && <Text style={styles.detail}>BI: {item.bi}</Text>}
-              {!!item.created_by?.nome && <Text style={styles.detail}>Cadastrado por: {item.created_by.nome}</Text>}
+              {!!item.created_by?.name && <Text style={styles.detail}>Cadastrado por: {item.created_by.name}</Text>}
             </View>
             <Ionicons name="chevron-forward" size={20} color={Theme.colors.gray400} />
           </TouchableOpacity>
