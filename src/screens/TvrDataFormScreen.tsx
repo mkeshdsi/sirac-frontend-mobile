@@ -127,12 +127,6 @@ export const TvrDataFormScreen = ({ navigation }: any) => {
   };
 
   const pickImageFromGallery = async (field: BiImageField) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      setShowErrorModal({ visible: true, title: 'Permissão Negada', message: 'Precisamos de permissão para aceder à galeria.' });
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,

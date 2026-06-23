@@ -39,8 +39,6 @@ module.exports = {
         'android.permission.ACCESS_FINE_LOCATION',
         'android.permission.ACCESS_COARSE_LOCATION',
         'android.permission.CAMERA',
-        'android.permission.READ_MEDIA_IMAGES',
-        'android.permission.READ_EXTERNAL_STORAGE',
       ],
       adaptiveIcon: {
         foregroundImage: './assets/logomkesh-adaptive-icon.png',
