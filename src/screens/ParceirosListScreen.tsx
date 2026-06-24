@@ -54,6 +54,14 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   const [selectedParceiro, setSelectedParceiro] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'ACTIVE'>('ALL');
+
+  const filteredItems = items.filter(item => {
+    if (filter === 'ALL') return true;
+    if (filter === 'PENDING') return String(item.estado_validacao || '').toUpperCase() === 'PENDENTE' && !isEwpCreated(item.criado_ewp);
+    if (filter === 'ACTIVE') return isEwpCreated(item.criado_ewp);
+    return true;
+  });
 
   const uniqueById = (data: any[]) => {
     const map = new Map();
@@ -181,7 +189,7 @@ export const ParceirosListScreen = ({ navigation }: any) => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Theme.colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        {items.map((item) => {
+        {filteredItems.map((item) => {
           const statusTone = partnerStatusTone(item);
           const ewpCreated = isEwpCreated(item.criado_ewp);
 
@@ -234,7 +242,7 @@ export const ParceirosListScreen = ({ navigation }: any) => {
           </View>
         )}
 
-        {items.length === 0 && !error && (
+        {filteredItems.length === 0 && !error && (
           <View style={styles.emptyState}>
             <Ionicons name="business-outline" size={42} color={Theme.colors.border} />
             <Text style={styles.emptyTitle}>Sem parceiros</Text>
@@ -280,6 +288,14 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', marginTop: 80 },
   emptyTitle: { fontSize: 17, color: Theme.colors.textPrimary, fontWeight: '700', marginTop: 12 },
   emptySubtitle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 6 },
+
+  filterContainer: { backgroundColor: Theme.colors.background, borderBottomWidth: 1, borderBottomColor: Theme.colors.border },
+  filterScroll: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
+  filterTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f0f0f0' },
+  filterTabActive: { backgroundColor: Theme.colors.primary },
+  filterText: { fontSize: 13, fontWeight: '600', color: Theme.colors.textSecondary },
+  filterTextActive: { color: 'white' },
+
 
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
