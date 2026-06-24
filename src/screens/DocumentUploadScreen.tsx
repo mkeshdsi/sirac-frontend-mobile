@@ -127,7 +127,7 @@ const UploadCard = ({ item, isUploaded, uri, onAttach, onRemove, converting }: a
 
 export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const { commercialData } = route.params;
+  const { commercialData, editParceiroId } = route.params;
   const [docs, setDocs] = useState<DocumentsPayload>({});
   const [converting, setConverting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -306,7 +306,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => navigation.navigate('ReviewSubmit', { commercialData, documents: docs })}
+          onPress={() => navigation.navigate('ReviewSubmit', { commercialData, documents: docs, editParceiroId })}
           disabled={!hasAnyDoc || converting}
           activeOpacity={0.85}
           style={styles.continueBtn}

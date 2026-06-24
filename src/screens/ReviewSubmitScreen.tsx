@@ -139,14 +139,21 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         formData.append("nuit", { uri: documents.nuitUri, name: "nuit.pdf", type: "application/pdf" } as any);
       }
 
-      const response = await api.post("/api/v1/parceiros/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      let response;
+      if (route.params.editParceiroId) {
+        response = await api.put(`/api/v1/parceiros/${route.params.editParceiroId}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        response = await api.post("/api/v1/parceiros/", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
 
       if (response.status === 201 || response.status === 200) {
         navigation.replace("Success", { registrationId: response.data?.id || "123" });
       } else {
-        throw new Error(`Falha ao criar parceiro (Status: ${response.status})`);
+        throw new Error(`Falha ao ${route.params.editParceiroId ? 'atualizar' : 'criar'} parceiro (Status: ${response.status})`);
       }
     } catch (err: any) {
       console.error("Erro submit detalhado:", err);

@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros } from '@/services/apiResources';
+import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros, getParceiro } from '@/services/apiResources';
+import { Modal } from 'react-native';
 
 const creatorTypeLabel = (type?: string) => {
   const normalized = String(type || '').toLowerCase();
@@ -50,6 +51,9 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [selectedParceiro, setSelectedParceiro] = useState<any>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const uniqueById = (data: any[]) => {
     const map = new Map();
@@ -119,6 +123,28 @@ export const ParceirosListScreen = ({ navigation }: any) => {
     fetchData().finally(() => setLoading(false));
   }, []);
 
+  
+  const openDetailsModal = async (item: any) => {
+    setSelectedParceiro(item);
+    setModalVisible(true);
+    setLoadingDetails(true);
+    try {
+      const detailed = await getParceiro(item.id);
+      if (detailed) {
+        setSelectedParceiro(detailed);
+      }
+    } catch (e) {
+      // Failed to load details
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const handleEditClick = () => {
+    setModalVisible(false);
+    navigation.navigate('CommercialDataForm', { editParceiroId: selectedParceiro.id });
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchData();
@@ -160,7 +186,7 @@ export const ParceirosListScreen = ({ navigation }: any) => {
           const ewpCreated = isEwpCreated(item.criado_ewp);
 
           return (
-            <View key={item.id} style={styles.card}>
+            <TouchableOpacity key={item.id} style={styles.card} activeOpacity={0.8} onPress={() => openDetailsModal(item)}>
             <View style={styles.iconWrap}>
               <Ionicons name="business-outline" size={20} color={Theme.colors.primary} />
             </View>
@@ -193,7 +219,7 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                 <Text style={styles.creatorContact}>Contacto do cadastrador: {item.angariador_msisdn}</Text>
               )}
             </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
 
@@ -254,6 +280,23 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', marginTop: 80 },
   emptyTitle: { fontSize: 17, color: Theme.colors.textPrimary, fontWeight: '700', marginTop: 12 },
   emptySubtitle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 6 },
+
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Theme.colors.border },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: Theme.colors.textPrimary },
+  modalCloseBtn: { padding: 4 },
+  modalScroll: { paddingBottom: 20 },
+  modalSection: { marginBottom: 20 },
+  modalSectionTitle: { fontSize: 15, fontWeight: '700', color: Theme.colors.primary, marginBottom: 8 },
+  modalText: { fontSize: 14, color: Theme.colors.textPrimary, marginBottom: 4, lineHeight: 20 },
+  modalLabel: { fontWeight: '600' },
+  commentBox: { backgroundColor: Theme.colors.background, padding: 12, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: Theme.colors.border },
+  commentAuthor: { fontSize: 12, fontWeight: '700', color: Theme.colors.textSecondary, marginBottom: 4 },
+  commentText: { fontSize: 14, color: Theme.colors.textPrimary, lineHeight: 20 },
+  editBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Theme.colors.primary, paddingVertical: 14, borderRadius: 12, marginTop: 10 },
+  editBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
+
   errorState: { alignItems: 'center', marginTop: 80, paddingHorizontal: 20 },
   errorTitle: { fontSize: 17, color: Theme.colors.error, fontWeight: '700', marginTop: 12 },
   errorSubtitle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 6, textAlign: 'center', lineHeight: 19 },

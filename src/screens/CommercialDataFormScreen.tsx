@@ -15,7 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { LocalizacaoOption, listAngariadores, listAprovadores, listValidadores, createAdesao, searchLocalizacoes } from '@/services/apiResources';
+import { LocalizacaoOption, listAngariadores, listAprovadores, listValidadores, createAdesao, searchLocalizacoes, getParceiro } from '@/services/apiResources';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -428,8 +428,73 @@ const EstabelecimentosFieldArray: React.FC<{ control: any }> = ({ control }) => 
 // ── Main screen ──────────────────────────────────────────
 export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const { personalData, password } = route.params || {};
+  const { personalData, password, editParceiroId } = route.params || {};
   const [isLoading, setIsLoading] = useState(false);
+  const formatDate = (d: Date) => { const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}/${mm}/${yyyy}`; };
+
+  useEffect(() => {
+    (async () => {
+      setIsLoading(true);
+      try {
+        if (editParceiroId) {
+          const parceiro = await getParceiro(editParceiroId);
+          if (parceiro) {
+            setValue('tipoParceiro', parceiro.tipo_parceiro, { shouldValidate: true });
+            setValue('nomeComercial', parceiro.designacao || '', { shouldValidate: true });
+            setValue('nuit', parceiro.nuit || '');
+            setValue('alvara', parceiro.alvara || '');
+            setValue('tipoEmpresa', parceiro.tipo_empresa || undefined);
+            setValue('banco', parceiro.banco || '');
+            setValue('numeroConta', parceiro.numero_conta || '');
+            setValue('contactoAgente', parceiro.contacto_agente || '');
+            setValue('profissao', parceiro.profissao || '');
+            setValue('naturezaObjecto', parceiro.natureza_actividade || '');
+            
+            if (parceiro.endereco) {
+               setValue('enderecoCidade', parceiro.endereco.cidade || '');
+               setValue('enderecoLocalidade', parceiro.endereco.localidade || '');
+               setValue('enderecoAvenidaRua', parceiro.endereco.avenida_rua || '');
+               setValue('enderecoNumero', parceiro.endereco.numero || '');
+               setValue('enderecoQuart', parceiro.endereco.quarteirao || '');
+               setValue('telefone', parceiro.endereco.telefone || '');
+               setValue('celular', parceiro.endereco.celular || '');
+               setValue('localizacaoId', parceiro.endereco.localizacao_id || undefined);
+               setValue('enderecoBairroRef', parceiro.bairro_ref || '');
+            }
+            if (parceiro.banca && parceiro.banca.length > 0) {
+               setValue('latitude', parceiro.banca[0].latitude);
+               setValue('longitude', parceiro.banca[0].longitude);
+               if (parceiro.banca[0].fotografia) {
+                 setValue('fotografia', parceiro.banca[0].fotografia);
+               }
+            }
+            if (parceiro.proprietarios) {
+               setValue('proprietarios', parceiro.proprietarios.map((p: any) => ({nome: p.nome, email: p.email, contacto: p.contacto})));
+            }
+            if (parceiro.assistentes) {
+               setValue('assistentes', parceiro.assistentes.map((a: any) => ({nomeCompleto: a.nome_completo, contacto: a.contacto})));
+            }
+            if (parceiro.estabelecimentos) {
+               setValue('estabelecimentos', parceiro.estabelecimentos.map((e: any) => ({nome: e.nome, provinciaLocalidade: e.provincia_localidade, enderecoBairro: e.endereco_bairro, localizacaoId: e.localizacao_id})));
+            }
+          }
+        }
+      } catch (error) {
+        Alert.alert("Erro", "Falha ao carregar dados do parceiro.");
+      } finally {
+        setIsLoading(false);
+      }
+      
+      await trigger('dataFormulario');
+      if (!editParceiroId) {
+        setValue('dataFormulario', formatDate(new Date()), { shouldValidate: true });
+      } else {
+        // Keep or format existing date?
+        setValue('dataFormulario', formatDate(new Date()), { shouldValidate: true });
+      }
+    })();
+  }, [editParceiroId]);
+
   const [showDatePicker, setShowDatePicker] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
   const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
@@ -690,12 +755,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     }
   };
 
-  const formatDate = (d: Date) => { const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}/${mm}/${yyyy}`; };
   const onLayoutField = (name: keyof CommercialData | string) => (e: any) => { const y = e?.nativeEvent?.layout?.y ?? 0; setFieldPositions((s) => ({ ...s, [String(name)]: y })); };
-
-  useEffect(() => {
-    (async () => { await trigger('dataFormulario'); setValue('dataFormulario', formatDate(new Date()), { shouldValidate: true }); })();
-  }, []);
 
   useEffect(() => {
     if (tipoParceiro === 'MERCHANT') { const current = getValues('tipoEmpresa'); if (!current) setValue('tipoEmpresa', 'SOCIEDADE', { shouldValidate: true }); }

@@ -125,6 +125,20 @@ export async function listParceiros(params?: ListParams) {
   return listResourceStrict(api, '/api/v1/parceiros/', params);
 }
 
+export async function getParceiro(parceiroId: number) {
+  const api = await getAuthApi();
+  const res = await api.get(`/api/v1/parceiros/${parceiroId}`);
+  return res.data;
+}
+
+export async function updateParceiro(parceiroId: number, payload: any) {
+  const api = await getAuthApi();
+  const res = await api.put(`/api/v1/parceiros/${parceiroId}`, payload, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+}
+
 export async function getParceirosGroupedDetailed() {
   const api = await getAuthApi();
   const res = await api.get('/api/v1/parceiros/grouped-detailed');
