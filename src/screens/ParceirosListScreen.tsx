@@ -46,6 +46,24 @@ const partnerStatusTone = (item: any) => {
   return 'warning';
 };
 
+const partnerIsRejeitado = (item: any) => {
+  const normalized = String(item?.estado_validacao || '').toUpperCase();
+  return normalized === 'REJEITADO' || normalized === 'INVALIDADO';
+};
+
+const userIsCreator = (item: any, userRole: any, userData: any) => {
+  if (!item || !userRole || !userData) return false;
+  const partnerType = String(item.angariador_type || '').toLowerCase();
+  let currentType: string = '';
+  if (userRole === 'user') currentType = 'user';
+  if (userRole === 'angariador') currentType = 'angariador';
+  if (userRole === 'tvr') currentType = 'tvr';
+  
+  const typesMatch = partnerType === currentType;
+  const idsMatch = Number(item.angariador_id) === Number(userData.id);
+  return typesMatch && idsMatch;
+};
+
 type FilterType = 'ALL' | 'PENDENTE' | 'ATIVO';
 
 export const ParceirosListScreen = ({ navigation }: any) => {
@@ -341,22 +359,24 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                 </View>
 
                 {selectedParceiro.comentarios && selectedParceiro.comentarios.length > 0 && (
-                  <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>Comentários</Text>
-                    {selectedParceiro.comentarios.map((comentario: any, index: number) => (
-                      <View key={index} style={styles.commentBox}>
-                        <Text style={styles.commentAuthor}>
-                          {comentario.autor || 'Sistema'} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
-                        </Text>
-                        <Text style={styles.commentText}>{comentario.texto}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
+          <View style={styles.modalSection}>
+            <Text style={styles.modalSectionTitle}>Comentários</Text>
+            {selectedParceiro.comentarios.map((comentario: any, index: number) => (
+              <View key={index} style={styles.commentBox}>
+                <Text style={styles.commentAuthor}>
+                  {comentario.autor || 'Sistema'} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
+                </Text>
+                <Text style={styles.commentText}>{comentario.texto}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
-                <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
-                  <Text style={styles.editBtnText}>Editar Parceiro</Text>
-                </TouchableOpacity>
+        {partnerIsRejeitado(selectedParceiro) && userIsCreator(selectedParceiro, userRole, userData) && (
+          <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
+            <Text style={styles.editBtnText}>Editar Parceiro</Text>
+          </TouchableOpacity>
+        )}
               </ScrollView>
             ) : null}
           </View>
