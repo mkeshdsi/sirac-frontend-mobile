@@ -441,6 +441,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
           if (parceiro) {
             setValue('tipoParceiro', parceiro.tipo_parceiro, { shouldValidate: true });
             setValue('nomeComercial', parceiro.designacao || '', { shouldValidate: true });
+            setValue('designacao', parceiro.designacao || '', { shouldValidate: true });
             setValue('nuit', parceiro.nuit || '');
             setValue('alvara', parceiro.alvara || '');
             setValue('tipoEmpresa', parceiro.tipo_empresa || undefined);
@@ -449,6 +450,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             setValue('contactoAgente', parceiro.contacto_agente || '');
             setValue('profissao', parceiro.profissao || '');
             setValue('naturezaObjecto', parceiro.natureza_actividade || '');
+            setValue('assinatura', parceiro.assinatura_adesao || '');
+            
+            if (parceiro.data_adesao) {
+              const date = new Date(parceiro.data_adesao);
+              setValue('dataFormulario', formatDate(date), { shouldValidate: true });
+            }
             
             if (parceiro.endereco) {
                setValue('enderecoCidade', parceiro.endereco.cidade || '');
