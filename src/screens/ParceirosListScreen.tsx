@@ -32,6 +32,7 @@ const partnerStatusLabel = (item: any) => {
   if (normalized === 'APROVADO') return 'Aprovado';
   if (normalized === 'REJEITADO') return 'Rejeitado';
   if (normalized === 'VALIDADO') return 'Validado';
+  if (normalized === 'INVALIDADO') return 'Invalidado';
   return state || 'Sem estado';
 };
 
@@ -41,9 +42,11 @@ const partnerStatusTone = (item: any) => {
   const state = item?.estado_validacao;
   const normalized = String(state || '').toUpperCase();
   if (normalized === 'APROVADO' || normalized === 'VALIDADO') return 'success';
-  if (normalized === 'REJEITADO') return 'danger';
+  if (normalized === 'REJEITADO' || normalized === 'INVALIDADO') return 'danger';
   return 'warning';
 };
+
+type FilterType = 'ALL' | 'PENDENTE' | 'ATIVO';
 
 export const ParceirosListScreen = ({ navigation }: any) => {
   const { userRole, userData } = useAuth();
@@ -54,14 +57,20 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   const [selectedParceiro, setSelectedParceiro] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'ACTIVE'>('ALL');
+  const [filter, setFilter] = useState<FilterType>('ALL');
 
   const filteredItems = items.filter(item => {
     if (filter === 'ALL') return true;
-    if (filter === 'PENDING') return String(item.estado_validacao || '').toUpperCase() === 'PENDENTE' && !isEwpCreated(item.criado_ewp);
-    if (filter === 'ACTIVE') return isEwpCreated(item.criado_ewp);
+    if (filter === 'PENDENTE') return String(item.estado_validacao || '').toUpperCase() === 'PENDENTE' && !isEwpCreated(item.criado_ewp);
+    if (filter === 'ATIVO') return isEwpCreated(item.criado_ewp);
     return true;
   });
+
+  const filters: { label: string; value: FilterType }[] = [
+    { label: 'Todos', value: 'ALL' },
+    { label: 'Pendente', value: 'PENDENTE' },
+    { label: 'Ativo', value: 'ATIVO' },
+  ];
 
   const uniqueById = (data: any[]) => {
     const map = new Map();
@@ -96,9 +105,11 @@ export const ParceirosListScreen = ({ navigation }: any) => {
     }
 
     if (userRole === 'angariador') {
-      return uniqueById((grouped.angariadores || [])
-        .filter((group: any) => Number(group.id) === Number(userData?.id))
-        .flatMap((group: any) => group.parceiros || []));
+      return uniqueById(
+        (grouped.angariadores || [])
+          .filter((group: any) => Number(group.id) === Number(userData?.id))
+          .flatMap((group: any) => group.parceiros || [])
+      );
     }
 
     return [];
@@ -183,6 +194,22 @@ export const ParceirosListScreen = ({ navigation }: any) => {
         <Text style={styles.headerSubtitle}>{items.length} parceiro(s) registado(s)</Text>
       </LinearGradient>
 
+      <View style={styles.filterContainer}>
+        <ScrollView horizontal style={styles.filterScroll} showsHorizontalScrollIndicator={false}>
+          {filters.map((f) => (
+            <TouchableOpacity
+              key={f.value}
+              style={[styles.filterTab, filter === f.value && styles.filterTabActive]}
+              onPress={() => setFilter(f.value)}
+            >
+              <Text style={[styles.filterText, filter === f.value && styles.filterTextActive]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -250,9 +277,94 @@ export const ParceirosListScreen = ({ navigation }: any) => {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Detalhes do Parceiro</Text>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setModalVisible(false)}
+              >
+                <Ionicons name="close" size={24} color={Theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {loadingDetails ? (
+              <View style={[styles.center, { paddingVertical: 40 }]}>
+                <ActivityIndicator size="large" color={Theme.colors.primary} />
+                <Text style={styles.loadingText}>A carregar detalhes...</Text>
+              </View>
+            ) : selectedParceiro ? (
+              <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Informações Básicas</Text>
+                  <Text style={styles.modalText}>
+                    <Text style={styles.modalLabel}>Designação:</Text> {selectedParceiro.designacao}
+                  </Text>
+                  <Text style={styles.modalText}>
+                    <Text style={styles.modalLabel}>Tipo:</Text> {selectedParceiro.tipo_parceiro}
+                  </Text>
+                  {selectedParceiro.tipo_empresa && (
+                    <Text style={styles.modalText}>
+                      <Text style={styles.modalLabel}>Tipo de Empresa:</Text> {selectedParceiro.tipo_empresa}
+                    </Text>
+                  )}
+                  {selectedParceiro.nuit && (
+                    <Text style={styles.modalText}>
+                      <Text style={styles.modalLabel}>NUIT:</Text> {selectedParceiro.nuit}
+                    </Text>
+                  )}
+                  {selectedParceiro.contacto_agente && (
+                    <Text style={styles.modalText}>
+                      <Text style={styles.modalLabel}>Contacto:</Text> {selectedParceiro.contacto_agente}
+                    </Text>
+                  )}
+                  <View style={[styles.badgeRow, { marginTop: 12 }]}>
+                    <View style={[styles.statusBadge, styles[`status_${partnerStatusTone(selectedParceiro)}`]]}>
+                      <Text style={[styles.statusText, styles[`statusText_${partnerStatusTone(selectedParceiro)}`]]}>
+                        {partnerStatusLabel(selectedParceiro)}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusBadge, isEwpCreated(selectedParceiro.criado_ewp) ? styles.status_success : styles.status_muted]}>
+                      <Text style={[styles.statusText, isEwpCreated(selectedParceiro.criado_ewp) ? styles.statusText_success : styles.statusText_muted]}>
+                        {isEwpCreated(selectedParceiro.criado_ewp) ? 'EWP criado' : 'EWP pendente'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {selectedParceiro.comentarios && selectedParceiro.comentarios.length > 0 && (
+                  <View style={styles.modalSection}>
+                    <Text style={styles.modalSectionTitle}>Comentários</Text>
+                    {selectedParceiro.comentarios.map((comentario: any, index: number) => (
+                      <View key={index} style={styles.commentBox}>
+                        <Text style={styles.commentAuthor}>
+                          {comentario.autor || 'Sistema'} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
+                        </Text>
+                        <Text style={styles.commentText}>{comentario.texto}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
+                  <Text style={styles.editBtnText}>Editar Parceiro</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Theme.colors.background },
@@ -288,15 +400,12 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', marginTop: 80 },
   emptyTitle: { fontSize: 17, color: Theme.colors.textPrimary, fontWeight: '700', marginTop: 12 },
   emptySubtitle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 6 },
-
   filterContainer: { backgroundColor: Theme.colors.background, borderBottomWidth: 1, borderBottomColor: Theme.colors.border },
   filterScroll: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
   filterTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f0f0f0' },
   filterTabActive: { backgroundColor: Theme.colors.primary },
   filterText: { fontSize: 13, fontWeight: '600', color: Theme.colors.textSecondary },
   filterTextActive: { color: 'white' },
-
-
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Theme.colors.border },
@@ -312,7 +421,6 @@ const styles = StyleSheet.create({
   commentText: { fontSize: 14, color: Theme.colors.textPrimary, lineHeight: 20 },
   editBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Theme.colors.primary, paddingVertical: 14, borderRadius: 12, marginTop: 10 },
   editBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
-
   errorState: { alignItems: 'center', marginTop: 80, paddingHorizontal: 20 },
   errorTitle: { fontSize: 17, color: Theme.colors.error, fontWeight: '700', marginTop: 12 },
   errorSubtitle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 6, textAlign: 'center', lineHeight: 19 },
