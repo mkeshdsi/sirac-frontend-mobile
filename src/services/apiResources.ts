@@ -100,6 +100,12 @@ async function listUsersByType(type: string, params?: ListParams) {
   return allUsers.filter((u: any) => u.usertype === type);
 }
 
+export async function getAllUsers() {
+  const api = await getAuthApi();
+  const res = await api.get('/api/v1/users/');
+  return Array.isArray(res.data) ? res.data : [];
+}
+
 export async function listAngariadores(params?: ListParams) {
   return listUsersByType('Angariador', params);
 }
@@ -197,36 +203,6 @@ export async function getAngariadoresGrouped() {
 export async function listMyAngariadores() {
   const api = await getAuthApi();
   return listResource(api, '/api/v1/angariadores/meus');
-}
-
-export async function getUserById(userId: number) {
-  const api = await getAuthApi();
-  try {
-    const res = await api.get(`/api/v1/users/${userId}`);
-    return res.data;
-  } catch (e) {
-    return null;
-  }
-}
-
-export async function getAngariadorById(angariadorId: number) {
-  const api = await getAuthApi();
-  try {
-    const res = await api.get(`/api/v1/angariadores/${angariadorId}`);
-    return res.data;
-  } catch (e) {
-    return null;
-  }
-}
-
-export async function getTvrById(tvrId: number) {
-  const api = await getAuthApi();
-  try {
-    const res = await api.get(`/api/v1/tvr/${tvrId}`);
-    return res.data;
-  } catch (e) {
-    return null;
-  }
 }
 
 export async function cadastrarAngariador(payload: any) {

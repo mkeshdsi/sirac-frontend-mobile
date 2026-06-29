@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros, getParceiro, getUserById, getAngariadorById, getTvrById } from '@/services/apiResources';
+import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros, getParceiro, getAllUsers, listTvrs } from '@/services/apiResources';
 import { Modal } from 'react-native';
 
 const creatorTypeLabel = (type?: string) => {
@@ -76,37 +76,45 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [filter, setFilter] = useState<FilterType>('ALL');
-  const [authorNames, setAuthorNames] = useState<Record<number, string>>({});
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allAngariadores, setAllAngariadores] = useState<any[]>([]);
+  const [allTvrs, setAllTvrs] = useState<any[]>([]);
 
-  const getAuthorName = async (userId: number) => {
-    if (authorNames[userId]) {
-      return authorNames[userId];
+  const fetchAllPeople = async () => {
+    try {
+      const users = await getAllUsers();
+      setAllUsers(users);
+      
+      const angariadores = await listMyAngariadores();
+      setAllAngariadores(angariadores);
+      
+      const tvrs = await listTvrs();
+      setAllTvrs(tvrs);
+    } catch (e) {
+      console.error("Error fetching people:", e);
     }
+  };
 
-    // Try user first
-    const user = await getUserById(userId);
+  const getAuthorName = (userId: number) => {
+    // Check users first
+    const user = allUsers.find(u => u.id === userId);
     if (user?.name) {
-      setAuthorNames(prev => ({ ...prev, [userId]: user.name }));
       return user.name;
     }
 
-    // Try angariador
-    const angariador = await getAngariadorById(userId);
+    // Check angariadores
+    const angariador = allAngariadores.find(a => a.id === userId);
     if (angariador?.nome) {
-      setAuthorNames(prev => ({ ...prev, [userId]: angariador.nome }));
       return angariador.nome;
     }
 
-    // Try tvr
-    const tvr = await getTvrById(userId);
+    // Check tvrs
+    const tvr = allTvrs.find(t => t.id === userId);
     if (tvr?.nome) {
-      setAuthorNames(prev => ({ ...prev, [userId]: tvr.nome }));
       return tvr.nome;
     }
 
-    const fallback = `Usuário ${userId}`;
-    setAuthorNames(prev => ({ ...prev, [userId]: fallback }));
-    return fallback;
+    return `Usuário ${userId}`;
   };
 
   const filteredItems = items.filter(item => {
@@ -194,7 +202,10 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   };
 
   useEffect(() => {
-    fetchData().finally(() => setLoading(false));
+    Promise.all([
+      fetchData(),
+      fetchAllPeople()
+    ]).finally(() => setLoading(false));
   }, []);
 
   
@@ -206,14 +217,6 @@ export const ParceirosListScreen = ({ navigation }: any) => {
       const detailed = await getParceiro(item.id);
       if (detailed) {
         setSelectedParceiro(detailed);
-        // Fetch author names for all comments
-        if (detailed.comentarios && detailed.comentarios.length > 0) {
-          for (const comment of detailed.comentarios) {
-            if (comment.user_id) {
-              await getAuthorName(comment.user_id);
-            }
-          }
-        }
       }
     } catch (e) {
       // Failed to load details
@@ -409,7 +412,7 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                     {selectedParceiro.comentarios.map((comentario: any, index: number) => (
                       <View key={index} style={styles.commentBox}>
                         <Text style={styles.commentAuthor}>
-                          {authorNames[comentario.user_id] || comentario.autor || `Usuário ${comentario.user_id}`} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
+                          {getAuthorName(comentario.user_id)} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
                         </Text>
                         <Text style={styles.commentText}>{comentario.texto || comentario.comentario}</Text>
                       </View>
