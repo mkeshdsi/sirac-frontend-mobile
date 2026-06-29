@@ -79,22 +79,6 @@ export type Angariador = {
   email: string;
   nome: string;
   bi: string;
-  nuit?: string;
-  localizacao_id?: number;
-  localizacao?: LocalizacaoOption;
-  bi_frente?: string;
-  bi_verso?: string;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
-  ultima_vez_online?: string;
-  created_by: {
-    user_id?: number;
-    tvr_id?: number;
-    name?: string;
-    type?: string;
-    id?: number;
-  };
 };
 
 export async function searchLocalizacoes(q: string, limit = 25): Promise<LocalizacaoOption[]> {
