@@ -199,6 +199,36 @@ export async function listMyAngariadores() {
   return listResource(api, '/api/v1/angariadores/meus');
 }
 
+export async function getUserById(userId: number) {
+  const api = await getAuthApi();
+  try {
+    const res = await api.get(`/api/v1/users/${userId}`);
+    return res.data;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function getAngariadorById(angariadorId: number) {
+  const api = await getAuthApi();
+  try {
+    const res = await api.get(`/api/v1/angariadores/${angariadorId}`);
+    return res.data;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function getTvrById(tvrId: number) {
+  const api = await getAuthApi();
+  try {
+    const res = await api.get(`/api/v1/tvr/${tvrId}`);
+    return res.data;
+  } catch (e) {
+    return null;
+  }
+}
+
 export async function cadastrarAngariador(payload: any) {
   const api = await getAuthApi();
   const { password, ...payloadWithoutPassword } = payload || {};

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros, getParceiro } from '@/services/apiResources';
+import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros, getParceiro, getUserById, getAngariadorById, getTvrById } from '@/services/apiResources';
 import { Modal } from 'react-native';
 
 const creatorTypeLabel = (type?: string) => {
@@ -76,6 +76,38 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [filter, setFilter] = useState<FilterType>('ALL');
+  const [authorNames, setAuthorNames] = useState<Record<number, string>>({});
+
+  const getAuthorName = async (userId: number) => {
+    if (authorNames[userId]) {
+      return authorNames[userId];
+    }
+
+    // Try user first
+    const user = await getUserById(userId);
+    if (user?.name) {
+      setAuthorNames(prev => ({ ...prev, [userId]: user.name }));
+      return user.name;
+    }
+
+    // Try angariador
+    const angariador = await getAngariadorById(userId);
+    if (angariador?.nome) {
+      setAuthorNames(prev => ({ ...prev, [userId]: angariador.nome }));
+      return angariador.nome;
+    }
+
+    // Try tvr
+    const tvr = await getTvrById(userId);
+    if (tvr?.nome) {
+      setAuthorNames(prev => ({ ...prev, [userId]: tvr.nome }));
+      return tvr.nome;
+    }
+
+    const fallback = `Usuário ${userId}`;
+    setAuthorNames(prev => ({ ...prev, [userId]: fallback }));
+    return fallback;
+  };
 
   const filteredItems = items.filter(item => {
     if (filter === 'ALL') return true;
@@ -174,6 +206,14 @@ export const ParceirosListScreen = ({ navigation }: any) => {
       const detailed = await getParceiro(item.id);
       if (detailed) {
         setSelectedParceiro(detailed);
+        // Fetch author names for all comments
+        if (detailed.comentarios && detailed.comentarios.length > 0) {
+          for (const comment of detailed.comentarios) {
+            if (comment.user_id) {
+              await getAuthorName(comment.user_id);
+            }
+          }
+        }
       }
     } catch (e) {
       // Failed to load details
@@ -369,7 +409,7 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                     {selectedParceiro.comentarios.map((comentario: any, index: number) => (
                       <View key={index} style={styles.commentBox}>
                         <Text style={styles.commentAuthor}>
-                          {comentario.autor || `Usuário ${comentario.user_id}`} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
+                          {authorNames[comentario.user_id] || comentario.autor || `Usuário ${comentario.user_id}`} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
                         </Text>
                         <Text style={styles.commentText}>{comentario.texto || comentario.comentario}</Text>
                       </View>
