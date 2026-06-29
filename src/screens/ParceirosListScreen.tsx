@@ -86,10 +86,11 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   });
 
   const hasRejeitados = items.some(item => partnerIsRejeitado(item));
+  const hasPendentes = items.some(item => String(item.estado_validacao || '').toUpperCase() === 'PENDENTE' && !isEwpCreated(item.criado_ewp));
 
   const filters: { label: string; value: FilterType }[] = [
     { label: 'Todos', value: 'ALL' },
-    { label: 'Pendente', value: 'PENDENTE' },
+    ...(hasPendentes ? [{ label: 'Pendente', value: 'PENDENTE' as FilterType }] : []),
     { label: 'Ativo', value: 'ATIVO' },
     ...(hasRejeitados ? [{ label: 'Rejeitado', value: 'REJEITADO' as FilterType }] : []),
   ];
