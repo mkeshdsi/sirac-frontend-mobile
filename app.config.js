@@ -9,7 +9,7 @@ module.exports = {
   platforms: ['android', 'ios'],
   updates: {
     fallbackToCacheTimeout: 0,
-    url: 'https://u.expo.dev/1d5f13c3-18c6-418b-ad75-9a41e922dc29'
+    url: 'https://u.expo.dev/5359f0b9-c61f-4c70-9f90-d28bcdd89e45'
   },
   runtimeVersion: {
     policy: 'appVersion'
@@ -49,7 +49,7 @@ module.exports = {
   ],
   extra: {
     eas: {
-      projectId: '1d5f13c3-18c6-418b-ad75-9a41e922dc29',
+      projectId: '5359f0b9-c61f-4c70-9f90-d28bcdd89e45',
     },
   },
 };

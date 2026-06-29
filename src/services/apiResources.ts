@@ -79,3 +79,19 @@ export async function createAdesao(payload: any) {
   const res = await api.post('/api/v1/parceiros/', payload);
   return res.data;
 }
+
+export async function getParceiro(parceiroId: number) {
+  const api = await getAuthApi();
+  const res = await api.get(`/api/v1/parceiros/${parceiroId}`);
+  return res.data;
+}
+
+export async function getParceirosGroupedDetailed() {
+  const api = await getAuthApi();
+  const res = await api.get('/api/v1/parceiros/grouped-detailed');
+  return res.data;
+}
+
+export async function listMyAngariadores() {
+  return listAngariadores();
+}
