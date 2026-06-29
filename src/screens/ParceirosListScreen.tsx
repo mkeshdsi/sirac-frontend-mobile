@@ -64,7 +64,7 @@ const userIsCreator = (item: any, userRole: any, userData: any) => {
   return typesMatch && idsMatch;
 };
 
-type FilterType = 'ALL' | 'PENDENTE' | 'ATIVO';
+type FilterType = 'ALL' | 'PENDENTE' | 'ATIVO' | 'REJEITADO';
 
 export const ParceirosListScreen = ({ navigation }: any) => {
   const { userRole, userData } = useAuth();
@@ -81,13 +81,17 @@ export const ParceirosListScreen = ({ navigation }: any) => {
     if (filter === 'ALL') return true;
     if (filter === 'PENDENTE') return String(item.estado_validacao || '').toUpperCase() === 'PENDENTE' && !isEwpCreated(item.criado_ewp);
     if (filter === 'ATIVO') return isEwpCreated(item.criado_ewp);
+    if (filter === 'REJEITADO') return partnerIsRejeitado(item);
     return true;
   });
+
+  const hasRejeitados = items.some(item => partnerIsRejeitado(item));
 
   const filters: { label: string; value: FilterType }[] = [
     { label: 'Todos', value: 'ALL' },
     { label: 'Pendente', value: 'PENDENTE' },
     { label: 'Ativo', value: 'ATIVO' },
+    ...(hasRejeitados ? [{ label: 'Rejeitado', value: 'REJEITADO' as FilterType }] : []),
   ];
 
   const uniqueById = (data: any[]) => {
@@ -359,24 +363,24 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                 </View>
 
                 {selectedParceiro.comentarios && selectedParceiro.comentarios.length > 0 && (
-          <View style={styles.modalSection}>
-            <Text style={styles.modalSectionTitle}>Comentários</Text>
-            {selectedParceiro.comentarios.map((comentario: any, index: number) => (
-              <View key={index} style={styles.commentBox}>
-                <Text style={styles.commentAuthor}>
-                  {comentario.autor || 'Sistema'} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
-                </Text>
-                <Text style={styles.commentText}>{comentario.texto}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+                  <View style={styles.modalSection}>
+                    <Text style={styles.modalSectionTitle}>Comentários</Text>
+                    {selectedParceiro.comentarios.map((comentario: any, index: number) => (
+                      <View key={index} style={styles.commentBox}>
+                        <Text style={styles.commentAuthor}>
+                          {comentario.autor || `Usuário ${comentario.user_id}`} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
+                        </Text>
+                        <Text style={styles.commentText}>{comentario.texto || comentario.comentario}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
 
-        {partnerIsRejeitado(selectedParceiro) && userIsCreator(selectedParceiro, userRole, userData) && (
-          <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
-            <Text style={styles.editBtnText}>Editar Parceiro</Text>
-          </TouchableOpacity>
-        )}
+                {partnerIsRejeitado(selectedParceiro) && userIsCreator(selectedParceiro, userRole, userData) && (
+                  <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
+                    <Text style={styles.editBtnText}>Editar Parceiro</Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             ) : null}
           </View>
