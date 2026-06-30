@@ -412,7 +412,7 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                     {selectedParceiro.comentarios.map((comentario: any, index: number) => (
                       <View key={index} style={styles.commentBox}>
                         <Text style={styles.commentAuthor}>
-                          {getAuthorName(comentario.user_id)} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
+                          {getAuthorName(comentario.user_id)} • {new Date(comentario.data_criacao).toLocaleString('pt-MZ')}
                         </Text>
                         <Text style={styles.commentText}>{comentario.texto || comentario.comentario}</Text>
                       </View>
