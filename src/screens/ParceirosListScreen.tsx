@@ -421,12 +421,17 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                   </View>
                 )}
 
-                {/* Edit button for rejected partners: only creator OR (any user, but only in pilot) */}
-      {partnerIsRejeitado(selectedParceiro) && (userIsCreator(selectedParceiro, userRole, userData) || (Constants.expoConfig?.extra?.isPilot)) && (
-        <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
-          <Text style={styles.editBtnText}>Editar Parceiro</Text>
-        </TouchableOpacity>
-      )}
+                {/* Edit button for rejected partners: only creator OR admin OR (any user in pilot) */}
+                {partnerIsRejeitado(selectedParceiro) && (
+                  userIsCreator(selectedParceiro, userRole, userData) ||
+                  userRole === 'admin' ||
+                  (userData?.roles && Array.isArray(userData.roles) && userData.roles.includes('Admin')) ||
+                  (Constants.expoConfig?.extra?.isPilot)
+                ) && (
+                  <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
+                    <Text style={styles.editBtnText}>Editar Parceiro</Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             ) : null}
           </View>
