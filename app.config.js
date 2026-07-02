@@ -61,6 +61,7 @@ module.exports = {
       eas: {
         projectId: '5359f0b9-c61f-4c70-9f90-d28bcdd89e45',
       },
+      isPilot,
       apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || '',
       googleMapsApiKey,
     },

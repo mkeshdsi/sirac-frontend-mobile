@@ -7,6 +7,7 @@ import { Theme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros, getParceiro, getAllUsers, listTvrs } from '@/services/apiResources';
 import { Modal } from 'react-native';
+import Constants from 'expo-constants';
 
 const creatorTypeLabel = (type?: string) => {
   const normalized = String(type || '').toLowerCase();
@@ -420,11 +421,12 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                   </View>
                 )}
 
-                {partnerIsRejeitado(selectedParceiro) && userIsCreator(selectedParceiro, userRole, userData) && (
-                  <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
-                    <Text style={styles.editBtnText}>Editar Parceiro</Text>
-                  </TouchableOpacity>
-                )}
+                {/* Edit button for rejected partners: only creator OR (any user, but only in pilot) */}
+      {partnerIsRejeitado(selectedParceiro) && (userIsCreator(selectedParceiro, userRole, userData) || (Constants.expoConfig?.extra?.isPilot)) && (
+        <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
+          <Text style={styles.editBtnText}>Editar Parceiro</Text>
+        </TouchableOpacity>
+      )}
               </ScrollView>
             ) : null}
           </View>
