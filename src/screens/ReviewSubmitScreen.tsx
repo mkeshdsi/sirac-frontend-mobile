@@ -82,25 +82,18 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         }));
 
         if (commercialData.latitude !== null && commercialData.longitude !== null) {
-          let base64Foto = "";
-          if (commercialData.fotografia) {
-            try {
-              base64Foto = await FileSystem.readAsStringAsync(commercialData.fotografia, {
-                encoding: 'base64',
-              });
-              if (!base64Foto.startsWith('data:')) {
-                base64Foto = `data:image/jpeg;base64,${base64Foto}`;
-              }
-            } catch (err) {
-              console.error("Erro ao converter foto da banca para Base64:", err);
-            }
-          }
-
           formData.append("banca", JSON.stringify([{
             latitude: commercialData.latitude,
             longitude: commercialData.longitude,
-            fotografia: base64Foto,
           }]));
+          
+          if (commercialData.fotografia) {
+            formData.append("banca_foto", {
+              uri: commercialData.fotografia,
+              name: "banca.jpg",
+              type: "image/jpeg"
+            } as any);
+          }
         }
 
         if (commercialData.proprietarios && commercialData.proprietarios.length > 0) {
@@ -166,7 +159,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         backendMsg = `Erro ${status}: ${data?.error || data?.message || JSON.stringify(data) || "Erro no servidor"}`;
       } else if (err.request) {
         // A requisição foi feita mas não houve resposta (Timeout ou Network Error)
-        backendMsg = "O servidor não respondeu. Verifique sua internet ou se o arquivo é muito grande.";
+        backendMsg = "O servidor não respondeu. Verifique a sua ligação à internet.";
       } else {
         backendMsg = err.message || "Erro desconhecido";
       }

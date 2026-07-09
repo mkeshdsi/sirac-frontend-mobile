@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { getAuthApi, getItem, setItem, deleteItem } from '@/config/api';
 
-export type AuthRole = 'user' | 'angariador' | 'tvr' | null;
+export type AuthRole = 'user' | 'angariador' | 'tvr' | 'admin' | null;
 
 interface AuthContextData {
   userRole: AuthRole;
