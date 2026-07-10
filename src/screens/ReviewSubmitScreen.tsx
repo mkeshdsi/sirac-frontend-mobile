@@ -10,6 +10,35 @@ import { getAuthApi } from '@/config/api';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 
+const createSignatureFile = async (base64data: string): Promise<{ uri: string; error?: string }> => {
+  // Remove data URL prefix if present
+  const base64 = base64data.replace(/^data:image\/\w+;base64,/, '');
+  const fileUri = FileSystem.documentDirectory + `signature_${Date.now()}.png`;
+  await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+  
+  // Validate file size (limit 5MB)
+  const fileInfo = await FileSystem.getInfoAsync(fileUri);
+  if (fileInfo.exists && fileInfo.size) {
+    const limitBytes = 5 * 1024 * 1024;
+    const sizeMB = (fileInfo.size / (1024 * 1024)).toFixed(2);
+    if (fileInfo.size > limitBytes) {
+      return { uri: fileUri, error: `A assinatura tem ${sizeMB}MB e excede o limite de 5MB. Por favor, use uma assinatura mais simples.` };
+    }
+  }
+  
+  return { uri: fileUri };
+};
+
+const getMimeType = (uri: string): string => {
+  const ext = uri.split('.').pop()?.toLowerCase();
+  if (!ext) return 'application/octet-stream';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
+    return `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+  }
+  if (ext === 'pdf') return 'application/pdf';
+  return 'application/octet-stream';
+};
+
 type Nav = StackNavigationProp<RootStackParamList, 'ReviewSubmit'>;
 type Route = RouteProp<RootStackParamList, 'ReviewSubmit'>;
 
@@ -35,6 +64,7 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   const { commercialData, documents } = route.params;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState('');
 
   const toISODate = (dateStr?: string) => {
     if (!dateStr) return "";
@@ -66,9 +96,22 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         if (commercialData.localizacaoId) formData.append("localizacao_id", String(commercialData.localizacaoId));
         formData.append("bairro_ref", commercialData.enderecoBairroRef || "");
         formData.append("profissao", commercialData.profissao || "");
-        formData.append("assinatura_adesao", commercialData.assinatura || "");
+        // assinatura será enviado como arquivo; será anexado abaixo
         formData.append("data_adesao", toISODate(commercialData.dataFormulario));
         formData.append("angariador_id", "40");
+        // Anexar assinatura como arquivo se presente
+        if (commercialData.assinatura) {
+          const signatureResult = await createSignatureFile(commercialData.assinatura);
+          if (signatureResult.error) {
+            setShowErrorModal(signatureResult.error);
+            return;
+          }
+          formData.append("assinatura_adesao", {
+            uri: signatureResult.uri,
+            name: "assinatura.png",
+            type: "image/png",
+          } as any);
+        }
 
         formData.append("endereco", JSON.stringify({
           cidade: commercialData.enderecoCidade || "",
@@ -319,6 +362,22 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           <Ionicons name="send" size={18} color={COLORS.white} style={{ marginLeft: 8 }} />
         </TouchableOpacity>
       </View>
+
+      {/* ── Error Modal ── */}
+      <Modal visible={!!showErrorModal} transparent animationType="fade" onRequestClose={() => setShowErrorModal('')}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, styles.centeredModalCard]}>
+            <View style={[styles.modalIconRing, { backgroundColor: '#ffebee' }]}>
+              <Ionicons name="alert-circle" size={36} color={COLORS.error} />
+            </View>
+            <Text style={[styles.modalTitle, { color: COLORS.error, textAlign: 'center' }]}>Erro</Text>
+            <Text style={styles.modalMsg}>{showErrorModal}</Text>
+            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: COLORS.error }]} onPress={() => setShowErrorModal('')}>
+              <Text style={styles.modalBtnText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -546,4 +605,51 @@ const styles = StyleSheet.create({
   },
   btnPrimaryText: { fontSize: 15, fontWeight: '700', color: COLORS.white },
   btnDisabled: { opacity: 0.6 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: 'white',
+    borderRadius: 18,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+  },
+  centeredModalCard: {
+    alignItems: 'center',
+  },
+  modalIconRing: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalMsg: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  modalBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+  },
+  modalBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: 'white',
+  },
 });

@@ -19,7 +19,7 @@ import { LocalizacaoOption, listAngariadores, listAprovadores, listValidadores, 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
@@ -45,6 +45,24 @@ const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 const phoneRegex = /^(258)?(82|83|84|85|86|87)\d{7}$/;
 const agentPhoneRegex = /^(258)?(82|83)\d{7}$/;
 const normalizePhone = (s?: string) => (s ? s.replace(/[^0-9]/g, '') : '');
+
+const validateImageSize = async (uri: string, limitMB: number): Promise<{ valid: boolean; error?: string }> => {
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (!fileInfo.exists || !fileInfo.size) return { valid: false };
+    
+    const limitBytes = limitMB * 1024 * 1024;
+    const sizeMB = (fileInfo.size / (1024 * 1024)).toFixed(2);
+    
+    if (fileInfo.size > limitBytes) {
+      return { valid: false, error: `A fotografia tem ${sizeMB}MB e excede o limite de ${limitMB}MB. Por favor, selecione uma foto menor.` };
+    }
+    return { valid: true };
+  } catch (error) {
+    console.error('Error validating image size:', error);
+    return { valid: false };
+  }
+};
 
 const schema: yup.ObjectSchema<CommercialData> = yup.object({
   tipoParceiro: yup.string().oneOf(['AGENTE', 'MERCHANT'], 'Tipo de parceiro inválido').required('Tipo de parceiro é obrigatório'),
@@ -670,10 +688,17 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   const takePhoto = async () => {
     try {
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (permissionResult.granted === false) { Alert.alert('Permissão negada', 'É necessário conceder permissão para usar a câmera.'); return; }
+      if (permissionResult.granted === false) { setShowErrorModal('É necessário conceder permissão para usar a câmera.'); return; }
       const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 0.5 });
-      if (!result.canceled && result.assets && result.assets[0]?.uri) { setValue('fotografia', result.assets[0].uri, { shouldDirty: true }); }
-    } catch (error) { Alert.alert('Erro', 'Falha ao tirar foto. Tente novamente.'); }
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        const validation = await validateImageSize(result.assets[0].uri, 5);
+        if (validation.valid) {
+          setValue('fotografia', result.assets[0].uri, { shouldDirty: true });
+        } else if (validation.error) {
+          setShowErrorModal(validation.error);
+        }
+      }
+    } catch (error) { setShowErrorModal('Falha ao tirar foto. Tente novamente.'); }
   };
 
   const searchLocations = async (query: string) => {
