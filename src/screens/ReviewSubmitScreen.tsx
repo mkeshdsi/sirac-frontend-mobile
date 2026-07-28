@@ -96,6 +96,10 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
         if (commercialData.localizacaoId) formData.append("localizacao_id", String(commercialData.localizacaoId));
         formData.append("bairro_ref", commercialData.enderecoBairroRef || "");
         formData.append("profissao", commercialData.profissao || "");
+        formData.append("solicita_encerramento_conta", commercialData.solicitaEncerramentoConta ? "true" : "false");
+        if (commercialData.solicitaEncerramentoConta && commercialData.observacaoEncerramento) {
+          formData.append("observacao_encerramento", commercialData.observacaoEncerramento);
+        }
         // assinatura será enviado como arquivo; será anexado abaixo
         formData.append("data_adesao", toISODate(commercialData.dataFormulario));
         formData.append("angariador_id", "40");
@@ -277,6 +281,17 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           <InfoRow label="Celular" value={commercialData?.celular} icon="phone-portrait" />
           <InfoRow label="Coordenadas" value={commercialData?.latitude ? `${commercialData.latitude.toFixed(4)}, ${commercialData.longitude?.toFixed(4)}` : undefined} icon="pin-outline" />
         </Card>
+
+        {commercialData?.solicitaEncerramentoConta && (
+          <Card style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="lock-closed" size={20} color={COLORS.error} />
+              <Text style={[styles.cardTitle, { color: COLORS.error }]}>Encerramento de Conta</Text>
+            </View>
+            <InfoRow label="Estado" value="Solicitado" icon="alert-circle" />
+            <InfoRow label="Observação" value={commercialData.observacaoEncerramento} icon="chatbox-ellipses" />
+          </Card>
+        )}
 
         <Card style={styles.card}>
           <View style={styles.cardHeader}>

@@ -68,9 +68,9 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   tipoParceiro: yup.string().oneOf(['AGENTE', 'MERCHANT'], 'Tipo de parceiro inválido').required('Tipo de parceiro é obrigatório'),
   nomeComercial: yup.string().required('Nome comercial é obrigatório').min(2, 'Mínimo 2 caracteres'),
   nuit: yup.string().when('tipoParceiro', { is: 'MERCHANT', then: (s) => s.required('NUIT é obrigatório').matches(/^[0-9]{9}$/, 'NUIT deve ter 9 dígitos'), otherwise: (s) => s.optional() }),
-  contactoAgente: yup.string().optional().test('tel', 'O contacto do agente deve ser 82 ou 83 (ex: 821234567)', (v) => !v || agentPhoneRegex.test(v)),
-  tipoDocumento: yup.string().oneOf(['BI', 'PASSAPORTE', 'CARTAO_ELEITOR', 'CARTA_CONDUCAO'], 'Tipo de documento inválido').optional(),
-  numeroDocumento: yup.string().when('tipoDocumento', { is: 'BI', then: (s) => s.required('Nº do BI é obrigatório').matches(/^[0-9]{12}[A-Za-z]$/, 'BI deve ter 12 dígitos e 1 letra no final'), otherwise: (s) => s.optional() }),
+  contactoAgente: yup.string().required('Contacto do agente é obrigatório').test('tel', 'O contacto do agente deve ser 82 ou 83 (ex: 821234567)', (v) => !!v && agentPhoneRegex.test(v)),
+  tipoDocumento: yup.string().oneOf(['BI', 'PASSAPORTE', 'CARTAO_ELEITOR', 'CARTA_CONDUCAO'], 'Tipo de documento inválido').required('Tipo de documento é obrigatório'),
+  numeroDocumento: yup.string().when('tipoDocumento', { is: 'BI', then: (s) => s.required('Nº do BI é obrigatório').matches(/^[0-9]{12}[A-Za-z]$/, 'BI deve ter 12 dígitos e 1 letra no final'), otherwise: (s) => s.required('Nº do documento é obrigatório') }),
   alvara: yup.string().when(['tipoParceiro', 'tipoDocumento'], { is: (tipoParceiro: string, tipoDocumento: string) => tipoParceiro === 'MERCHANT' || tipoDocumento === 'CARTA_CONDUCAO', then: (s) => s.required('Número do alvará/licença é obrigatório'), otherwise: (s) => s.optional() }),
   dataFormulario: yup.string().required('Data do formulário é obrigatória').test('date-req', 'Data inválida (dd/mm/aaaa)', (v) => !!v && dateRegex.test(v)),
   dataValidacao: yup.string().optional().test('date-opt2', 'Data inválida (dd/mm/aaaa)', (v) => !v || dateRegex.test(v)),
@@ -87,9 +87,9 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   proprietarios: yup.array(yup.object({ nome: yup.string().optional(), email: yup.string().optional().email('Email inválido'), contacto: yup.string().optional().test('prop-contact', 'Use 82, 83, 84, 85, 86 ou 87 + 7 dígitos', (v) => !v || phoneRegex.test(v)) })).optional(),
   estabelecimentos: yup.array(yup.object({ nome: yup.string().optional(), provinciaLocalidade: yup.string().optional(), enderecoBairro: yup.string().optional() })).optional(),
   proprietarioEmail: yup.string().optional().email('Email inválido'),
-  enderecoCidade: yup.string().required('Cidade é obrigatória'),
-  enderecoLocalidade: yup.string().optional(),
-  enderecoAvenidaRua: yup.string().optional(),
+  enderecoCidade: yup.string().required('Província é obrigatória'),
+  enderecoLocalidade: yup.string().required('Distrito é obrigatório'),
+  enderecoAvenidaRua: yup.string().required('Avenida/Rua é obrigatória'),
   enderecoNumero: yup.string().optional(),
   enderecoQuart: yup.string().optional(),
   enderecoBairroRef: yup.string().optional(),
@@ -105,6 +105,12 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   latitude: yup.number().typeError('Latitude é obrigatória').required('Latitude é obrigatória'),
   longitude: yup.number().typeError('Longitude é obrigatória').required('Longitude é obrigatória'),
   fotografia: yup.string().optional(),
+  solicitaEncerramentoConta: yup.boolean().optional(),
+  observacaoEncerramento: yup.string().when('solicitaEncerramentoConta', {
+    is: true,
+    then: (s) => s.required('Observação de encerramento é obrigatória'),
+    otherwise: (s) => s.optional(),
+  }),
 }) as any;
 
 interface Props { navigation: Nav; route: Route }
@@ -532,6 +538,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
       tipoParceiro: 'MERCHANT', nomeComercial: '', nuit: '', alvara: '',
       tipoEmpresa: undefined as any, proprietarioNomeCompleto: '', proprietarioContacto: '',
       assistentes: [], proprietarios: [], estabelecimentos: [],
+      solicitaEncerramentoConta: false, observacaoEncerramento: '',
     },
   });
 
@@ -540,6 +547,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   const fotografiaValue = useWatch({ control, name: 'fotografia' });
   const latitudeValue = useWatch({ control, name: 'latitude' });
   const longitudeValue = useWatch({ control, name: 'longitude' });
+  const solicitaEncerramentoConta = useWatch({ control, name: 'solicitaEncerramentoConta' });
   const selectedLocalizacaoLabel = useWatch({ control, name: 'localizacaoDisplay' });
   const selectedLocalizacaoId = useWatch({ control, name: 'localizacaoId' });
   const hasSelectedLocalizacao = !!selectedLocalizacaoId;
@@ -558,6 +566,8 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [searchMessage, setSearchMessage] = useState('');
   const [showErrorModal, setShowErrorModal] = useState('');
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showValidationModal, setShowValidationModal] = useState(false);
   const [showPermissionDeniedModal, setShowPermissionDeniedModal] = useState(false);
   const [showSuccessLocationModal, setShowSuccessLocationModal] = useState(false);
   const [successLocationMessage, setSuccessLocationMessage] = useState('');
@@ -649,7 +659,6 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     const { latitude, longitude, address } = selectedMapPoint;
     setValue('latitude', latitude, { shouldValidate: true, shouldDirty: true });
     setValue('longitude', longitude, { shouldValidate: true, shouldDirty: true });
-    applyAddressToForm(address);
     setShowMapPicker(false);
     setSuccessLocationMessage([
       'Localização selecionada:',
@@ -670,7 +679,6 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
       const address = await resolveAddress(location.coords.latitude, location.coords.longitude);
       setValue('latitude', location.coords.latitude, { shouldValidate: true, shouldDirty: true });
       setValue('longitude', location.coords.longitude, { shouldValidate: true, shouldDirty: true });
-      applyAddressToForm(address);
       setShowLoadingLocationModal(false);
       setSuccessLocationMessage([
         'Localização obtida:',
@@ -841,7 +849,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             <Controller control={control} name="contactoAgente" render={({ field: { onChange, onBlur, value } }) => (
               <>
                 <Input label="Contacto do Agente" placeholder="Ex: 821234567" keyboardType="phone-pad" maxLength={9}
-                  value={value} onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))} onBlur={onBlur} error={errors.contactoAgente?.message} />
+                  value={value} onChangeText={(t) => onChange(normalizePhone(t).slice(0, 9))} onBlur={onBlur} error={errors.contactoAgente?.message} required />
                 <View style={styles.infoBadge}>
                   <Ionicons name="information-circle-outline" size={13} color={COLORS.primary} />
                   <Text style={styles.infoBadgeText}>Apenas prefixos 82 ou 83 são aceitos</Text>
@@ -850,18 +858,17 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             )} />
           </View>
           <View onLayout={onLayoutField('tipoDocumento')}>
-            <Text style={styles.fieldLabel}>Tipo de Documento</Text>
             <Controller control={control} name="tipoDocumento" render={({ field: { onChange, value } }) => (
-              <Select label="Selecionar tipo de documento" placeholder="Selecionar tipo de documento"
+              <Select label="Tipo de Documento" placeholder="Selecionar tipo de documento"
                 value={value || (null as any)} onChange={onChange} errorText={errors.tipoDocumento?.message}
-                options={[{ id: 'BI', label: 'BI' }, { id: 'PASSAPORTE', label: 'Passaporte' }, { id: 'CARTAO_ELEITOR', label: 'Cartão de Eleitor' }, { id: 'CARTA_CONDUCAO', label: 'Carta de Condução' }]} />
+                options={[{ id: 'BI', label: 'BI' }, { id: 'PASSAPORTE', label: 'Passaporte' }, { id: 'CARTAO_ELEITOR', label: 'Cartão de Eleitor' }, { id: 'CARTA_CONDUCAO', label: 'Carta de Condução' }]} required />
             )} />
           </View>
           <View onLayout={onLayoutField('numeroDocumento')}>
             <Controller control={control} name="numeroDocumento" render={({ field: { onChange, onBlur, value } }) => (
               <>
                 <Input label="Número do Documento" placeholder={tipoDocumento === 'BI' ? 'Ex: 123456789012A' : 'Número do Documento'}
-                  value={value} maxLength={13} autoCapitalize="characters"
+                  value={value} maxLength={13} autoCapitalize="characters" required
                   onChangeText={(t) => {
                     if (tipoDocumento === 'BI') {
                       const clean = t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
@@ -997,10 +1004,11 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
               onBlur={onBlur}
               editable={!hasSelectedLocalizacao}
               rightIcon={hasSelectedLocalizacao ? <Ionicons name="lock-closed-outline" size={17} color={COLORS.textSecondary} /> : undefined}
+              required
             />
           )} />
           <Controller control={control} name="enderecoAvenidaRua" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Avenida/Rua" placeholder="Avenida/Rua" value={value} onChangeText={onChange} onBlur={onBlur} />
+            <Input label="Avenida/Rua" placeholder="Avenida/Rua" value={value} onChangeText={onChange} onBlur={onBlur} required />
           )} />
           <View style={styles.rowFields}>
             <View style={{ flex: 1 }}>
@@ -1179,6 +1187,40 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
           </View>
         </SectionCard>
 
+        {/* ── Solicitar Encerramento de Conta ── */}
+        <SectionCard emoji="🔒" title="Solicitar Encerramento de Conta">
+          <Controller control={control} name="solicitaEncerramentoConta" render={({ field: { onChange, value } }) => (
+            <View>
+              <Text style={styles.fieldLabel}>Deseja solicitar encerramento da conta actual?</Text>
+              <View style={styles.radioGroup}>
+                {[{ value: false, label: 'Não' }, { value: true, label: 'Sim' }].map((opt) => (
+                  <TouchableOpacity key={String(opt.value)} onPress={() => onChange(opt.value)}
+                    style={[styles.radioCard, value === opt.value && styles.radioCardSelected]}>
+                    <View style={[styles.radioIndicator, value === opt.value && styles.radioIndicatorSelected]}>
+                      {value === opt.value && <View style={styles.radioIndicatorInner} />}
+                    </View>
+                    <Text style={[styles.radioLabel, value === opt.value && styles.radioLabelSelected]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )} />
+          {solicitaEncerramentoConta && (
+            <Controller control={control} name="observacaoEncerramento" render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Observação"
+                placeholder="Descreva o motivo do encerramento da conta"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.observacaoEncerramento?.message}
+                multiline
+                required
+              />
+            )} />
+          )}
+        </SectionCard>
+
         {/* ── Proprietários ── */}
         <SectionCard emoji="👥" title="Dados dos Proprietários">
           <ProprietariosFieldArray control={control} />
@@ -1343,6 +1385,31 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
         </View>
       </Modal>
 
+      {/* ── Validation Error Modal ── */}
+      <Modal visible={showValidationModal} transparent animationType="fade" onRequestClose={() => setShowValidationModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { maxWidth: 380 }]}>
+            <View style={[styles.modalIconRing, { backgroundColor: '#ffebee', alignSelf: 'center' }]}>
+              <Ionicons name="alert-circle" size={36} color={COLORS.error} />
+            </View>
+            <Text style={[styles.modalTitle, { color: COLORS.error, textAlign: 'center', marginBottom: 12 }]}>Campos em falta</Text>
+            <Text style={[styles.modalMsg, { marginBottom: 16 }]}>Preencha todos os campos obrigatórios antes de continuar:</Text>
+            <ScrollView style={{ maxHeight: 240, marginBottom: 16 }}>
+              {validationErrors.map((msg, i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                  <Ionicons name="close-circle" size={16} color={COLORS.error} style={{ marginTop: 2 }} />
+                  <Text style={{ flex: 1, fontSize: 13, color: COLORS.text, lineHeight: 18 }}>{msg}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={[styles.btnPrimary, { alignSelf: 'stretch', alignItems: 'center', backgroundColor: COLORS.error }]}
+              onPress={() => setShowValidationModal(false)}>
+              <Text style={styles.btnWhiteText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* ── Permission Denied Modal ── */}
       <Modal visible={showPermissionDeniedModal} transparent animationType="fade" onRequestClose={() => setShowPermissionDeniedModal(false)}>
         <View style={styles.modalBackdrop}>
@@ -1418,9 +1485,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
               const allErrors = keys.map((k) => ({ field: k, message: (errs as any)[k]?.message })).filter((e) => !!e.message);
               const y = firstKey ? fieldPositions[firstKey] : undefined;
               if (typeof y === 'number' && scrollRef.current) scrollRef.current.scrollTo({ y: Math.max(y - 12, 0), animated: true });
-              const list = allErrors.slice(0, 6).map((e) => `• ${e.field === 'numeroDocumento' ? 'Nº do BI' : e.field}: ${e.message}`).join('\n');
-              Alert.alert('Campos em falta', list || 'Verifique os campos obrigatórios destacados antes de continuar.');
-            } catch (err) { Alert.alert('Campos em falta', 'Verifique os campos obrigatórios destacados antes de continuar.'); }
+              const list = allErrors.slice(0, 10).map((e) => e.message || 'Campo obrigatório');
+              setValidationErrors(list.length > 0 ? list : ['Verifique os campos obrigatórios destacados.']);
+              setShowValidationModal(true);
+            } catch (err) { setValidationErrors(['Verifique os campos obrigatórios destacados.']); setShowValidationModal(true); }
           })}
           style={styles.footerBtn}
           disabled={isLoading}

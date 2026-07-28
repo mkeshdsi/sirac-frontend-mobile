@@ -15,6 +15,7 @@ interface SelectProps {
   options: SelectOption[];
   loading?: boolean;
   errorText?: string;
+  required?: boolean;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -25,6 +26,7 @@ export const Select: React.FC<SelectProps> = ({
   options,
   loading,
   errorText,
+  required,
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -34,7 +36,7 @@ export const Select: React.FC<SelectProps> = ({
     <View style={{ marginBottom: Theme.spacing.md }}>
       {!!label && (
         <Text style={styles.label}>
-          {label}
+          {label}{required && <Text style={{ color: Theme.colors.error }}> *</Text>}
         </Text>
       )}
 

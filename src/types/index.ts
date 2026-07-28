@@ -47,6 +47,8 @@ export interface CommercialData {
   latitude?: number;
   longitude?: number;
   fotografia?: string;
+  solicitaEncerramentoConta?: boolean;
+  observacaoEncerramento?: string;
 }
 
 export interface DocumentsPayload {
