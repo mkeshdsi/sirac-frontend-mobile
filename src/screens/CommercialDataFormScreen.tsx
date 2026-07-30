@@ -15,7 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { LocalizacaoOption, listAngariadores, listAprovadores, listValidadores, createAdesao, searchLocalizacoes, getParceiro } from '@/services/apiResources';
+import { LocalizacaoOption, listAngariadores, listAprovadores, listValidadores, createAdesao, searchLocalizacoes, getParceiro, getLocalizacaoById } from '@/services/apiResources';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -39,6 +39,8 @@ const COLORS = {
   textSecondary: '#6b7280',
   error: '#d32f2f',
   success: '#01836b',
+  warning: '#F59E0B',
+  warningLight: '#F59E0B20',
 };
 
 const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
@@ -69,9 +71,9 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   nomeComercial: yup.string().required('Nome comercial é obrigatório').min(2, 'Mínimo 2 caracteres'),
   nuit: yup.string().when('tipoParceiro', { is: 'MERCHANT', then: (s) => s.required('NUIT é obrigatório').matches(/^[0-9]{9}$/, 'NUIT deve ter 9 dígitos'), otherwise: (s) => s.optional() }),
   contactoAgente: yup.string().required('Contacto do agente é obrigatório').test('tel', 'O contacto do agente deve ser 82 ou 83 (ex: 821234567)', (v) => !!v && agentPhoneRegex.test(v)),
-  tipoDocumento: yup.string().oneOf(['BI', 'PASSAPORTE', 'CARTAO_ELEITOR', 'CARTA_CONDUCAO'], 'Tipo de documento inválido').required('Tipo de documento é obrigatório'),
-  numeroDocumento: yup.string().when('tipoDocumento', { is: 'BI', then: (s) => s.required('Nº do BI é obrigatório').matches(/^[0-9]{12}[A-Za-z]$/, 'BI deve ter 12 dígitos e 1 letra no final'), otherwise: (s) => s.required('Nº do documento é obrigatório') }),
-  alvara: yup.string().when(['tipoParceiro', 'tipoDocumento'], { is: (tipoParceiro: string, tipoDocumento: string) => tipoParceiro === 'MERCHANT' || tipoDocumento === 'CARTA_CONDUCAO', then: (s) => s.required('Número do alvará/licença é obrigatório'), otherwise: (s) => s.optional() }),
+  tipoDocumento: yup.string().optional(),
+  numeroDocumento: yup.string().optional(),
+  alvara: yup.string().when('tipoParceiro', { is: 'MERCHANT', then: (s) => s.required('Número do alvará/licença é obrigatório'), otherwise: (s) => s.optional() }),
   dataFormulario: yup.string().required('Data do formulário é obrigatória').test('date-req', 'Data inválida (dd/mm/aaaa)', (v) => !!v && dateRegex.test(v)),
   dataValidacao: yup.string().optional().test('date-opt2', 'Data inválida (dd/mm/aaaa)', (v) => !v || dateRegex.test(v)),
   dataAprovacao: yup.string().optional().test('date-opt3', 'Data inválida (dd/mm/aaaa)', (v) => !v || dateRegex.test(v)),
@@ -453,7 +455,7 @@ const EstabelecimentosFieldArray: React.FC<{ control: any }> = ({ control }) => 
 export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const { personalData, password, editParceiroId } = route.params || {};
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!!editParceiroId);
   const formatDate = (d: Date) => { const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}/${mm}/${yyyy}`; };
 
   useEffect(() => {
@@ -491,13 +493,30 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
                setValue('celular', parceiro.endereco.celular || '');
                setValue('localizacaoId', parceiro.endereco.localizacao_id || undefined);
                setValue('enderecoBairroRef', parceiro.bairro_ref || '');
-            }
-            if (parceiro.banca && parceiro.banca.length > 0) {
-               setValue('latitude', parceiro.banca[0].latitude);
-               setValue('longitude', parceiro.banca[0].longitude);
-               if (parceiro.banca[0].fotografia) {
-                 setValue('fotografia', parceiro.banca[0].fotografia);
+               if (parceiro.endereco.localizacao_id) {
+                 getLocalizacaoById(parceiro.endereco.localizacao_id).then((loc) => {
+                   if (loc) {
+                     setValue('localizacaoDisplay', loc.nome_display, { shouldDirty: true });
+                     setValue('localizacaoNivel', loc.nivel, { shouldDirty: true });
+                   }
+                 });
                }
+            }
+            if (parceiro.banca) {
+               const banca = Array.isArray(parceiro.banca) ? parceiro.banca[0] : parceiro.banca;
+               if (banca.geolocalizacao) {
+                 setValue('latitude', banca.geolocalizacao.latitude);
+                 setValue('longitude', banca.geolocalizacao.longitude);
+               }
+               if (banca.fotografia) {
+                 setValue('fotografia', banca.fotografia);
+               }
+            }
+            if (typeof parceiro.solicita_encerramento_conta === 'boolean') {
+               setValue('solicitaEncerramentoConta', parceiro.solicita_encerramento_conta);
+            }
+            if (parceiro.observacao_encerramento) {
+               setValue('observacaoEncerramento', parceiro.observacao_encerramento);
             }
             if (parceiro.proprietarios) {
                setValue('proprietarios', parceiro.proprietarios.map((p: any) => ({nome: p.nome, email: p.email, contacto: p.contacto})));
@@ -543,7 +562,6 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   });
 
   const tipoParceiro = useWatch({ control, name: 'tipoParceiro' });
-  const tipoDocumento = useWatch({ control, name: 'tipoDocumento' });
   const fotografiaValue = useWatch({ control, name: 'fotografia' });
   const latitudeValue = useWatch({ control, name: 'latitude' });
   const longitudeValue = useWatch({ control, name: 'longitude' });
@@ -828,6 +846,17 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
+      {/* ── Loading Overlay ── */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingOverlayCard}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingOverlayTitle}>A carregar dados...</Text>
+            <Text style={styles.loadingOverlaySubtitle}>A preparar o formulário para edição</Text>
+          </View>
+        </View>
+      )}
+
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -857,34 +886,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
               </>
             )} />
           </View>
-          <View onLayout={onLayoutField('tipoDocumento')}>
-            <Controller control={control} name="tipoDocumento" render={({ field: { onChange, value } }) => (
-              <Select label="Tipo de Documento" placeholder="Selecionar tipo de documento"
-                value={value || (null as any)} onChange={onChange} errorText={errors.tipoDocumento?.message}
-                options={[{ id: 'BI', label: 'BI' }, { id: 'PASSAPORTE', label: 'Passaporte' }, { id: 'CARTAO_ELEITOR', label: 'Cartão de Eleitor' }, { id: 'CARTA_CONDUCAO', label: 'Carta de Condução' }]} required />
-            )} />
-          </View>
-          <View onLayout={onLayoutField('numeroDocumento')}>
-            <Controller control={control} name="numeroDocumento" render={({ field: { onChange, onBlur, value } }) => (
-              <>
-                <Input label="Número do Documento" placeholder={tipoDocumento === 'BI' ? 'Ex: 123456789012A' : 'Número do Documento'}
-                  value={value} maxLength={13} autoCapitalize="characters" required
-                  onChangeText={(t) => {
-                    if (tipoDocumento === 'BI') {
-                      const clean = t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
-                      let result = '';
-                      for (let i = 0; i < Math.min(clean.length, 13); i++) {
-                        if (i < 12) { if (/[0-9]/.test(clean[i])) result += clean[i]; }
-                        else { if (/[A-Z]/.test(clean[i])) result += clean[i]; }
-                      }
-                      onChange(result);
-                    } else { onChange(t.toUpperCase().slice(0, 13)); }
-                  }}
-                  onBlur={onBlur} error={errors.numeroDocumento?.message} />
-                {tipoDocumento === 'BI' && <Text style={styles.helperText}>12 dígitos numéricos + 1 letra no final</Text>}
-              </>
-            )} />
-          </View>
+
         </SectionCard>
 
         {/* ── Tipo de Parceiro ── */}
@@ -913,7 +915,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
           </View>
           <Controller control={control} name="alvara" render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Número do Alvará/Licença" placeholder="Ex: 123/2024" value={value} onChangeText={onChange} onBlur={onBlur}
-              error={errors.alvara?.message} required={tipoParceiro === 'MERCHANT' || tipoDocumento === 'CARTA_CONDUCAO'} />
+              error={errors.alvara?.message} required={tipoParceiro === 'MERCHANT'} />
           )} />
           <View onLayout={onLayoutField('nomeComercial')}>
             <Controller control={control} name="nomeComercial" render={({ field: { onChange, onBlur, value } }) => (
@@ -1227,12 +1229,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
         </SectionCard>
 
         {/* ── Documentos info card ── */}
-        <View style={styles.infoCard}>
+        <View style={styles.infoCardWarning}>
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIconContainer, { backgroundColor: COLORS.secondaryLight }]}>
+            <View style={[styles.cardIconContainer, { backgroundColor: COLORS.warningLight }]}>
               <Text style={styles.cardIcon}>📄</Text>
             </View>
-            <Text style={styles.cardTitle}>Documentos Necessários</Text>
+            <Text style={styles.cardTitleWarning}>Documentos Necessários</Text>
           </View>
           <Text style={styles.helperText}>Na próxima etapa, será necessário fazer upload dos seguintes documentos:</Text>
           <View style={styles.docList}>
@@ -1650,9 +1652,11 @@ const styles = StyleSheet.create({
 
   // ── Info/docs card ───────────────────────────────────────
   infoCard: { backgroundColor: COLORS.secondaryLight, borderRadius: 18, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: COLORS.secondary + '30' },
+  infoCardWarning: { backgroundColor: COLORS.warningLight, borderRadius: 18, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: COLORS.warning + '50' },
+  cardTitleWarning: { fontSize: 16, fontWeight: '700', color: COLORS.warning },
   docList: { marginTop: 6 },
   docItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 },
-  docDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
+  docDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.warning },
   docText: { fontSize: 14, color: COLORS.text },
 
   // ── Shared button variants ───────────────────────────────
@@ -1713,4 +1717,27 @@ const styles = StyleSheet.create({
   footerBtn: { borderRadius: 15, overflow: 'hidden', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 5 },
   footerBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },
   footerBtnText: { fontSize: 16, fontWeight: '700', color: 'white', letterSpacing: -0.2 },
+
+  // ── Loading Overlay ─────────────────────────────────────
+  loadingOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(244,246,248,0.95)',
+    justifyContent: 'center', alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingOverlayCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    paddingVertical: 40,
+    paddingHorizontal: 36,
+    alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 8,
+  },
+  loadingOverlayTitle: {
+    fontSize: 17, fontWeight: '700', color: COLORS.text,
+    marginTop: 20, marginBottom: 6,
+  },
+  loadingOverlaySubtitle: {
+    fontSize: 13, color: COLORS.textSecondary,
+  },
 });

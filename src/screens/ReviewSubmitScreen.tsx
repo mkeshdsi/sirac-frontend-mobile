@@ -135,11 +135,14 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           }]));
           
           if (commercialData.fotografia) {
-            formData.append("banca_foto", {
-              uri: commercialData.fotografia,
-              name: "banca.jpg",
-              type: "image/jpeg"
-            } as any);
+            const isLocalUri = commercialData.fotografia.startsWith('file://');
+            if (isLocalUri) {
+              formData.append("banca_foto", {
+                uri: commercialData.fotografia,
+                name: "banca.jpg",
+                type: "image/jpeg"
+              } as any);
+            }
           }
         }
 

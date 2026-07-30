@@ -167,7 +167,7 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
     { key: 'alvaraUri' as keyof DocumentsPayload, title: 'Licença / Alvará', icon: '📜', type: 'file' },
   ];
 
-  const hasAnyDoc = Object.values(docs).some(Boolean);
+  const hasAnyDoc = Object.values(docs).some(Boolean) || !!editParceiroId;
   const uploadedCount = Object.values(docs).filter(Boolean).length;
   const totalCount = documentItems.length;
   const progress = (uploadedCount / totalCount) * 100;
@@ -266,6 +266,23 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
         </LinearGradient>
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+          {/* ── Edit mode banner ── */}
+          {!!editParceiroId && (
+            <View style={styles.editBanner}>
+              <LinearGradient colors={[COLORS.primary, '#02a882']} style={styles.editBannerInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <View style={styles.editBannerIconWrap}>
+                  <Ionicons name="checkmark-done-circle" size={28} color="white" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.editBannerTitle}>Documentos já submetidos</Text>
+                  <Text style={styles.editBannerSubtitle}>
+                    Os documentos foram enviados anteriormente. Pode reenviar se pretender substituí-los, ou avançar sem alterações.
+                  </Text>
+                </View>
+              </LinearGradient>
+            </View>
+          )}
 
           {/* ── Upload cards ── */}
           <View style={styles.cardsGrid}>
@@ -860,5 +877,37 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: 'white',
+  },
+
+  // ── Edit mode banner ─────────────────────────────────────
+  editBanner: {
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  editBannerInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  editBannerIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editBannerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 4,
+  },
+  editBannerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    lineHeight: 17,
   },
 });

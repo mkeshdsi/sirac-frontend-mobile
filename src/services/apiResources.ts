@@ -86,6 +86,16 @@ export async function searchLocalizacoes(q: string, limit = 25): Promise<Localiz
   return listResource(api, '/api/v1/localizacoes/search', { q, limit });
 }
 
+export async function getLocalizacaoById(id: number): Promise<LocalizacaoOption | null> {
+  const api = await getAuthApi();
+  try {
+    const res = await api.get(`/api/v1/localizacoes/${id}`);
+    return res.data;
+  } catch {
+    return null;
+  }
+}
+
 // Usando endpoint de users com filtro usertype (ajustado conforme backend)
 // Backend nao tem filtro, entao buscamos todos e filtramos no front
 async function listUsersByType(type: string, params?: ListParams) {
