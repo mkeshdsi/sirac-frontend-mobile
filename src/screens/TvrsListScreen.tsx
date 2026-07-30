@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ export const TvrsListScreen = ({ navigation }: any) => {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedTvr, setSelectedTvr] = useState<any | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -86,6 +87,19 @@ export const TvrsListScreen = ({ navigation }: any) => {
 
   const canUpdatePassword = newPassword.length >= 6 && newPassword === confirmPassword && !savingPassword;
 
+  const filteredItems = searchQuery.trim()
+    ? items.filter(item => {
+        const q = searchQuery.toLowerCase();
+        return (
+          (item.nome || '').toLowerCase().includes(q) ||
+          (item.msisdn || '').includes(q) ||
+          (item.email || '').toLowerCase().includes(q) ||
+          (item.bi || '').toLowerCase().includes(q) ||
+          (item.created_by?.name || '').toLowerCase().includes(q)
+        );
+      })
+    : items;
+
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
@@ -114,13 +128,31 @@ export const TvrsListScreen = ({ navigation }: any) => {
         </View>
       </LinearGradient>
 
+      <View style={styles.searchContainer}>
+        <Ionicons name="search-outline" size={18} color={Theme.colors.textSecondary} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Pesquisar TVR..."
+          placeholderTextColor={Theme.colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          clearButtonMode="while-editing"
+          autoCorrect={false}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClear}>
+            <Ionicons name="close-circle" size={16} color={Theme.colors.textSecondary} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Theme.colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <TouchableOpacity key={item.id} style={styles.card} activeOpacity={0.78} onPress={() => openTvrModal(item)}>
             <View style={styles.iconWrap}>
               <Ionicons name="briefcase-outline" size={20} color={Theme.colors.primary} />
@@ -148,7 +180,7 @@ export const TvrsListScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         ))}
 
-        {items.length === 0 && (
+        {filteredItems.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="briefcase-outline" size={42} color={Theme.colors.border} />
             <Text style={styles.emptyTitle}>Sem TVRs</Text>
@@ -236,6 +268,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Theme.colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Theme.colors.background, gap: 12 },
   loadingText: { color: Theme.colors.textSecondary, fontSize: 14 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: 12, marginHorizontal: 16, marginTop: 14, marginBottom: 2, paddingHorizontal: 12, height: 42 },
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 14, color: Theme.colors.textPrimary, height: '100%' },
+  searchClear: { padding: 4 },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
   headerIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
