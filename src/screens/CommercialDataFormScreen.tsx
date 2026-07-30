@@ -39,8 +39,6 @@ const COLORS = {
   textSecondary: '#6b7280',
   error: '#d32f2f',
   success: '#01836b',
-  warning: '#F59E0B',
-  warningLight: '#F59E0B20',
 };
 
 const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
@@ -1229,12 +1227,12 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
         </SectionCard>
 
         {/* ── Documentos info card ── */}
-        <View style={styles.infoCardWarning}>
+        <View style={styles.infoCard}>
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIconContainer, { backgroundColor: COLORS.warningLight }]}>
+            <View style={[styles.cardIconContainer, { backgroundColor: COLORS.secondaryLight }]}>
               <Text style={styles.cardIcon}>📄</Text>
             </View>
-            <Text style={styles.cardTitleWarning}>Documentos Necessários</Text>
+            <Text style={styles.cardTitle}>Documentos Necessários</Text>
           </View>
           <Text style={styles.helperText}>Na próxima etapa, será necessário fazer upload dos seguintes documentos:</Text>
           <View style={styles.docList}>
@@ -1652,11 +1650,9 @@ const styles = StyleSheet.create({
 
   // ── Info/docs card ───────────────────────────────────────
   infoCard: { backgroundColor: COLORS.secondaryLight, borderRadius: 18, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: COLORS.secondary + '30' },
-  infoCardWarning: { backgroundColor: COLORS.warningLight, borderRadius: 18, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: COLORS.warning + '50' },
-  cardTitleWarning: { fontSize: 16, fontWeight: '700', color: COLORS.warning },
   docList: { marginTop: 6 },
   docItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 },
-  docDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.warning },
+  docDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
   docText: { fontSize: 14, color: COLORS.text },
 
   // ── Shared button variants ───────────────────────────────

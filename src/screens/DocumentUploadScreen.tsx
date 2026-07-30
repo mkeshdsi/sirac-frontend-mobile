@@ -30,6 +30,8 @@ const COLORS = {
   textSecondary: '#6b7280',
   error: '#d32f2f',
   success: '#01836b',
+  warning: '#F59E0B',
+  warningLight: '#F59E0B20',
 };
 
 const getFileExtension = (uri: string) => {
@@ -270,9 +272,9 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
           {/* ── Edit mode banner ── */}
           {!!editParceiroId && (
             <View style={styles.editBanner}>
-              <LinearGradient colors={[COLORS.primary, '#02a882']} style={styles.editBannerInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <LinearGradient colors={[COLORS.warning, '#D97706']} style={styles.editBannerInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                 <View style={styles.editBannerIconWrap}>
-                  <Ionicons name="checkmark-done-circle" size={28} color="white" />
+                  <Ionicons name="alert-circle" size={28} color="white" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.editBannerTitle}>Documentos já submetidos</Text>
