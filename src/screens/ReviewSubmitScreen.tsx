@@ -175,9 +175,6 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
       if (documents.biVersoUri) {
         formData.append("bi", { uri: documents.biVersoUri, name: "bi_verso.pdf", type: "application/pdf" } as any);
       }
-      if (documents.alvaraUri) {
-        formData.append("alvara", { uri: documents.alvaraUri, name: "alvara.pdf", type: "application/pdf" } as any);
-      }
       if (documents.nuitUri) {
         formData.append("nuit", { uri: documents.nuitUri, name: "nuit.pdf", type: "application/pdf" } as any);
       }
@@ -267,7 +264,6 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
             <InfoRow label="Nome Comercial" value={commercialData.nomeComercial} icon="pricetag-outline" />
             <InfoRow label="NUIT" value={commercialData.nuit} icon="id-card-outline" />
-            <InfoRow label="Alvará/Licença" value={commercialData.alvara} icon="ribbon-outline" />
             <InfoRow label="Tipo Empresa" value={commercialData.tipoEmpresa} icon="layers-outline" />
             <InfoRow label="Banco" value={commercialData.banco} icon="wallet-outline" />
             <InfoRow label="Nº de Conta" value={commercialData.numeroConta} icon="cash-outline" />
@@ -313,10 +309,6 @@ export const ReviewSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
             <View style={styles.docStatus}>
               <Ionicons name={documents.nuitUri ? "checkmark-circle" : "close-circle"} size={18} color={documents.nuitUri ? COLORS.success : COLORS.error} />
               <Text style={styles.docStatusText}>NUIT</Text>
-            </View>
-            <View style={styles.docStatus}>
-              <Ionicons name={documents.alvaraUri ? "checkmark-circle" : "close-circle"} size={18} color={documents.alvaraUri ? COLORS.success : COLORS.error} />
-              <Text style={styles.docStatusText}>Alvará</Text>
             </View>
           </View>
         </Card>

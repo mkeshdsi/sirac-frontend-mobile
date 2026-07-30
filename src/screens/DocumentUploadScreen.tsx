@@ -43,7 +43,6 @@ const FILE_SIZE_LIMITS_MB = {
   biFrenteUri: 3,
   biVersoUri: 3,
   nuitUri: 3,
-  alvaraUri: 3,
 };
 
 const validateFileSize = async (uri: string, key: keyof DocumentsPayload): Promise<{ valid: boolean; error?: string }> => {
@@ -70,7 +69,6 @@ const keyofDocumentsPayloadToLabel = (key: string) => {
     case 'biFrenteUri': return 'BI_Frente';
     case 'biVersoUri': return 'BI_Verso';
     case 'nuitUri': return 'NUIT';
-    case 'alvaraUri': return 'Alvara';
     default: return 'Doc';
   }
 };
@@ -166,7 +164,6 @@ export const DocumentUploadScreen: React.FC<Props> = ({ navigation, route }) => 
     { key: 'biFrenteUri' as keyof DocumentsPayload, title: 'BI / Passaporte (Frente)', icon: '🪪', type: 'image' },
     { key: 'biVersoUri' as keyof DocumentsPayload, title: 'Verso (se aplicável)', icon: '🪪', type: 'image' },
     { key: 'nuitUri' as keyof DocumentsPayload, title: 'NUIT (Documento)', icon: '🔢', type: 'file' },
-    { key: 'alvaraUri' as keyof DocumentsPayload, title: 'Licença / Alvará', icon: '📜', type: 'file' },
   ];
 
   const hasAnyDoc = Object.values(docs).some(Boolean) || !!editParceiroId;

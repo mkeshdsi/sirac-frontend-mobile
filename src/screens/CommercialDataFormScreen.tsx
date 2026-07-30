@@ -71,7 +71,6 @@ const schema: yup.ObjectSchema<CommercialData> = yup.object({
   contactoAgente: yup.string().required('Contacto do agente é obrigatório').test('tel', 'O contacto do agente deve ser 82 ou 83 (ex: 821234567)', (v) => !!v && agentPhoneRegex.test(v)),
   tipoDocumento: yup.string().optional(),
   numeroDocumento: yup.string().optional(),
-  alvara: yup.string().when('tipoParceiro', { is: 'MERCHANT', then: (s) => s.required('Número do alvará/licença é obrigatório'), otherwise: (s) => s.optional() }),
   dataFormulario: yup.string().required('Data do formulário é obrigatória').test('date-req', 'Data inválida (dd/mm/aaaa)', (v) => !!v && dateRegex.test(v)),
   dataValidacao: yup.string().optional().test('date-opt2', 'Data inválida (dd/mm/aaaa)', (v) => !v || dateRegex.test(v)),
   dataAprovacao: yup.string().optional().test('date-opt3', 'Data inválida (dd/mm/aaaa)', (v) => !v || dateRegex.test(v)),
@@ -467,7 +466,6 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
             setValue('nomeComercial', parceiro.designacao || '', { shouldValidate: true });
             setValue('designacao', parceiro.designacao || '', { shouldValidate: true });
             setValue('nuit', parceiro.nuit || '');
-            setValue('alvara', parceiro.alvara || '');
             setValue('tipoEmpresa', parceiro.tipo_empresa || undefined);
             setValue('banco', parceiro.banco || '');
             setValue('numeroConta', parceiro.numero_conta || '');
@@ -552,7 +550,7 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   const { control, handleSubmit, formState: { errors }, setValue, trigger, getValues } = useForm<CommercialData>({
     resolver: yupResolver(schema) as any,
     defaultValues: {
-      tipoParceiro: 'MERCHANT', nomeComercial: '', nuit: '', alvara: '',
+      tipoParceiro: 'MERCHANT', nomeComercial: '', nuit: '',
       tipoEmpresa: undefined as any, proprietarioNomeCompleto: '', proprietarioContacto: '',
       assistentes: [], proprietarios: [], estabelecimentos: [],
       solicitaEncerramentoConta: false, observacaoEncerramento: '',
@@ -911,10 +909,6 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
               <Input label="NUIT" placeholder="123456789" keyboardType="numeric" maxLength={9} value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nuit?.message} required />
             )} />
           </View>
-          <Controller control={control} name="alvara" render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Número do Alvará/Licença" placeholder="Ex: 123/2024" value={value} onChangeText={onChange} onBlur={onBlur}
-              error={errors.alvara?.message} required={tipoParceiro === 'MERCHANT'} />
-          )} />
           <View onLayout={onLayoutField('nomeComercial')}>
             <Controller control={control} name="nomeComercial" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="Nome Comercial" placeholder="Nome do negócio" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.nomeComercial?.message} required />

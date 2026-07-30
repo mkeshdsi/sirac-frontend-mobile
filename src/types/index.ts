@@ -9,7 +9,6 @@ export interface PersonalData {
 export interface CommercialData {
   nomeComercial: string;
   nuit: string;
-  alvara: string;
   contactoAgente?: string;
   tipoDocumento?: 'BI' | 'PASSAPORTE' | 'CARTAO_ELEITOR' | 'CARTA_CONDUCAO';
   numeroDocumento?: string;
@@ -55,7 +54,6 @@ export interface DocumentsPayload {
   biFrenteUri?: string;
   biVersoUri?: string;
   nuitUri?: string;
-  alvaraUri?: string;
 }
 
 export type RootStackParamList = {
