@@ -1,44 +1,133 @@
 import 'react-native-gesture-handler';
-import React from 'react';
-import { StatusBar } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Updates from 'expo-updates';
 import { Theme } from '@/constants/theme';
-import { RootStackParamList } from '@/types';
-import { WelcomeScreen } from '@/screens/WelcomeScreen';
-import { PersonalDataFormScreen } from '@/screens/PersonalDataFormScreen';
-import { CommercialDataFormScreen } from '@/screens/CommercialDataFormScreen';
-import { DocumentUploadScreen } from '@/screens/DocumentUploadScreen';
-import { ReviewSubmitScreen } from '@/screens/ReviewSubmitScreen';
-import { SuccessScreen } from '@/screens/SuccessScreen';
-import { PasswordCreationScreen } from '@/screens/PasswordCreationScreen';
-import { LoginScreen } from '@/screens/LoginScreen';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { RootNavigator } from '@/navigation/RootNavigator';
+import { hasActiveNetworkActivity, useNetworkActivityActive } from '@/utils/networkActivity';
 
-const Stack = createStackNavigator<RootStackParamList>();
+const INACTIVITY_TIMEOUT_MS = 60 * 1000;
+
+const OtaUpdateGate = () => {
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    const applyAvailableUpdate = async () => {
+      if (__DEV__ || !Updates.isEnabled) return;
+
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (!update.isAvailable) return;
+
+        setUpdating(true);
+        await Updates.fetchUpdateAsync();
+        await Updates.reloadAsync();
+      } catch (error) {
+        console.log('OTA update check failed', error);
+        setUpdating(false);
+      }
+    };
+
+    applyAvailableUpdate();
+  }, []);
+
+  return (
+    <Modal visible={updating} transparent animationType="fade">
+      <View style={styles.updateBackdrop}>
+        <View style={styles.updateCard}>
+          <ActivityIndicator size="large" color={Theme.colors.primary} />
+          <Text style={styles.updateTitle}>A atualizar app...</Text>
+          <Text style={styles.updateText}>A preparar a versão mais recente.</Text>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const AutoLogoutGate = () => {
+  const { userRole, signOut } = useAuth();
+  const hasLoadingRequest = useNetworkActivityActive();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimer = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  const resetTimer = () => {
+    clearTimer();
+    if (!userRole || hasLoadingRequest) return;
+
+    timeoutRef.current = setTimeout(() => {
+      if (hasActiveNetworkActivity()) {
+        resetTimer();
+        return;
+      }
+      signOut();
+    }, INACTIVITY_TIMEOUT_MS);
+  };
+
+  useEffect(() => {
+    resetTimer();
+    return clearTimer;
+  }, [userRole, hasLoadingRequest]);
+
+  return (
+    <View style={styles.appShell} onTouchStart={resetTimer} onTouchMove={resetTimer}>
+      <NavigationContainer>
+        <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
+        <OtaUpdateGate />
+        <RootNavigator />
+      </NavigationContainer>
+    </View>
+  );
+};
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: Theme.colors.surface },
-          headerTintColor: Theme.colors.textPrimary,
-          headerTitleStyle: { ...Theme.typography.h4 },
-          cardStyle: { backgroundColor: Theme.colors.background },
-        }}
-        initialRouteName="Login"
-      >
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ title: 'SIRAC' }} />
-        <Stack.Screen name="PasswordCreation" component={PasswordCreationScreen} options={{ title: 'Palavra‑Passe' }} />
-        <Stack.Screen name="PersonalDataForm" component={PersonalDataFormScreen} options={{ title: 'Dados Pessoais' }} />
-        <Stack.Screen name="CommercialDataForm" component={CommercialDataFormScreen} options={{ title: 'Dados Comerciais' }} />
-        <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} options={{ title: 'Documentos' }} />
-        <Stack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} options={{ title: 'Revisão' }} />
-        <Stack.Screen name="Success" component={SuccessScreen} options={{ title: 'Sucesso' }} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <AutoLogoutGate />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  appShell: {
+    flex: 1,
+  },
+  updateBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    padding: 24,
+  },
+  updateCard: {
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 18,
+    padding: 24,
+  },
+  updateTitle: {
+    marginTop: 14,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Theme.colors.textPrimary,
+  },
+  updateText: {
+    marginTop: 6,
+    fontSize: 13,
+    color: Theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+});
 

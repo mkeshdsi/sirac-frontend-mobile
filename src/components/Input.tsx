@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { View, Text, TextInput, StyleSheet, ViewStyle, TextInputProps, TouchableOpacity } from 'react-native';
 import { Theme } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Props extends TextInputProps {
   label?: string;
@@ -52,7 +53,12 @@ export const Input: React.FC<Props> = ({ label, error, containerStyle, required,
           {!!rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
         </View>
       )}
-      {!!error && <Text style={styles.error}>{error}</Text>}
+      {!!error && (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={14} color={Theme.colors.error} />
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -93,8 +99,13 @@ const styles = StyleSheet.create({
   iconRight: {
     paddingRight: Theme.spacing.md,
   },
-  error: {
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 4,
+    gap: 4,
+  },
+  error: {
     color: Theme.colors.error,
     ...Theme.typography.caption,
   },

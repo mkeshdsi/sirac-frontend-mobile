@@ -1,12 +1,14 @@
 {
   "expo": {
-    "name": "SIRAC",
+    "name": "Mkesh agente",
     "slug": "sirac",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "sirac",
     "userInterfaceStyle": "automatic",
-    "icon": "./logo_png.png",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "updates": {
       "fallbackToCacheTimeout": 0,
       "url": "https://u.expo.dev/5359f0b9-c61f-4c70-9f90-d28bcdd89e45"
@@ -20,22 +22,30 @@
     "ios": {
       "bundleIdentifier": "com.eleuterio.sirac",
       "supportsTablet": true,
+      "bundleIdentifier": "com.sirac.app",
+      "buildNumber": "1.0.1",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to get the position of the banca.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to get the position of the banca."
       }
     },
     "android": {
-      "package": "com.eleuterio.sirac",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logomkesh-adaptive-icon.png",
+        "backgroundColor": "#F0CF12"
+      },
+      "usesCleartextTraffic": true,
+      "package": "com.sirac.app",
+      "versionCode": 1,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA"
       ]
     },
-    "extra": {
-      "eas": {
-        "projectId": "5359f0b9-c61f-4c70-9f90-d28bcdd89e45"
-      }
+    "icon": "./assets/logomkesh-icon.png",
+    "web": {
+      "output": "single"
     }
   }
 }

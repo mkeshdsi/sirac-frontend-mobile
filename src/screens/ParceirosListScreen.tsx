@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros, getParceiro } from '@/services/apiResources';
+import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros, getParceiro, getAllUsers, listTvrs } from '@/services/apiResources';
 import { Modal } from 'react-native';
+import Constants from 'expo-constants';
 
 const creatorTypeLabel = (type?: string) => {
   const normalized = String(type || '').toLowerCase();
@@ -76,22 +77,75 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [filter, setFilter] = useState<FilterType>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allAngariadores, setAllAngariadores] = useState<any[]>([]);
+  const [allTvrs, setAllTvrs] = useState<any[]>([]);
+
+  const fetchAllPeople = async () => {
+    try {
+      const users = await getAllUsers();
+      setAllUsers(users);
+      
+      const angariadores = await listMyAngariadores();
+      setAllAngariadores(angariadores);
+      
+      const tvrs = await listTvrs();
+      setAllTvrs(tvrs);
+    } catch (e) {
+      console.error("Error fetching people:", e);
+    }
+  };
+
+  const getAuthorName = (userId: number) => {
+    // Check users first
+    const user = allUsers.find(u => u.id === userId);
+    if (user?.name) {
+      return user.name;
+    }
+
+    // Check angariadores
+    const angariador = allAngariadores.find(a => a.id === userId);
+    if (angariador?.nome) {
+      return angariador.nome;
+    }
+
+    // Check tvrs
+    const tvr = allTvrs.find(t => t.id === userId);
+    if (tvr?.nome) {
+      return tvr.nome;
+    }
+
+    return `Usuário ${userId}`;
+  };
 
   const filteredItems = items.filter(item => {
-    if (filter === 'ALL') return true;
     if (filter === 'PENDENTE') return String(item.estado_validacao || '').toUpperCase() === 'PENDENTE' && !isEwpCreated(item.criado_ewp);
     if (filter === 'ATIVO') return isEwpCreated(item.criado_ewp);
     if (filter === 'REJEITADO') return partnerIsRejeitado(item);
     return true;
+  }).filter(item => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (item.designacao || '').toLowerCase().includes(q) ||
+      (item.nomeComercial || '').toLowerCase().includes(q) ||
+      (item.nuit || '').includes(q) ||
+      (item.contacto_agente || '').includes(q) ||
+      (item.angariador_nome || '').toLowerCase().includes(q) ||
+      (item.tipo_parceiro || '').toLowerCase().includes(q) ||
+      (item.tipo_empresa || '').toLowerCase().includes(q)
+    );
   });
 
-  const hasRejected = items.some(partnerIsRejeitado);
+  const hasRejeitados = items.some(item => partnerIsRejeitado(item));
+  const hasPendentes = items.some(item => String(item.estado_validacao || '').toUpperCase() === 'PENDENTE' && !isEwpCreated(item.criado_ewp));
 
   const filters: { label: string; value: FilterType }[] = [
     { label: 'Todos', value: 'ALL' },
-    { label: 'Pendente', value: 'PENDENTE' },
+    ...(hasPendentes ? [{ label: 'Pendente', value: 'PENDENTE' as FilterType }] : []),
     { label: 'Ativo', value: 'ATIVO' },
-    ...(hasRejected ? [{ label: 'Rejeitado', value: 'REJEITADO' as const }] : []),
+    ...(hasRejeitados ? [{ label: 'Rejeitado', value: 'REJEITADO' as FilterType }] : []),
   ];
 
   const uniqueById = (data: any[]) => {
@@ -161,7 +215,10 @@ export const ParceirosListScreen = ({ navigation }: any) => {
   };
 
   useEffect(() => {
-    fetchData().finally(() => setLoading(false));
+    Promise.all([
+      fetchData(),
+      fetchAllPeople()
+    ]).finally(() => setLoading(false));
   }, []);
 
   
@@ -230,6 +287,24 @@ export const ParceirosListScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           ))}
         </ScrollView>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <Ionicons name="search-outline" size={18} color={Theme.colors.textSecondary} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Pesquisar parceiro..."
+          placeholderTextColor={Theme.colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          clearButtonMode="while-editing"
+          autoCorrect={false}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClear}>
+            <Ionicons name="close-circle" size={16} color={Theme.colors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -368,7 +443,7 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                     {selectedParceiro.comentarios.map((comentario: any, index: number) => (
                       <View key={index} style={styles.commentBox}>
                         <Text style={styles.commentAuthor}>
-                          {comentario.autor || comentario.user_id ? `Usuário ${comentario.user_id}` : 'Sistema'} • {new Date(comentario.data_criacao).toLocaleDateString('pt-MZ')}
+                          {getAuthorName(comentario.user_id)} • {new Date(comentario.data_criacao).toLocaleString('pt-MZ')}
                         </Text>
                         <Text style={styles.commentText}>{comentario.texto || comentario.comentario}</Text>
                       </View>
@@ -376,11 +451,17 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                   </View>
                 )}
 
-        {partnerIsRejeitado(selectedParceiro) && userIsCreator(selectedParceiro, userRole, userData) && (
-          <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
-            <Text style={styles.editBtnText}>Editar Parceiro</Text>
-          </TouchableOpacity>
-        )}
+                {/* Edit button for rejected partners: only creator OR admin OR (any user in pilot) */}
+                {partnerIsRejeitado(selectedParceiro) && (
+                  userIsCreator(selectedParceiro, userRole, userData) ||
+                  userRole === 'admin' ||
+                  (userData?.roles && Array.isArray(userData.roles) && userData.roles.includes('Admin')) ||
+                  (Constants.expoConfig?.extra?.isPilot)
+                ) && (
+                  <TouchableOpacity style={styles.editBtn} onPress={handleEditClick}>
+                    <Text style={styles.editBtnText}>Editar Parceiro</Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             ) : null}
           </View>
@@ -424,6 +505,10 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', marginTop: 80 },
   emptyTitle: { fontSize: 17, color: Theme.colors.textPrimary, fontWeight: '700', marginTop: 12 },
   emptySubtitle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 6 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: 12, marginHorizontal: 16, marginTop: 14, marginBottom: 2, paddingHorizontal: 12, height: 42 },
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 14, color: Theme.colors.textPrimary, height: '100%' },
+  searchClear: { padding: 4 },
   filterContainer: { backgroundColor: Theme.colors.background, borderBottomWidth: 1, borderBottomColor: Theme.colors.border },
   filterScroll: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
   filterTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f0f0f0' },

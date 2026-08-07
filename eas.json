@@ -1,20 +1,55 @@
 {
-    "cli": {
-        "version": ">= 20.3.0"
+  "cli": {
+    "version": ">= 3.14.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "production",
+      "ios": {
+        "simulator": true
+      },
+      "distribution": "internal"
     },
-    "build": {
-        "development": {
-            "developmentClient": true,
-            "distribution": "internal"
-        },
-        "preview": {
-            "android": {
-                "buildType": "apk"
-            }
-        },
-        "production": {}
+    "apk": {
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "production",
+      "environment": "production",
+      "distribution": "internal"
     },
-    "submit": {
-        "production": {}
+    "pilot": {
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "pilot",
+      "environment": "production",
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "pilot"
+      }
+    },
+    "preview": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "channel": "production",
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "channel": "production",
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "distribution": "store"
     }
+  }
 }

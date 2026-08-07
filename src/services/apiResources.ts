@@ -4,6 +4,7 @@ import { getAuthApi } from '@/config/api';
 export type ListParams = {
   page?: number;
   q?: string;
+  limit?: number;
 };
 
 async function listResource(api: AxiosInstance, path: string, params?: ListParams) {
@@ -15,9 +16,84 @@ async function listResource(api: AxiosInstance, path: string, params?: ListParam
   }
 }
 
+async function listResourceStrict(api: AxiosInstance, path: string, params?: ListParams) {
+  const res = await api.get(path, { params });
+  return Array.isArray(res.data) ? res.data : [];
+}
+
 export async function listEnderecos(params?: ListParams) {
   const api = await getAuthApi();
   return listResource(api, '/api/v1/enderecos/', params);
+}
+
+export type DashboardOverview = {
+  scope: 'user' | 'tvr' | 'angariador';
+  actor: { id: number; type: string; nome: string };
+  totals: {
+    parceiros: number;
+    angariadores: number;
+    tvrs: number;
+    parceiros_mes: number;
+  };
+  progress: {
+    month_total: number;
+    previous_month_total: number;
+    growth_percent: number;
+  };
+  series: Array<{ label: string; value: number }>;
+  breakdown: {
+    diretos_tvr: number;
+    por_angariadores: number;
+    por_users: number;
+  };
+  top_angariadores: Array<{ id: number; nome: string; total: number }>;
+  top_tvrs: Array<{ id: number; nome: string; total: number }>;
+  recent_parceiros: Array<{ id: number; designacao: string; tipo_parceiro: string; data_adesao?: string; origem?: string }>;
+};
+
+export async function getDashboardOverview(): Promise<DashboardOverview> {
+  const api = await getAuthApi();
+  const res = await api.get('/api/v1/dashboard/overview');
+  return res.data;
+}
+
+export type LocalizacaoOption = {
+  id: number;
+  nivel: string;
+  nome_display: string;
+  provincia_id?: number;
+  provincia?: string;
+  distrito_id?: number;
+  distrito?: string;
+  posto_administrativo_id?: number;
+  posto_administrativo?: string;
+  localidade_id?: number;
+  localidade?: string;
+  bairro_id?: number;
+  bairro?: string;
+};
+
+export type Angariador = {
+  id: number;
+  msisdn: string;
+  email: string;
+  nome: string;
+  bi: string;
+};
+
+export async function searchLocalizacoes(q: string, limit = 25): Promise<LocalizacaoOption[]> {
+  const api = await getAuthApi();
+  return listResource(api, '/api/v1/localizacoes/search', { q, limit });
+}
+
+export async function getLocalizacaoById(id: number): Promise<LocalizacaoOption | null> {
+  const api = await getAuthApi();
+  try {
+    const res = await api.get(`/api/v1/localizacoes/${id}`);
+    return res.data;
+  } catch {
+    return null;
+  }
 }
 
 // Usando endpoint de users com filtro usertype (ajustado conforme backend)
@@ -34,13 +110,56 @@ async function listUsersByType(type: string, params?: ListParams) {
   return allUsers.filter((u: any) => u.usertype === type);
 }
 
+export async function getAllUsers() {
+  const api = await getAuthApi();
+  const res = await api.get('/api/v1/users/');
+  return Array.isArray(res.data) ? res.data : [];
+}
+
 export async function listAngariadores(params?: ListParams) {
   return listUsersByType('Angariador', params);
 }
 
 export async function listParceiros(params?: ListParams) {
   const api = await getAuthApi();
-  return listResource(api, '/api/v1/parceiros/', params);
+  return listResourceStrict(api, '/api/v1/parceiros/', params);
+}
+
+export async function getParceiro(parceiroId: number) {
+  const api = await getAuthApi();
+  const res = await api.get(`/api/v1/parceiros/${parceiroId}`);
+  return res.data;
+}
+
+export async function updateParceiro(parceiroId: number, payload: any) {
+  const api = await getAuthApi();
+  const res = await api.put(`/api/v1/parceiros/${parceiroId}`, payload, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+}
+
+export async function getParceirosGroupedDetailed() {
+  const api = await getAuthApi();
+  const res = await api.get('/api/v1/parceiros/grouped-detailed');
+  return res.data || { users: [], tvrs: [], angariadores: [] };
+}
+
+export async function listTvrs(params?: ListParams) {
+  const api = await getAuthApi();
+  return listResource(api, '/api/v1/tvr/', params);
+}
+
+export async function cadastrarTvr(payload: any) {
+  const api = await getAuthApi();
+  const res = await api.post('/api/v1/tvr/', payload);
+  return res.data;
+}
+
+export async function updateTvrPassword(tvrId: number, payload: { password: string }) {
+  const api = await getAuthApi();
+  const res = await api.put(`/api/v1/tvr/${tvrId}`, payload);
+  return res.data;
 }
 
 export async function listValidadores(params?: ListParams) {
@@ -80,18 +199,55 @@ export async function createAdesao(payload: any) {
   return res.data;
 }
 
-export async function getParceiro(parceiroId: number) {
+export async function getAngariadoresGrouped() {
   const api = await getAuthApi();
-  const res = await api.get(`/api/v1/parceiros/${parceiroId}`);
-  return res.data;
-}
-
-export async function getParceirosGroupedDetailed() {
-  const api = await getAuthApi();
-  const res = await api.get('/api/v1/parceiros/grouped-detailed');
-  return res.data;
+  try {
+    const res = await api.get('/api/v1/angariadores/grouped-by-tvr');
+    return res.data;
+  } catch (e) {
+    console.error('Error fetching grouped angariadores:', e);
+    return { data: [], total_geral: 0 };
+  }
 }
 
 export async function listMyAngariadores() {
-  return listAngariadores();
+  const api = await getAuthApi();
+  return listResource(api, '/api/v1/angariadores/meus');
+}
+
+export async function cadastrarAngariador(payload: any) {
+  const api = await getAuthApi();
+  const { password, ...payloadWithoutPassword } = payload || {};
+  const res = await api.post('/api/v1/angariadores/', payloadWithoutPassword);
+  return res.data;
+}
+
+export async function updateAngariadorPassword(angariadorId: number, payload: { email: string; new_password: string }) {
+  const api = await getAuthApi();
+  const res = await api.put(`/api/v1/angariadores/${angariadorId}/update-password`, payload);
+  return res.data;
+}
+
+export async function updateMyAngariadorPassword(payload: { email: string; old_password: string; new_password: string }) {
+  const api = await getAuthApi();
+  const res = await api.put('/api/v1/angariadores/me/update-password', payload);
+  return res.data;
+}
+
+export async function changeMyTvrPassword(payload: { old_password: string; new_password: string }) {
+  const api = await getAuthApi();
+  const res = await api.put('/api/v1/tvr/me/change-password', payload);
+  return res.data;
+}
+
+export async function toggleAngariadorActive(angariadorId: number, isActive: boolean) {
+  const api = await getAuthApi();
+  const res = await api.patch(`/api/v1/angariadores/${angariadorId}/active`, { is_active: isActive });
+  return res.data;
+}
+
+export async function toggleTvrActive(tvrId: number, isActive: boolean) {
+  const api = await getAuthApi();
+  const res = await api.patch(`/api/v1/tvr/${tvrId}/active`, { is_active: isActive });
+  return res.data;
 }

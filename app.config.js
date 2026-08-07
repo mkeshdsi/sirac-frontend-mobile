@@ -1,55 +1,69 @@
-// Ensure Expo CLI reads this config and sets web.output to 'single'
+// Ensure Expo CLI reads this config and sets web.output to 'static'
+const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const isPilot = process.env.APP_VARIANT === 'pilot';
+
 module.exports = {
-  name: 'SIRAC',
-  slug: 'sirac',
-  version: '1.0.0',
-  orientation: 'portrait',
-  scheme: 'sirac',
-  userInterfaceStyle: 'light',
-  platforms: ['android', 'ios'],
-  updates: {
-    fallbackToCacheTimeout: 0,
-    url: 'https://u.expo.dev/5359f0b9-c61f-4c70-9f90-d28bcdd89e45'
-  },
-  runtimeVersion: {
-    policy: 'sdkVersion'
-  },
-  assetBundlePatterns: ['**/*'],
-  ios: {
-    supportsTablet: true,
-    bundleIdentifier: 'com.eleuterio.sirac',
-    infoPlist: {
-      NSLocationWhenInUseUsageDescription: 'This app needs access to location when open to show your position on the map.',
-      NSAppTransportSecurity: {
-        NSAllowsArbitraryLoads: true,
+  expo: {
+    name: isPilot ? 'Mkesh agente Pilot' : 'Mkesh agente',
+    slug: 'sirac',
+    version: '1.0.1',
+    orientation: 'portrait',
+    scheme: isPilot ? 'sirac-pilot' : 'sirac',
+    userInterfaceStyle: 'automatic',
+    platforms: ['android', 'ios', 'web'],
+    runtimeVersion: { policy: 'sdkVersion' },
+    updates: {
+      fallbackToCacheTimeout: 0,
+      url: 'https://u.expo.dev/5359f0b9-c61f-4c70-9f90-d28bcdd89e45',
+    },
+    assetBundlePatterns: ['**/*'],
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: isPilot ? 'com.sirac.app.pilot' : 'com.sirac.app',
+      buildNumber: '1.0.1',
+      config: {
+        googleMapsApiKey,
+      },
+      infoPlist: {
+        NSLocationWhenInUseUsageDescription:
+          'This app needs access to location to get the position of the banca.',
+        NSLocationAlwaysAndWhenInUseUsageDescription:
+          'This app needs access to location to get the position of the banca.',
       },
     },
-    icon: './logo_png.png',
-  },
-  android: {
-    package: 'com.eleuterio.sirac',
-    permissions: [
-      'ACCESS_FINE_LOCATION',
-      'ACCESS_COARSE_LOCATION',
-    ],
-    icon: './logo_png.png',
-  },
-  web: {
-    output: 'single',
-  },
-  plugins: [
-    [
-      'expo-build-properties',
-      {
-        android: {
-          usesCleartextTraffic: true,
+    android: {
+      package: isPilot ? 'com.sirac.app.pilot' : 'com.sirac.app',
+      versionCode: 1,
+      usesCleartextTraffic: true,
+      permissions: [
+        'android.permission.ACCESS_FINE_LOCATION',
+        'android.permission.ACCESS_COARSE_LOCATION',
+        'android.permission.CAMERA',
+      ],
+      adaptiveIcon: {
+        foregroundImage: './assets/logomkesh-adaptive-icon.png',
+        backgroundColor: '#F0CF12',
+      },
+      config: {
+        googleMaps: {
+          apiKey: googleMapsApiKey,
         },
       },
+    },
+    web: {
+      output: 'single',
+    },
+    icon: './assets/logomkesh-icon.png',
+    plugins: [
+      './plugins/withNetworkSecurityConfig',
     ],
-  ],
-  extra: {
-    eas: {
-      projectId: '5359f0b9-c61f-4c70-9f90-d28bcdd89e45',
+    extra: {
+      eas: {
+        projectId: '5359f0b9-c61f-4c70-9f90-d28bcdd89e45',
+      },
+      isPilot,
+      apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || '',
+      googleMapsApiKey,
     },
   },
 };

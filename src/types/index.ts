@@ -9,71 +9,76 @@ export interface PersonalData {
 export interface CommercialData {
   nomeComercial: string;
   nuit: string;
-  alvara: string;
-  // Add new fields for agent contact and document identification
   contactoAgente?: string;
   tipoDocumento?: 'BI' | 'PASSAPORTE' | 'CARTAO_ELEITOR' | 'CARTA_CONDUCAO';
   numeroDocumento?: string;
-  // Campos adicionais
   assinatura?: string;
-  dataFormulario?: string; // dd/mm/aaaa
-
-  // Tipo de Parceiro (alinhado com API)
+  dataFormulario?: string;
+  dataValidacao?: string;
+  dataAprovacao?: string;
   tipoParceiro?: 'AGENTE' | 'MERCHANT';
-
-  // Empresa
   tipoEmpresa?: 'SOCIEDADE' | 'INDIVIDUAL';
   designacao?: string;
   naturezaObjecto?: string;
   banco?: string;
   numeroConta?: string;
   profissao?: string;
-
-  // Endereço
   enderecoCidade?: string;
   enderecoLocalidade?: string;
   enderecoAvenidaRua?: string;
   enderecoNumero?: string;
   enderecoQuart?: string;
   enderecoBairroRef?: string;
+  localizacaoId?: number;
+  localizacaoDisplay?: string;
+  localizacaoNivel?: string;
   telefone?: string;
   celular?: string;
-
-  // Proprietários
   proprietarioNomeCompleto?: string;
   proprietarioEmail?: string;
   proprietarioContacto?: string;
-  // Lista de proprietários (novo)
   proprietarios?: Array<{ nome?: string; email?: string; contacto?: string }>;
-
-  // Assistentes (lista dinâmica)
   assistentes?: Array<{ nomeCompleto?: string; contacto?: string }>;
-
-  // Lista de estabelecimentos (novo)
-  estabelecimentos?: Array<{ nome?: string; provinciaLocalidade?: string; enderecoBairro?: string }>;
-
-  // Banca fields (for AGENT partners)
+  estabelecimentos?: Array<{ nome?: string; provinciaLocalidade?: string; enderecoBairro?: string; localizacaoId?: number }>;
+  substituicaoNomeAgente?: string;
+  substituicaoProvinciaLocalidade?: string;
+  substituicaoEnderecoBairro?: string;
   latitude?: number;
   longitude?: number;
-  fotografia?: string; // Photo of the banca
+  fotografia?: string;
+  solicitaEncerramentoConta?: boolean;
+  observacaoEncerramento?: string;
 }
 
 export interface DocumentsPayload {
   biFrenteUri?: string;
   biVersoUri?: string;
   nuitUri?: string;
-  alvaraUri?: string;
 }
 
 export type RootStackParamList = {
   Login: undefined;
+  FirstLoginPasswordChange: { oldPassword: string; angariadorId?: number; tvrId?: number; msisdn: string; accountType: 'angariador' | 'tvr' };
+  ForgotPassword: undefined;
+  ResetPassword: { msisdn: string; accountType: 'angariador' | 'tvr' };
+  TokenVerification: { username: string; maskedDestination: string };
+  Dashboard: undefined; // The nested tab navigator
   ApiConfig: undefined;
   Welcome: undefined;
   UserTypeSelection: undefined;
-  PersonalDataForm: undefined; // removido do fluxo principal
-  PasswordCreation: undefined; // removido do fluxo principal
-  CommercialDataForm: undefined;
-  DocumentUpload: { commercialData?: CommercialData };
-  ReviewSubmit: { commercialData?: CommercialData; documents: DocumentsPayload };
+  PersonalDataForm: undefined;
+  PasswordCreation: { userType: UserType; personalData: PersonalData };
+  CommercialDataForm: { personalData?: PersonalData; password?: string; userType?: UserType; editParceiroId?: number };
+  DocumentUpload: { commercialData?: CommercialData; personalData?: PersonalData; password?: string; userType?: UserType; editParceiroId?: number };
+  ReviewSubmit: { commercialData?: CommercialData; documents: DocumentsPayload; editParceiroId?: number };
   Success: { registrationId: string };
+  AngariadorDataForm: undefined;
+  AngariadoresList: undefined;
+  ParceirosList: undefined;
+  TvrDataForm: undefined;
+  TvrsList: undefined;
+};
+export type DashboardTabParamList = {
+  Home: undefined;
+  AngariadoresList: undefined; // where TVR grouped list lives
 };

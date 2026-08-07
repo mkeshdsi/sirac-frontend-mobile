@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -17,28 +17,86 @@ import { Button, Input } from '@/components';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/types';
 import { login } from '@/services/auth';
+import { useAuth } from '@/context/AuthContext';
+import { deleteItem, getItem, setItem } from '@/config/api';
 
 type Nav = StackNavigationProp<RootStackParamList, 'Login'>;
 interface Props { navigation: Nav }
 
 export const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [username, setUsername] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberPassword, setRememberPassword] = useState(false);
+  const { signIn } = useAuth();
+  const normalizedIdentifier = identifier.trim();
+  const normalizedContact = normalizedIdentifier.replace(/\D/g, '');
+  const isEmailIdentifier = normalizedIdentifier.includes('@');
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedIdentifier.toLowerCase());
+  const isTmcelContact = /^(82|83)\d{7}$/.test(normalizedContact);
+  const isIdentifierValid = isEmailIdentifier ? isEmailValid : isTmcelContact;
+
+  useEffect(() => {
+    const loadSavedCredentials = async () => {
+      const saved = await getItem('sirac_saved_login');
+      if (!saved) return;
+
+      try {
+        const credentials = JSON.parse(saved);
+        setIdentifier(credentials.identifier || '');
+        setPassword(credentials.password || '');
+        setRememberPassword(true);
+      } catch {
+        await deleteItem('sirac_saved_login');
+      }
+    };
+
+    loadSavedCredentials();
+  }, []);
 
   const onSubmit = async () => {
     setError('');
+
+    if (!isIdentifierValid) {
+      setError('Colaborador deve usar email. Angariador ou TVR deve usar contacto Tmcel: 82/83 + 7 dígitos.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await login(username.trim(), password);
+      const loginIdentifier = isEmailIdentifier ? normalizedIdentifier.toLowerCase() : normalizedContact;
+      const res = await login(loginIdentifier, password);
+      if (res.forcePasswordChange) {
+        navigation.navigate('FirstLoginPasswordChange', {
+          oldPassword: password,
+          angariadorId: res.forcePasswordChange.angariador_id,
+          tvrId: res.forcePasswordChange.tvr_id,
+          msisdn: res.forcePasswordChange.msisdn,
+          accountType: res.forcePasswordChange.tvr_id ? 'tvr' : 'angariador',
+        });
+        return;
+      }
+
       if (!res.success || !res.token) {
         setError(res.message || 'Falha ao iniciar sessão.');
         return;
       }
-      // Login concluído, segue diretamente para Dados Comerciais
-      navigation.reset({ index: 0, routes: [{ name: 'CommercialDataForm' }] });
+      
+      const roleMatch = (res.type || res.user?.type || res.user?.usertype || 'user') as 'user' | 'angariador' | 'tvr';
+      await signIn(roleMatch, res.user);
+
+      if (rememberPassword) {
+        await setItem('sirac_saved_login', JSON.stringify({
+          identifier: isEmailIdentifier ? normalizedIdentifier.toLowerCase() : normalizedContact,
+          password,
+        }));
+      } else {
+        await deleteItem('sirac_saved_login');
+      }
+      
+      // O RootNavigator vai reagir ao signIn e desenhar as BottomTabs (Dashboard)
     } catch (e) {
       setError('Falha ao iniciar sessão. Tente novamente.');
     } finally {
@@ -46,7 +104,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const isFormValid = username.trim().length > 0 && password.length > 0;
+  const isFormValid = isIdentifierValid && password.length > 0;
 
   return (
     <>
@@ -67,7 +125,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.welcomeText}>Bem-vindo de volta</Text>
+            <Text style={styles.welcomeText}>Bem-vindo</Text>
             <Text style={styles.subtitleText}>Inicie sessão para continuar</Text>
           </View>
         </LinearGradient>
@@ -82,15 +140,15 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             
             <View style={styles.inputContainer}>
               <Input
-                label="Email"
-                placeholder="exemplo@email.com"
+                label="Email ou contacto"
+                placeholder="Email ou contacto 82/83"
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
-                value={username}
-                onChangeText={setUsername}
+                value={identifier}
+                onChangeText={setIdentifier}
                 required
-                leftIcon={<Ionicons name="person-outline" size={20} color={Theme.colors.textSecondary} />}
+                leftIcon={<Ionicons name={isEmailIdentifier ? 'mail-outline' : 'person-outline'} size={20} color={Theme.colors.textSecondary} />}
               />
             </View>
 
@@ -125,7 +183,22 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             )}
 
-            
+            <View style={styles.loginOptions}>
+              <TouchableOpacity
+                style={styles.rememberRow}
+                onPress={() => setRememberPassword((value) => !value)}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.checkbox, rememberPassword && styles.checkboxChecked]}>
+                  {rememberPassword && <Ionicons name="checkmark" size={14} color="white" />}
+                </View>
+                <Text style={styles.rememberText}>Guardar senha</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate('ForgotPassword')}>
+                <Text style={styles.forgotPasswordText}>Esqueci a palavra-passe</Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.buttonContainer}>
               <Button 
@@ -220,9 +293,41 @@ const styles = StyleSheet.create({
     marginLeft: Theme.spacing.sm,
     flex: 1,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
+  loginOptions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
     marginBottom: Theme.spacing.xl,
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    backgroundColor: Theme.colors.surface,
+  },
+  checkboxChecked: {
+    borderColor: Theme.colors.primary,
+    backgroundColor: Theme.colors.primary,
+  },
+  rememberText: {
+    ...Theme.typography.caption,
+    color: Theme.colors.textPrimary,
+    fontWeight: '600',
+  },
+  forgotPassword: {
+    flexShrink: 1,
+    alignItems: 'flex-end',
   },
   forgotPasswordText: {
     ...Theme.typography.caption,
