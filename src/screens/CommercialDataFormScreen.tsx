@@ -812,9 +812,10 @@ export const CommercialDataFormScreen: React.FC<Props> = ({ navigation, route })
   const onLayoutField = (name: keyof CommercialData | string) => (e: any) => { const y = e?.nativeEvent?.layout?.y ?? 0; setFieldPositions((s) => ({ ...s, [String(name)]: y })); };
 
   useEffect(() => {
+    if (editParceiroId) return;
     if (tipoParceiro === 'MERCHANT') { const current = getValues('tipoEmpresa'); if (!current) setValue('tipoEmpresa', 'SOCIEDADE', { shouldValidate: true }); }
     else setValue('tipoEmpresa', undefined as any, { shouldValidate: false });
-  }, [tipoParceiro]);
+  }, [tipoParceiro, editParceiroId]);
 
   useEffect(() => {
     const query = searchQuery.trim();

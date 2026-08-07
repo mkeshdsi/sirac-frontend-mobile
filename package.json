@@ -8,7 +8,7 @@
     "lan": "expo start --lan",
     "dev": "expo start --tunnel",
     "publish": "expo publish",
-    "update:prod": "npx eas-cli update --branch production --environment production --message \"OTA update\"",
+    "update:prod": "npx eas-cli update --branch production --environment production --platform android --message \"OTA update\"",
     "update:pilot": "npx eas-cli update --branch pilot --environment production --platform android --message \"Pilot OTA update\"",
     "build:pilot": "npx eas-cli build --profile pilot --platform android",
     "android": "expo start --android",
