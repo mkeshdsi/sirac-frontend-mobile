@@ -9,6 +9,21 @@ import { getParceirosGroupedDetailed, listMyAngariadores, listParceiros, getParc
 import { Modal } from 'react-native';
 import Constants from 'expo-constants';
 
+/**
+ * Formata uma string ISO DateTime devolvida pelo backend ("YYYY-MM-DDTHH:MM:SS")
+ * num formato legível "DD/MM/YYYY HH:MM". Funciona de forma fiável no Hermes/RN.
+ */
+const formatIsoDateTime = (iso: string | null | undefined): string => {
+  if (!iso) return '—';
+  // Garantir que o parse não depende de fuso horário: substitui T por espaço
+  const clean = iso.replace('T', ' ').substring(0, 16); // "YYYY-MM-DD HH:MM"
+  const [datePart, timePart] = clean.split(' ');
+  if (!datePart) return iso;
+  const [year, month, day] = datePart.split('-');
+  const time = timePart || '00:00';
+  return `${day}/${month}/${year} ${time}`;
+};
+
 const creatorTypeLabel = (type?: string) => {
   const normalized = String(type || '').toLowerCase();
   if (normalized === 'tvr') return 'TVR';
@@ -421,6 +436,18 @@ export const ParceirosListScreen = ({ navigation }: any) => {
                   {selectedParceiro.contacto_agente && (
                     <Text style={styles.modalText}>
                       <Text style={styles.modalLabel}>Contacto:</Text> {selectedParceiro.contacto_agente}
+                    </Text>
+                  )}
+                  {selectedParceiro.data_adesao && (
+                    <Text style={styles.modalText}>
+                      <Text style={styles.modalLabel}>Data de Adesão:</Text>{' '}
+                      {formatIsoDateTime(selectedParceiro.data_adesao)}
+                    </Text>
+                  )}
+                  {selectedParceiro.data_validacao && (
+                    <Text style={styles.modalText}>
+                      <Text style={styles.modalLabel}>Data de Validação:</Text>{' '}
+                      {formatIsoDateTime(selectedParceiro.data_validacao)}
                     </Text>
                   )}
                   <View style={[styles.badgeRow, { marginTop: 12 }]}>
