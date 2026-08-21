@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { Theme } from '@/constants/theme';
 import { DashboardOverview, getDashboardOverview } from '@/services/apiResources';
@@ -76,6 +77,7 @@ const RankingList = ({ title, items, emptyText }: {
 };
 
 export const OverviewScreen = () => {
+  const navigation = useNavigation();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -171,6 +173,33 @@ export const OverviewScreen = () => {
               </Text>
             </View>
 
+            <TouchableOpacity
+              style={styles.myRecordsBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('MeusRegistos' as never)}
+            >
+              <LinearGradient
+                colors={[Theme.colors.primary, '#0EA5E9']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.myRecordsGradient}
+              >
+                <View style={styles.myRecordsDecor} />
+                <View style={styles.myRecordsLeft}>
+                  <View style={styles.myRecordsIconWrap}>
+                    <Ionicons name="bar-chart" size={22} color="white" />
+                  </View>
+                  <View>
+                    <Text style={styles.myRecordsTitle}>Ver Meus Registos</Text>
+                    <Text style={styles.myRecordsSubtitle}>Activations · Parceiros · Angariadores</Text>
+                  </View>
+                </View>
+                <View style={styles.myRecordsArrow}>
+                  <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.8)" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Últimos 7 dias</Text>
               <BarChart data={overview.series} />
@@ -264,4 +293,12 @@ const styles = StyleSheet.create({
   recentIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#eef8f5', alignItems: 'center', justifyContent: 'center' },
   recentTitle: { color: Theme.colors.textPrimary, fontWeight: '800' },
   recentMeta: { color: Theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
+  myRecordsBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 12, shadowColor: Theme.colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6 },
+  myRecordsGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, overflow: 'hidden' },
+  myRecordsDecor: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.1)', top: -40, right: -20 },
+  myRecordsLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  myRecordsIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  myRecordsTitle: { color: 'white', fontSize: 16, fontWeight: '800' },
+  myRecordsSubtitle: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 },
+  myRecordsArrow: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
 });

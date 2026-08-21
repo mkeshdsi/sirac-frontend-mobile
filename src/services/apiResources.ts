@@ -251,3 +251,25 @@ export async function toggleTvrActive(tvrId: number, isActive: boolean) {
   const res = await api.patch(`/api/v1/tvr/${tvrId}/active`, { is_active: isActive });
   return res.data;
 }
+
+export type MeusRegistosData = {
+  actor: { id: number; type: string; nome: string };
+  permissoes: { pode_criar_angariador: boolean; pode_criar_tvr: boolean };
+  mes_atual: { angariadores: number; parceiros: number; tvrs: number };
+  ultimos_6_meses: {
+    angariadores: Array<{ label: string; value: number }>;
+    parceiros: Array<{ label: string; value: number }>;
+    tvrs: Array<{ label: string; value: number }>;
+  };
+  ultimos_7_dias: {
+    angariadores: Array<{ label: string; value: number }>;
+    parceiros: Array<{ label: string; value: number }>;
+    tvrs: Array<{ label: string; value: number }>;
+  };
+};
+
+export async function getMeusRegistos(): Promise<MeusRegistosData> {
+  const api = await getAuthApi();
+  const res = await api.get('/api/v1/dashboard/meus-registos');
+  return res.data;
+}

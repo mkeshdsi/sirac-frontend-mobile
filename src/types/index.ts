@@ -77,6 +77,7 @@ export type RootStackParamList = {
   ParceirosList: undefined;
   TvrDataForm: undefined;
   TvrsList: undefined;
+  MeusRegistos: undefined;
 };
 export type DashboardTabParamList = {
   Home: undefined;

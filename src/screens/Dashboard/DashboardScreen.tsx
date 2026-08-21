@@ -2,17 +2,16 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// ── Animated card component ──────────────────────────────
-const ActionCard = ({ colors, icon, title, onPress, delay = 0 }: {
+const ActionCard = ({ colors, icon, title, onPress }: {
   colors: readonly [string, string, ...string[]];
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   onPress: () => void;
-  delay?: number;
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -33,9 +32,7 @@ const ActionCard = ({ colors, icon, title, onPress, delay = 0 }: {
         style={{ flex: 1 }}
       >
         <LinearGradient colors={colors} style={styles.cardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          {/* Decorative circle */}
           <View style={styles.cardDecorCircle} />
-
           <View style={styles.cardIconWrap}>
             <Ionicons name={icon} size={26} color="rgba(255,255,255,0.95)" />
           </View>
@@ -49,9 +46,13 @@ const ActionCard = ({ colors, icon, title, onPress, delay = 0 }: {
   );
 };
 
-// ── Main screen ──────────────────────────────────────────
-export const DashboardScreen = ({ navigation }: any) => {
+export const DashboardScreen = () => {
   const { userRole, userData } = useAuth();
+  const navigation = useNavigation();
+
+  const goTo = (route: string) => {
+    navigation.getParent()?.navigate(route);
+  };
 
   const getRoleLabel = () => {
     if (userRole === 'tvr') return 'Técnico de Vendas';
@@ -81,7 +82,6 @@ export const DashboardScreen = ({ navigation }: any) => {
           end={{ x: 1, y: 1 }}
           style={styles.headerCard}
         >
-          {/* Decorative elements */}
           <View style={styles.headerDecor1} />
           <View style={styles.headerDecor2} />
 
@@ -90,7 +90,6 @@ export const DashboardScreen = ({ navigation }: any) => {
               <Ionicons name={getRoleIcon()} size={12} color="rgba(255,255,255,0.9)" style={{ marginRight: 5 }} />
               <Text style={styles.rolePillText}>{getRoleLabel()}</Text>
             </View>
-            
           </View>
 
           <Text style={styles.greetingSmall}>Bem‑vindo,</Text>
@@ -116,13 +115,11 @@ export const DashboardScreen = ({ navigation }: any) => {
 
         {/* ── Actions grid ── */}
         <View style={styles.actionsGrid}>
-
-          {/* TODOS: Cadastrar Parceiro */}
           <ActionCard
             colors={[Theme.colors.primary, '#3B82F6']}
             icon="business-outline"
             title={`Cadastrar\nParceiro`}
-            onPress={() => navigation.navigate('CommercialDataForm')}
+            onPress={() => goTo('CommercialDataForm')}
           />
 
           {(userRole === 'user' || userRole === 'tvr' || userRole === 'angariador') && (
@@ -130,37 +127,34 @@ export const DashboardScreen = ({ navigation }: any) => {
               colors={['#0EA5E9', '#0284C7']}
               icon="list-outline"
               title={`Lista de\nParceiros`}
-              onPress={() => navigation.navigate('ParceirosList')}
+              onPress={() => goTo('ParceirosList')}
             />
           )}
 
-          {/* ADMIN + TVR: Cadastrar Angariador */}
           {(userRole === 'user' || userRole === 'tvr') && (
             <ActionCard
               colors={['#10B981', '#059669']}
               icon="person-add-outline"
               title={`Cadastrar\nAngariador`}
-              onPress={() => navigation.navigate('AngariadorDataForm')}
+              onPress={() => goTo('AngariadorDataForm')}
             />
           )}
 
-          {/* ADMIN + TVR: Lista de Angariadores */}
           {(userRole === 'user' || userRole === 'tvr') && (
             <ActionCard
               colors={['#F59E0B', '#D97706']}
               icon="people-outline"
               title={`Lista de\nAngariadores`}
-              onPress={() => navigation.navigate('AngariadoresList')}
+              onPress={() => goTo('AngariadoresList')}
             />
           )}
 
-          {/* ADMIN: Lista de TVRs */}
           {userRole === 'user' && (
             <ActionCard
               colors={['#8B5CF6', '#6D28D9']}
               icon="briefcase-outline"
               title={`Cadastrar\nTVR`}
-              onPress={() => navigation.navigate('TvrDataForm')}
+              onPress={() => goTo('TvrDataForm')}
             />
           )}
 
@@ -169,10 +163,9 @@ export const DashboardScreen = ({ navigation }: any) => {
               colors={['#6366F1', '#4F46E5']}
               icon="briefcase-outline"
               title={`Lista de\nTVRs`}
-              onPress={() => navigation.navigate('TvrsList')}
+              onPress={() => goTo('TvrsList')}
             />
           )}
-
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -192,7 +185,6 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
 
-  // ── Header card ─────────────────────────────────────────
   headerCard: {
     marginHorizontal: 16,
     marginTop: 12,
@@ -239,14 +231,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  notifBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   greetingSmall: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.7)',
@@ -280,7 +264,6 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
-  // ── Section header ───────────────────────────────────────
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,7 +285,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
-  // ── Actions grid ─────────────────────────────────────────
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
